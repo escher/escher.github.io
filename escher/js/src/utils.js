@@ -7,14 +7,15 @@ define(["lib/vkbeautify"], function(vkbeautify) {
              load_the_file: load_the_file,
 	     make_class: make_class,
 	     setup_defs: setup_defs,
-	     draw_an_array: draw_an_array,
 	     draw_an_object: draw_an_object,
+	     draw_a_nested_object: draw_a_nested_object,
 	     make_array: make_array,
 	     compare_arrays: compare_arrays,
 	     array_to_object: array_to_object,
 	     clone: clone,
 	     extend: extend,
 	     unique_concat: unique_concat,
+	     object_slice_for_ids: object_slice_for_ids,
 	     c_plus_c: c_plus_c,
 	     c_minus_c: c_minus_c,
 	     c_times_scalar: c_times_scalar,
@@ -32,7 +33,8 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	     decompartmentalize: decompartmentalize,
 	     check_r: check_r,
 	     mean: mean,
-	     check_for_parent_tag: check_for_parent_tag };
+	     check_for_parent_tag: check_for_parent_tag,
+	     parse_url_components: parse_url_components };
 
     // definitions
     function set_options(options, defaults) {
@@ -172,34 +174,86 @@ define(["lib/vkbeautify"], function(vkbeautify) {
         return defs;
     }
 
-    function draw_an_array(container_sel, parent_node_selector, children_selector,
-			   array, create_function, update_function) {
-	/** Run through the d3 data binding steps for an array.
-	 */
-	var sel = container_sel.select(parent_node_selector)
-		.selectAll(children_selector)
-		.data(array);
-	// enter: generate and place reaction
-	sel.enter().call(create_function);
-	// update: update when necessary
-	sel.call(update_function);
-	// exit
-	sel.exit().remove();
-    }
-
     function draw_an_object(container_sel, parent_node_selector, children_selector,
-			    object, id_key, create_function, update_function) {
+			    object, id_key, create_function, update_function,
+			    exit_function) {
 	/** Run through the d3 data binding steps for an object.
+
+	 Arguments
+	 ---------
+
+	 container_sel: A d3 selection containing all objects.
+
+	 parent_node_selector: A selector string for a subselection of
+	 container_sel.
+
+	 children_selector: A selector string for each DOM element to bind.
+
+	 object: An object to bind to the selection.
+
+	 id_key: The key that will be used to store object IDs in the bound data
+	 points.
+
+	 create_function: A function for enter selection.
+
+	 update_function: A function for update selection.
+
+	 exit_function: A function for exit selection.
+	 
 	 */
 	var sel = container_sel.select(parent_node_selector)
 		.selectAll(children_selector)
 		.data(make_array(object, id_key), function(d) { return d[id_key]; });
 	// enter: generate and place reaction
-	sel.enter().call(create_function);
+	if (create_function)
+	    sel.enter().call(create_function);
 	// update: update when necessary
-	sel.call(update_function);
+	if (update_function)
+	    sel.call(update_function);
 	// exit
-	sel.exit().remove();
+	if (exit_function) 
+	    sel.exit().call(exit_function);
+    }
+
+    function draw_a_nested_object(container_sel, children_selector, object_data_key,
+				  id_key, create_function, update_function,
+				  exit_function) {
+	/** Run through the d3 data binding steps for an object that is nested
+	 within another element with d3 data.
+
+	 Arguments
+	 ---------
+
+	 container_sel: A d3 selection containing all objects.
+
+	 children_selector: A selector string for each DOM element to bind.
+
+	 object_data_key: A key for the parent object containing data for the
+	 new selection.
+
+	 id_key: The key that will be used to store object IDs in the bound data
+	 points.
+
+	 create_function: A function for enter selection.
+
+	 update_function: A function for update selection.
+
+	 exit_function: A function for exit selection.
+	 
+	 */
+	var sel = container_sel.selectAll(children_selector)
+	    .data(function(d) {
+		return make_array(d[object_data_key], id_key);
+	    }, function(d) { return d[id_key]; });
+	// enter: generate and place reaction
+	if (create_function)
+	    sel.enter().call(create_function);
+	// update: update when necessary
+	if (update_function)
+	    sel.call(update_function);
+	// exit
+	if (exit_function) 
+	    sel.exit().call(exit_function);
     }
 
     function make_array(obj, id_key) { // is this super slow?
@@ -302,6 +356,27 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	    });
 	});
 	return new_array;
+    }
+
+    function object_slice_for_ids(obj, ids) {
+	/** Return a copy of the object with just the given ids. 
+	 
+	 Arguments
+	 ---------
+
+	 obj: An object.
+
+	 ids: An array of id strings.
+
+	 */
+        var subset = {}, i = -1;
+        while (++i<ids.length) {
+	    subset[ids[i]] = clone(obj[ids[i]]);
+        }
+        if (ids.length != Object.keys(subset).length) {
+	    console.warn('did not find correct reaction subset');
+        }
+	return subset;
     }
 
     function c_plus_c(coords1, coords2) {
@@ -538,4 +613,41 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	}
 	return false;
     }
+
+    function parse_url_components(the_window, options) {
+	/** Parse the URL and return options based on the URL arguments.
+
+	 Arguments
+	 ---------
+
+	 the_window: A reference to the global window.
+	 
+	 options: (optional) an existing options object to which new options
+	 will be added.
+
+
+	 Adapted from http://stackoverflow.com/questions/979975/how-to-get-the-value-from-url-parameter
+
+	 */
+	if (options===undefined) options = {};
+
+	var query = the_window.location.search.substring(1),
+	    vars = query.split("&");
+	for (var i = 0; i < vars.length; i++) {
+	    var pair = vars[i].split("=");
+    	    // If first entry with this name
+	    if (typeof options[pair[0]] === "undefined") {
+		options[pair[0]] = pair[1];
+    		// If second entry with this name
+	    } else if (typeof options[pair[0]] === "string") {
+		var arr = [ options[pair[0]], pair[1] ];
+		options[pair[0]] = arr;
+    		// If third or later entry with this name
+	    } else {
+		options[pair[0]].push(pair[1]);
+	    }
+	}
+
+	return options;
+    }    
 });
