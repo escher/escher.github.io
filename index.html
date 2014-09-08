@@ -3,7 +3,7 @@
   <head>
     <title>Escher</title>
     
-  <script src="escher/lib/jquery-2.1.0.min.js"></script>
+  <script src="escher/lib/d3.min.js"></script>
 
   <link rel="stylesheet" href="escher/lib/bootstrap-3.1.1.min.css"/>
   <link rel="stylesheet" href="escher/css/index.css"/>
@@ -30,31 +30,44 @@
 	  </div>
 	</div>
       </header>
+      <div class="row">	
+	<div class="col-sm-12">
+	  <h3>Filter by organism</h3>
+	  <select id="organisms" class="form-control">
+	    <option value="all">All</option>
+	  </select>
+	</div>
+      </div>
       <div class="row">
 	<div class="col-sm-3">
 	  <h3>Model</h3>
-	  <select id="model" class="form-control">
+	  <select id="models" class="form-control">
 	    <option value="none">None</option>
-	    
 	  </select>
 	</div>
-	<div class="col-sm-3">
+	<div class="col-sm-6">
 	  <h3>Map</h3>
-	  <select id="map" class="form-control">
+	  <select id="maps" class="form-control">
 	    <option value="none">None</option>
-	    
 	  </select>
 	</div>
 	<div class="col-sm-3">
+	  <h3>Tool</h3>
+	  <select id="tools" class="form-control">
+	    <option class="tool" value="viewer">Viewer</option>
+	    <option class="tool" value="builder">Builder</option>
+	    
+	  </select>
+	</div>
+      </div>
+      <div class="row">
+	<div class="col-sm-6">
 	  <h3>Options</h3>
-	  <select id="options" class="form-control">
-	    <option value="viewer">Viewer</option>
-	    <option value="builder">Builder</option>
-	    
-	  </select>
+	    <div style="width: 100%"><input type="checkbox" id="scroll"> Scroll to zoom (instead scroll to pan)</div>
+	    <div style="width: 100%"><input type="checkbox" id="never_ask"> Never ask before reloading</div>
 	</div>
-	<div class="col-sm-3">
-	  <button type="button" class="btn btn-default column-button" onClick="submit()">
+	<div class="col-sm-6">
+	  <button type="button" id="submit" class="btn btn-default column-button">
 	    Submit
 	  </button>
 	</div>
@@ -82,10 +95,11 @@
     </div>
   </footer>
 
-  <script src="escher/js/web/index.js"></script>
+  <script>var data=null;</script>
   
     <script src="escher/js/web/index_gh_pages.js"></script>
   
+  <script src="escher/js/web/index.js"></script>
 
 
     <script>

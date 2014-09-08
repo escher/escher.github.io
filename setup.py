@@ -35,7 +35,7 @@ class CleanCommand(Command):
             os.remove(f)
         print 'done cleaning'
 
-class BuildCommand(Command):
+class JSBuildCommand(Command):
     description = "Custom build command that generates escher lib files"
     user_options = []
     def initialize_options(self):
@@ -81,5 +81,5 @@ setup(name='Escher',
                                'lib/*.js', 'lib/*.css', 'lib/fonts/*',
                                'resources/*']},
       cmdclass={'clean': CleanCommand,
-                'build': BuildCommand,
+                'buildjs': JSBuildCommand,
                 'test': TestCommand})
