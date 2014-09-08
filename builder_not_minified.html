@@ -7,7 +7,7 @@
   <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
   <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 
-  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootswatch/3.1.1/simplex/bootstrap.min.css">
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootswatch/3.1.1/simplex/bootstrap.min.css"/>
   <link rel="stylesheet" href="https://zakandrewking.github.io/escher/escher/css/builder.css"/>
 
     <!-- Require only loaded in standalone file. -->
@@ -19,14 +19,14 @@
   </head>
   <body>
     
-  <div style="height: 100%; width: 100%;" id="ofbsstoqor"></div>
+  <div style="height: 100%; width: 100%;" id="ovezzukgwm"></div>
 
   <script>
-   var map_data_ofbsstoqor = null;
-var cobra_model_ofbsstoqor = null;
-var reaction_data_ofbsstoqor = null;
-var metabolite_data_ofbsstoqor = null;
-var css_string_ofbsstoqor = '#mouse-node {     fill: none; } #canvas {     stroke: #ccc;     stroke-width: 7px;     fill: white; } .resize-rect {     fill: black;     opacity: 0;     stroke: none; } .label {     font-family: sans-serif;      font-style: italic;      font-weight: bold;      font-size: 8px;      fill: black;      stroke: none;     text-rendering: optimizelegibility;     cursor: default; } .reaction-label {     fill: rgb(32, 32, 120);     text-rendering: optimizelegibility; } .text-label .label {     font-size: 50px; } .text-label-input {     font-size: 50px; } .node-circle {     stroke-width: 2px;     fill: none;	     stroke: rgb(50, 50, 50); } .selected .node-circle{     stroke-width: 3px;     stroke: rgb(20, 113, 199); } .selected .label {     fill: rgb(20, 113, 199); } .metabolite-circle {     stroke: rgb(162, 69, 16); } .selected .metabolite-circle {     stroke: rgb(5, 2, 0); } .segment {     stroke: #334E75;     stroke-width: 6px;     fill: none; } .arrowhead {     fill: #334E75; } .membrane {     fill: none;     stroke: rgb(255, 187, 0); } .brush .extent {      fill-opacity: 0.1;     fill: black;     stroke: #fff;     shape-rendering: crispEdges; } .bezier-circle {     fill: rgb(255,255,255);	 } .bezier-circle.b1 {     stroke: red; } .bezier-circle.b2 {     stroke: blue; } .connect-line{      stroke: rgb(200,200,200); } .direction-arrow {     stroke: black;     stroke-width: 1px;     fill: white;     opacity: 0.3; } .start-reaction-cursor {     cursor: pointer; } .start-reaction-target {     stroke: rgb(100,100,100);     fill: none;     opacity: 0.5; } .rotation-center-line {     stroke: red;     stroke-width: 2px; } .highlight {     fill: #106F94; } .cursor-grab {     cursor: grab;     cursor: -webkit-grab; } .cursor-grabbing {     cursor: grabbing;     cursor: -webkit-grabbing; } .edit-text-cursor {     cursor: text; }';
+   var map_data_ovezzukgwm = null;
+var cobra_model_ovezzukgwm = null;
+var reaction_data_ovezzukgwm = null;
+var metabolite_data_ovezzukgwm = null;
+var css_string_ovezzukgwm = '#mouse-node {     fill: none; } #canvas {     stroke: #ccc;     stroke-width: 7px;     fill: white; } .resize-rect {     fill: black;     opacity: 0;     stroke: none; } .label {     font-family: sans-serif;      font-style: italic;      font-weight: bold;      font-size: 8px;      fill: black;      stroke: none;     text-rendering: optimizelegibility;     cursor: default; } .reaction-label {     fill: rgb(32, 32, 120);     text-rendering: optimizelegibility; } .text-label .label {     font-size: 50px; } .text-label-input {     font-size: 50px; } .node-circle {     stroke-width: 2px;     fill: none;	     stroke: rgb(50, 50, 50); } .selected .node-circle{     stroke-width: 3px;     stroke: rgb(20, 113, 199); } .selected .label {     fill: rgb(20, 113, 199); } .metabolite-circle {     stroke: rgb(162, 69, 16); } .selected .metabolite-circle {     stroke: rgb(5, 2, 0); } .segment {     stroke: #334E75;     stroke-width: 6px;     fill: none; } .arrowhead {     fill: #334E75; } .membrane {     fill: none;     stroke: rgb(255, 187, 0); } .brush .extent {      fill-opacity: 0.1;     fill: black;     stroke: #fff;     shape-rendering: crispEdges; } .bezier-circle {     fill: rgb(255,255,255);	 } .bezier-circle.b1 {     stroke: red; } .bezier-circle.b2 {     stroke: blue; } .connect-line{      stroke: rgb(200,200,200); } .direction-arrow {     stroke: black;     stroke-width: 1px;     fill: white;     opacity: 0.3; } .start-reaction-cursor {     cursor: pointer; } .start-reaction-target {     stroke: rgb(100,100,100);     fill: none;     opacity: 0.5; } .rotation-center-line {     stroke: red;     stroke-width: 2px; } .highlight {     fill: #106F94; } .cursor-grab {     cursor: grab;     cursor: -webkit-grab; } .cursor-grabbing {     cursor: grabbing;     cursor: -webkit-grabbing; } .edit-text-cursor {     cursor: text; }';
 
   </script>
   <script>
@@ -46,22 +46,22 @@ var css_string_ofbsstoqor = '#mouse-node {     fill: none; } #canvas {     strok
 			      escher: "https://zakandrewking.github.io/escher/escher.1.0.0b3" }});
      require(["d3", "escher"], function(d3, escher) {
        window.d3 = d3;
-       options = { selection: d3.select('#ofbsstoqor'),
+       options = { selection: d3.select('#ovezzukgwm'),
 enable_editing: true,
 menu: "all",
 enable_keys: true,
 scroll_behavior: "pan",
 fill_screen: true,
-map: map_data_ofbsstoqor,
-cobra_model: cobra_model_ofbsstoqor,
+map: map_data_ovezzukgwm,
+cobra_model: cobra_model_ovezzukgwm,
 auto_set_data_domain: true,
-reaction_data: reaction_data_ofbsstoqor,
-metabolite_data: metabolite_data_ofbsstoqor,
+reaction_data: reaction_data_ovezzukgwm,
+metabolite_data: metabolite_data_ovezzukgwm,
 never_ask_before_quit: false,
-css: css_string_ofbsstoqor,
+css: css_string_ovezzukgwm,
 };
 
-options = escher.utils.parse_url_components(window, options, "https://zakandrewking.github.io/escher/maps/v1/", "https://zakandrewking.github.io/escher/models/v1/");
+options = escher.utils.parse_url_components(window, options, "maps/v1/", "models/v1/");
 escher.Builder(options);
 
      });
@@ -70,22 +70,22 @@ escher.Builder(options);
      if (window.escher !== undefined && window.d3 !== undefined) {
        // already loaded: just create the figure
        !function(escher, d3) {
-	 options = { selection: d3.select('#ofbsstoqor'),
+	 options = { selection: d3.select('#ovezzukgwm'),
 enable_editing: true,
 menu: "all",
 enable_keys: true,
 scroll_behavior: "pan",
 fill_screen: true,
-map: map_data_ofbsstoqor,
-cobra_model: cobra_model_ofbsstoqor,
+map: map_data_ovezzukgwm,
+cobra_model: cobra_model_ovezzukgwm,
 auto_set_data_domain: true,
-reaction_data: reaction_data_ofbsstoqor,
-metabolite_data: metabolite_data_ofbsstoqor,
+reaction_data: reaction_data_ovezzukgwm,
+metabolite_data: metabolite_data_ovezzukgwm,
 never_ask_before_quit: false,
-css: css_string_ofbsstoqor,
+css: css_string_ovezzukgwm,
 };
 
-options = escher.utils.parse_url_components(window, options, "https://zakandrewking.github.io/escher/maps/v1/", "https://zakandrewking.github.io/escher/models/v1/");
+options = escher.utils.parse_url_components(window, options, "maps/v1/", "models/v1/");
 escher.Builder(options);
 
        }(window.escher, window.d3);
@@ -93,22 +93,22 @@ escher.Builder(options);
        // require.js not available: dynamically load d3 & escher
        escher_load_lib("//cdnjs.cloudflare.com/ajax/libs/d3/3.4.8/d3.min.js", function() {
 	 escher_load_lib("https://zakandrewking.github.io/escher/escher.1.0.0b3.js", function() {
-	   options = { selection: d3.select('#ofbsstoqor'),
+	   options = { selection: d3.select('#ovezzukgwm'),
 enable_editing: true,
 menu: "all",
 enable_keys: true,
 scroll_behavior: "pan",
 fill_screen: true,
-map: map_data_ofbsstoqor,
-cobra_model: cobra_model_ofbsstoqor,
+map: map_data_ovezzukgwm,
+cobra_model: cobra_model_ovezzukgwm,
 auto_set_data_domain: true,
-reaction_data: reaction_data_ofbsstoqor,
-metabolite_data: metabolite_data_ofbsstoqor,
+reaction_data: reaction_data_ovezzukgwm,
+metabolite_data: metabolite_data_ovezzukgwm,
 never_ask_before_quit: false,
-css: css_string_ofbsstoqor,
+css: css_string_ovezzukgwm,
 };
 
-options = escher.utils.parse_url_components(window, options, "https://zakandrewking.github.io/escher/maps/v1/", "https://zakandrewking.github.io/escher/models/v1/");
+options = escher.utils.parse_url_components(window, options, "maps/v1/", "models/v1/");
 escher.Builder(options);
 
 	 })
