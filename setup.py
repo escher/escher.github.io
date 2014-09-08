@@ -27,7 +27,11 @@ class CleanCommand(Command):
     def run(self):
         call(['rm', '-rf', join(directory, 'build')])
         call(['rm', '-rf', join(directory, 'dist')])
+        # remove lib files
         for f in glob(join(directory, 'escher/lib/escher.*.js')):
+            os.remove(f)
+        # remove site files
+        for f in glob(join(directory, '*.html')):
             os.remove(f)
         print 'done cleaning'
 
@@ -43,6 +47,14 @@ class BuildCommand(Command):
               'out=escher/lib/%s'%escher, 'optimize=none'])
         call([join(directory, 'bin/r.js'), '-o', 'escher/js/build/build.js',
               'out=escher/lib/%s'%escher_min, 'optimize=uglify'])
+        # copy files to top level
+        call(['cp', join('escher/lib/', escher), '.'])
+        call(['cp', join('escher/lib/', escher_min), '.'])
+        call(['cp', join('escher/lib/', escher), 'escher.js'])
+        call(['cp', join('escher/lib/', escher_min), 'escher.min.js'])
+        # generate the static site
+        call(['python', 'escher/static_site.py'])
+        call(['python', 'escher/generate_index.py'])        
         print 'done building'
 
 class TestCommand(Command):
