@@ -32,8 +32,8 @@ describe('utils', function() {
 	var url = utils.name_to_url('e_coli:iJO1366', 'https://zakandrewking.github.io/escher/', 'model');
 	expect(url).toEqual('https://zakandrewking.github.io/escher/organisms/e_coli/models/iJO1366.json');
 
-	var url = utils.name_to_url('e_coli:iJO1366:central_metabolism', 'https://zakandrewking.github.io/escher', 'map');
-	expect(url).toEqual('https://zakandrewking.github.io/escher/organisms/e_coli/models/iJO1366/maps/central_metabolism.json');
+	var url = utils.name_to_url('e_coli:iJO1366:central_metabolism', '', 'map');
+	expect(url).toEqual('organisms/e_coli/models/iJO1366/maps/central_metabolism.json');
     });
 
     it('parse_url_components', function() {

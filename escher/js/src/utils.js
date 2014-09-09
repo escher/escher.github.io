@@ -629,7 +629,7 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 
 	 */
 	// strip download_url
-	download_url = download_url.replace(/\/$/g, '');
+	download_url = download_url.replace(/^\/|\/$/g, '');
 
 	var parts = name.split(':'),
 	    longname;
@@ -641,7 +641,9 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	    longname = ['organisms', parts[0], 'models', parts[1]+'.json'].join('/');
 	else
 	    longname = ['organisms', parts[0], 'models', parts[1], 'maps', parts[2]+'.json'].join('/');
-	return [download_url, longname].join('/');
+	var out = [download_url, longname].join('/');
+	// strip final path
+	return out.replace(/^\/|\/$/g, '');
     }
 
     function parse_url_components(the_window, options, download_url) {
