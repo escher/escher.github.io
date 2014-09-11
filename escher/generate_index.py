@@ -1,6 +1,6 @@
 import json
 from os import listdir
-from os.path import join, dirname, realpath, isdir, relpath
+from os.path import join, dirname, realpath, exists
 
 directory = realpath(join(dirname(realpath(__file__)), '..'))
 
@@ -9,6 +9,9 @@ ignore_files = ['index.json', 'README']
 
 for index_dir in index_directories:
     index = []
+    if not exists(join(directory, index_dir)):
+        print '%s does not exist' % index_dir
+        continue
     for filename in listdir(join(directory, index_dir)):
         if filename.endswith('.json') and filename not in ignore_files:
             index.append(filename.replace('.json', ''))
