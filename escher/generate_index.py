@@ -1,6 +1,6 @@
 import json
 from os import listdir
-from os.path import join, dirname, realpath, exists
+from os.path import join, dirname, realpath, exists, isdir, relpath
 
 directory = realpath(join(dirname(realpath(__file__)), '..'))
 
