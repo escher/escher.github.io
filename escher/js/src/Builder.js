@@ -652,7 +652,9 @@ define(['utils', 'BuildInput', 'ZoomContainer', 'Map', 'CobraModel', 'Brush', 'C
 	    search: { key: 70, modifiers: { control: true }, // ctrl-f
 		      fn: search_bar.toggle.bind(search_bar, true) },
 	    view_mode: { fn: this.view_mode.bind(this),
-			 ignore_with_input: true }
+			 ignore_with_input: true },
+	    show_settings: { key: 188, modifiers: { control: true }, // Ctrl ,
+			     fn: settings_page.toggle.bind(settings_page) }
 	};
 	if (enable_editing) {
 	    utils.extend(keys, {
@@ -717,9 +719,7 @@ define(['utils', 'BuildInput', 'ZoomContainer', 'Map', 'CobraModel', 'Brush', 'C
 			       fn: map.select_all.bind(map) },
 		select_none: { key: 65, modifiers: { control: true, shift: true }, // Ctrl Shift a
 			       fn: map.select_none.bind(map) },
-		invert_selection: { fn: map.invert_selection.bind(map) },
-		show_settings: { key: 188, modifiers: { control: true }, // Ctrl ,
-				 fn: settings_page.toggle.bind(settings_page) }
+		invert_selection: { fn: map.invert_selection.bind(map) }
 	    });
 	}
 	return keys;
