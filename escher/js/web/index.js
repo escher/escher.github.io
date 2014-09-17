@@ -57,7 +57,7 @@ function draw_models_select(data) {
     var model_data = data.models.filter(filter_models),
 	models_select = d3.select('#models'),
 	models = models_select.selectAll('.model')
-	    .data(model_data);
+	    .data(model_data, function(d) { return d; });
     models.enter()
 	.append('option')
 	.classed('model', true)
@@ -84,7 +84,7 @@ function draw_maps_select(data) {
     var map_data = data.maps.filter(filter_maps),
 	maps_select = d3.select('#maps'),
 	maps = maps_select.selectAll('.map')
-	    .data(map_data);
+	    .data(map_data, function(d) { return d; });
     maps.enter()
 	.append('option')
 	.classed('map', true)
@@ -102,7 +102,7 @@ function draw_maps_select(data) {
 }
 function draw_organisms_select(data) {
     var org = d3.select('#organisms').selectAll('.organism')
-	    .data(data.organisms);
+	    .data(data.organisms, function(d) { return d; });
     org.enter()
 	.append('option')
 	.classed('organism', true)
