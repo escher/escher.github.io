@@ -6,6 +6,8 @@
   <link rel="stylesheet" href="{{boot_css}}"/>
   <link rel="stylesheet" href="{{index_css}}"/>
 
+  <link rel="shortcut icon" href="{{favicon}}" />
+    
   <!-- This font cannot be downloaded. -->
   <script src="//use.edgefonts.net/tulpen-one.js"></script>
 {% endblock %}
@@ -46,9 +48,9 @@
 	  <select id="tools" class="form-control">
 	    <option class="tool" value="viewer">Viewer</option>
 	    <option class="tool" value="builder">Builder</option>
-	    {% if not web_version %}
-	      <option class="tool" value="local_viewer">Viewer (Offline)</option>
-	      <option class="tool" value="local_builder">Builder (Offline)</option>
+	    {% if not web_version and can_dev %}
+	      <option class="tool" value="dev_viewer">Viewer (Dev)</option>
+	      <option class="tool" value="dev_builder">Builder (Dev)</option>
 	    {% endif %}
 	  </select>
 	</div>
@@ -87,7 +89,7 @@
 	      <p>Escher has not yet been published in a peer-reviewed journal,
 		but, in the meantime, you can cite the code by DOI:
 		<a href="http://dx.doi.org/10.5281/zenodo.11712"><img
-		src="https://zenodo.org/badge/6078/zakandrewking/escher.png"><a>.</p>
+		src="https://zenodo.org/badge/6078/zakandrewking/escher.png"></a>.</p>
 	    </li>
 	    <li><h4>I have more questions. Who do I ask?</h4>
 	      <p>You can follow <a href="https://twitter.com/zakandrewking">@zakandrewking</a>
@@ -113,11 +115,16 @@
     </div>
   </footer>
 
-  <script>var data={{data}};</script>
   <script src="{{index_js}}"></script>
-  {% if web_version %}
-    <script src="{{index_gh_pages_js}}"></script>
-  {% else %}
-    <script>setup()</script>
-  {% endif %}
+  <script>
+   {% if web_version %} 
+   // get the models
+   d3.json('{{server_index_url}}', function(d) {
+     var server_index = d, local_index = null;
+     setup(server_index, local_index, '{{map_download}}', false);
+   });
+   {% else %}
+   setup({{server_index}}, {{local_index}}, '{{map_download}}', {{can_dev_js}});
+   {% endif %}   
+  </script>
 {% endblock %}

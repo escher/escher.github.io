@@ -1,31 +1,41 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function, unicode_literals
+
 from escher.quick_server import serve_and_open
-from escher.urls import get_url, model_name_to_url, map_name_to_url
+from escher.urls import get_url 
+from escher.appdirs import user_cache_dir
+from escher.generate_index import index
 
 import os
 from os.path import dirname, abspath, join, isfile, isdir
 from warnings import warn
-from urllib2 import urlopen, HTTPError, URLError
+try:
+    from urllib.request import urlopen
+    from urllib.error import HTTPError, URLError
+except:
+    from urllib2 import urlopen, HTTPError, URLError
 import json
 import shutil
-import appdirs
 import re
 from jinja2 import Environment, PackageLoader, Template
 import codecs
 import random
 import string
+from tornado.escape import url_escape
 
 # set up jinja2 template location
 env = Environment(loader=PackageLoader('escher', 'templates'))
 
+# cache management
+
 def get_cache_dir(name=None):
     """ Get the cache dir as a string.
 
-    name: an optional subdirectory within the cache
+    :param string name: An optional subdirectory within the cache
 
     """
-    cache_dir = join(appdirs.user_cache_dir('escher', appauthor='Zachary King'))
+    cache_dir = join(user_cache_dir('escher', appauthor='Zachary King'))
     if name is not None:
         cache_dir = join(cache_dir, name)
     try:
@@ -34,36 +44,118 @@ def get_cache_dir(name=None):
         pass
     return cache_dir
 
-def clear_cache():
-    """Empty the contents of the cache directory."""
-    cache_dir = get_cache_dir()
+def clear_cache(different_cache_dir=None):
+    """Empty the contents of the cache directory.
+
+    :param string different_cache_dir: (Optional) The directory of another
+                                       cache. This is mainly for testing.
+
+    """
+    if different_cache_dir is None:
+        cache_dir = get_cache_dir()
+    else:
+        cache_dir = different_cache_dir    
+        
     for root, dirs, files in os.walk(cache_dir):
         for f in files:
             os.unlink(join(root, f))
         for d in dirs:
             shutil.rmtree(join(root, d))
 
+def local_index(cache_dir=get_cache_dir()):
+    return index(cache_dir)
+
 def list_cached_maps():
     """Return a list of all cached maps."""
-    try:
-        return [x.replace('.json', '') for x in os.listdir(get_cache_dir(name='maps'))]
-    except OSError:
-        print 'No cached maps'
-        return None
+    return local_index()['maps']
 
 def list_cached_models():
     """Return a list of all cached models."""
-    try:
-        return [x.replace('.json', '') for x in os.listdir(get_cache_dir(name='models'))]
-    except OSError:
-        print 'No cached maps'
-        return None
+    return local_index()['models']
     
-def get_an_id():
-    return unicode(''.join(random.choice(string.ascii_lowercase)
-                           for _ in range(10)))
+# server management
 
-def load_resource(resource, name, safe=False):
+def server_index():
+    url = get_url('server_index', source='web', protocol='https')
+    try:
+        download = urlopen(url)
+    except URLError:
+        raise URLError('Could not contact Escher server')
+    index = json.loads(download.read())
+    return index
+
+def list_available_maps():
+    """Return a list of all maps available on the server"""
+    return server_index()['maps']
+
+def list_available_models():
+    """Return a list of all models available on the server"""
+    return server_index()['models']
+
+# download maps and models
+
+def _json_for_name(name, kind, cache_dir):
+    # check the name
+    name = name.replace('.json', '')
+
+    def match_in_index(name, index, kind):
+        return [(obj['organism'], obj[kind + '_name']) for obj in index[kind + 's']
+                if obj[kind + '_name'] == name]
+    
+    # first check the local index
+    match = match_in_index(name, local_index(cache_dir=cache_dir), kind)
+    if len(match) == 0:
+        path = None
+    else:
+        org, name = match[0]
+        path = join(cache_dir, kind + 's', org, name + '.json')
+
+    if path:
+        # load the file
+        with open(path, 'rb') as f:
+            return f.read().decode('utf-8')
+    # if the file is not present attempt to download
+    else:
+        try:
+            index = server_index()
+        except URLError:
+            raise Exception(('Could not find the %s %s in the cache, and could '
+                             'not connect to the Escher server' % (kind, name)))
+        match = match_in_index(name, server_index(), kind)
+        if len(match) == 0:
+            raise Exception('Could not find the %s %s in the cache or on the server' % (kind, name))
+        org, name = match[0]
+        url = (get_url(kind + '_download', source='web', protocol='https') +
+               '/'.join([url_escape(x, plus=False) for x in [org, name + '.json']]))
+        warn(('Model not in cache. Attempting download from %s' % url))
+        try:
+            download = urlopen(url)
+        except HTTPError:
+            raise ValueError('No %s found in cache or at %s' % (kind, url))
+        data = download.read()
+        # save the file
+        org_path = join(cache_dir, kind + 's', org)
+        try:
+            os.makedirs(org_path)
+        except OSError:
+            pass
+        with open(join(org_path, name + '.json'), 'w') as outfile:
+            outfile.write(data)
+        return data.decode('utf-8')
+
+def model_json_for_name(model_name, cache_dir=get_cache_dir()):
+    return _json_for_name(model_name, 'model', cache_dir)
+   
+def map_json_for_name(map_name, cache_dir=get_cache_dir()):
+    return _json_for_name(map_name, 'map', cache_dir)
+
+# helper functions
+
+def _get_an_id():
+    return (''.join(random.choice(string.ascii_lowercase)
+                    for _ in range(10)))
+
+def _load_resource(resource, name, safe=False):
     """Load a resource that could be a file, URL, or json string."""
     # if it's a url, download it
     if resource.startswith('http://') or resource.startswith('https://'):
@@ -72,14 +164,20 @@ def load_resource(resource, name, safe=False):
         except URLError as err:
             raise err
         else:
-            return download.read()
+            data = download.read()
+            encoding = download.headers.getparam('charset')
+            if encoding:
+                data = data.decode(encoding)
+            else:
+                data = data.decode('utf-8')
+            return data
     # if it's a filepath, load it
     if os.path.exists(resource):
         if (safe):
             raise Exception('Cannot load resource from file with safe mode enabled.')
         try:
-            with open(resource, 'r') as f:
-                loaded_resource = f.read()
+            with open(resource, 'rb') as f:
+                loaded_resource = f.read().decode('utf-8')
             _ = json.loads(loaded_resource)
         except ValueError as err:
             raise ValueError('%s not a valid json file' % name)
@@ -94,8 +192,9 @@ def load_resource(resource, name, safe=False):
         return resource
     raise Exception('Could not load %s.' % name)
 
+
 class Builder(object):
-    """Viewable metabolic map.
+    """A metabolic map that can be viewed, edited, and used to visualize data.
     
     This map will also show metabolic fluxes passed in during consruction.  It
     can be viewed as a standalone html inside a browswer. Alternately, the
@@ -103,41 +202,100 @@ class Builder(object):
 
     Maps are stored in json files and are stored in a cache directory. Maps
     which are not found will be downloaded from a map repository if found.
-
-    Arguments
-    ---------
-    map_name: a string specifying a map to be downloaded from the Escher web server.
     
-    map_json: a json string, or a file path to a json file, or a URL specifying
-    a json file to be downloaded.
+    :param map_name:
 
-    model_name: a string specifying a model to be downloaded from the Escher web
-    server.
+        A string specifying a map to be downloaded from the Escher web server,
+        or loaded from the cache.
     
-    model_json: a json string, or a file path to a json file, or a URL
-    specifying a json file to be downloaded.
+    :param map_json:
 
-    reaction_data: a dictionary with keys that correspond to reaction ids
-    and values that will be mapped to reaction arrows and labels.
+        A JSON string, or a file path to a JSON file, or a URL specifying a JSON
+        file to be downloaded.
 
-    reaction_data: a dictionary with keys that correspond to metabolite ids and
-    values that will be mapped to metabolite nodes and labels.
+    :param model: A Cobra model.
 
-    local_host: a hostname that will be used for any local files in dev
-    mode.
+    :param model_name:
 
-    embedded_css: a css string to be embedded with the Escher SVG.
-
-    id: specify an id to make the javascript data definitions unique. A random
-    id is chosen by default.
+        A string specifying a model to be downloaded from the Escher web server,
+        or loaded from the cache.
     
-    safe: if True, then loading files from the filesytem is not allowed. This is
-    to ensure the safety of using Builder with a web server.
+    :param model_json:
+
+        A JSON string, or a file path to a JSON file, or a URL specifying a JSON
+        file to be downloaded.
+
+    :param embedded_css:
+
+        The CSS (as a string) to be embedded with the Escher SVG.
+    
+    :param reaction_data:
+
+        A dictionary with keys that correspond to reaction ids and values that
+        will be mapped to reaction arrows and labels.
+
+    :param metabolite_data:
+
+        A dictionary with keys that correspond to metabolite ids and values that
+        will be mapped to metabolite nodes and labels.
+
+    :param gene_data:
+
+        A dictionary with keys that correspond to gene ids and values that will
+        be mapped to corresponding reactions.
+
+    :param local_host:
+
+        A hostname that will be used for any local files in dev mode.
+
+    :param id:
+
+        Specify an id to make the javascript data definitions unique. A random
+        id is chosen by default.
+    
+    :param safe:
+
+        If True, then loading files from the filesytem is not allowed. This is
+        to ensure the safety of using Builder with a web server.
+
+    **Keyword Arguments**
+
+    These are defined in the Javascript API:
+
+        - identifiers_on_map
+        - show_gene_reaction_rules
+        - unique_map_id
+        - primary_metabolite_radius
+        - secondary_metabolite_radius
+        - marker_radius
+        - hide_secondary_metabolites
+        - reaction_styles
+        - reaction_compare_style
+        - reaction_scale
+        - reaction_no_data_color
+        - reaction_no_data_size
+        - and_method_in_gene_reaction_rule
+        - metabolite_styles
+        - metabolite_compare_style
+        - metabolite_scale
+        - metabolite_no_data_color
+        - metabolite_no_data_size
+        - highlight_missing_color
+
+    All keyword arguments can also be set on an existing Builder object
+    using setter functions, e.g.:
+
+    .. code:: python
+    
+        my_builder.set_reaction_styles(new_styles)
 
     """
-    def __init__(self, map_name=None, map_json=None, model_name=None,
-                 model_json=None, reaction_data=None, metabolite_data=None,
-                 local_host=None, embedded_css=None, id=None, safe=False):
+    
+    def __init__(self, map_name=None, map_json=None, model=None,
+        model_name=None, model_json=None, embedded_css=None,
+        reaction_data=None, metabolite_data=None, gene_data=None,
+        local_host=None, id=None, safe=False, **kwargs):
+
         self.safe = safe
         
         # load the map
@@ -146,42 +304,49 @@ class Builder(object):
         self.loaded_map_json = None
         if map_name and map_json:
             warn('map_json overrides map_name')
-        self.load_map()
+        self._load_map()
         # load the model
+        self.model = model
         self.model_name = model_name
         self.model_json = model_json
         self.loaded_model_json = None
-        if model_name and model_json:
-            warn('model_json overrides model_name')
-        self.load_model()
+        if sum([x is not None for x in (model, model_name, model_json)]) >= 2:
+            warn('model overrides model_json, and both override model_name')
+        self._load_model()
         # set the args
         self.reaction_data = reaction_data
         self.metabolite_data = metabolite_data
+        self.gene_data = gene_data
         self.local_host = local_host
         
         # remove illegal characters from css
         try:
-            self.embedded_css = unicode(embedded_css.replace('\n', ''))
+            self.embedded_css = (embedded_css.replace('\n', ''))
         except AttributeError:
             self.embedded_css = None
         # make the unique id
-        self.the_id = get_an_id() if id is None else id
+        self.the_id = _get_an_id() if id is None else id
 
         # set up the options
-        self.options = ['reaction_styles',
-                        'auto_reaction_domain',
-                        'reaction_domain',
-                        'reaction_color_range',
-                        'reaction_size_range',
+        self.options = ['identifiers_on_map',
+                        'show_gene_reaction_rules',
+                        'unique_map_id',
+                        'primary_metabolite_radius',
+                        'secondary_metabolite_radius',
+                        'marker_radius',
+                        'hide_secondary_metabolites',
+                        'reaction_styles',
+                        'reaction_compare_style',
+                        'reaction_scale',
                         'reaction_no_data_color',
                         'reaction_no_data_size',
+                        'and_method_in_gene_reaction_rule',
                         'metabolite_styles',
-                        'auto_metabolite_domain',
-                        'metabolite_domain',
-                        'metabolite_color_range',
-                        'metabolite_size_range',
+                        'metabolite_compare_style',
+                        'metabolite_scale',
                         'metabolite_no_data_color',
-                        'metabolite_no_data_size']
+                        'metabolite_no_data_size',
+                        'highlight_missing_color']
         def get_getter_setter(o):
             """Use a closure."""
             # create local fget and fset functions 
@@ -196,70 +361,41 @@ class Builder(object):
             setattr(self.__class__, option, property(fget))
             # add corresponding local variable
             setattr(self, '_%s' % option, None)
+            
+        # set the kwargs
+        for key, val in kwargs.items():
+            try:
+                getattr(self, 'set_%s' % key)(val)
+            except AttributeError:
+                print('Unrecognized keywork argument %s' % key)
         
-    def load_model(self):
-        """Load the model from input model_json using load_resource, or, secondarily,
-           from model_name.
+    def _load_model(self):
+        """Load the model.
 
+        Try first from self.model, second from self.model_json, and
+        third from from self.model_name.
+        
         """
-        model_json = self.model_json
-        if model_json is not None:
-            self.loaded_model_json = load_resource(self.model_json,
-                                                   'model_json',
-                                                   safe=self.safe)
+        if self.model is not None:
+            self.loaded_model_json = cobra.io.to_json(self.model)
+        elif self.model_json is not None:
+            self.loaded_model_json = _load_resource(self.model_json,
+                                                    'model_json',
+                                                    safe=self.safe)
         elif self.model_name is not None:
-            # get the name
-            model_name = self.model_name  
-            model_name = model_name.replace('.json', '')
-            # if the file is not present attempt to download
-            cache_dir = get_cache_dir(name='models')
-            model_filename = join(cache_dir, model_name + '.json')
-            if not isfile(model_filename):
-                model_not_cached = 'Model "%s" not in cache. Attempting download from %s' % \
-                    (model_name, get_url('escher_root'))
-                warn(model_not_cached)
-                try:
-                    model_url = model_name_to_url(model_name)
-                    download = urlopen(model_url)
-                    with open(model_filename, 'w') as outfile:
-                        outfile.write(download.read())
-                except HTTPError:
-                    raise ValueError('No model named %s found in cache or at %s' % \
-                                     (model_name, model_url))
-            with open(model_filename) as f:
-                self.loaded_model_json = f.read()
+            self.loaded_model_json = model_json_for_name(self.model_name)
                 
-    def load_map(self):
-        """Load the map from input map_json using load_resource, or, secondarily,
+    def _load_map(self):
+        """Load the map from input map_json using _load_resource, or, secondarily,
            from map_name.
 
         """
-        map_json = self.map_json
-        if map_json is not None:
-            self.loaded_map_json = load_resource(self.map_json,
-                                                 'map_json',
-                                                 safe=self.safe)
+        if self.map_json is not None:
+            self.loaded_map_json = _load_resource(self.map_json,
+                                                  'map_json',
+                                                  safe=self.safe)
         elif self.map_name is not None:
-            # get the name
-            map_name = self.map_name
-            map_name = map_name.replace('.json', '')
-            # if the file is not present attempt to download
-            cache_dir = get_cache_dir(name='maps')
-            map_filename = join(cache_dir, map_name + '.json')
-            if not isfile(map_filename):
-                map_not_cached = 'Map "%s" not in cache. Attempting download from %s' % \
-                    (map_name, get_url('escher_root'))
-                warn(map_not_cached)
-                try:
-                    map_url = map_name_to_url(self.map_name)
-                    download = urlopen(map_url)
-                    with open(map_filename, 'w') as outfile:
-                        outfile.write(download.read())
-                except HTTPError:
-                    raise ValueError('No map named %s found in cache or at %s' % \
-                                     (map_name, map_url))
-            with open(map_filename) as f:
-                self.loaded_map_json = f.read()
+            self.loaded_map_json = map_json_for_name(self.map_name)
 
     def _embedded_css(self, url_source):
         """Return a css string to be embedded in the SVG.
@@ -276,7 +412,6 @@ class Builder(object):
         """
         if self.embedded_css is not None:
             return self.embedded_css
-     
             
         loc = get_url('builder_embed_css', source=url_source,
                       local_host=self.local_host, protocol='https')
@@ -286,75 +421,84 @@ class Builder(object):
             raise Exception(('Could not find builder_embed_css. Be sure to pass '
                              'a local_host argument to Builder if js_source is dev or local '
                              'and you are in an iPython notebook or a static html file.'))
-        return unicode(download.read().replace('\n', ' '))
+        data = download.read()
+        encoding = r.headers.getparam('charset')
+        if encoding:
+            data = data.decode(encoding)
+        else:
+            data = data.decode('utf-8')
+        return data.replace('\n', ' ')
 
     def _initialize_javascript(self, url_source):
-        javascript = (u"var map_data_{the_id} = {map_data};\n"
-                      u"var cobra_model_{the_id} = {cobra_model};\n"
-                      u"var reaction_data_{the_id} = {reaction_data};\n"
-                      u"var metabolite_data_{the_id} = {metabolite_data};\n"
-                      u"var css_string_{the_id} = '{style}';\n").format(
+        javascript = ("var map_data_{the_id} = {map_data};\n"
+                      "var cobra_model_{the_id} = {cobra_model};\n"
+                      "var reaction_data_{the_id} = {reaction_data};\n"
+                      "var metabolite_data_{the_id} = {metabolite_data};\n"
+                      "var gene_data_{the_id} = {gene_data};\n"
+                      "var embedded_css_{the_id} = '{style}';\n").format(
                           the_id=self.the_id,
                           map_data=(self.loaded_map_json if self.loaded_map_json else
-                                    u'null'),
+                                    'null'),
                           cobra_model=(self.loaded_model_json if self.loaded_model_json else
-                                       u'null'),
+                                       'null'),
                           reaction_data=(json.dumps(self.reaction_data) if self.reaction_data else
-                                         u'null'),
+                                         'null'),
                           metabolite_data=(json.dumps(self.metabolite_data) if self.metabolite_data else
-                                           u'null'),
+                                           'null'),
+                          gene_data=(json.dumps(self.gene_data) if self.gene_data else
+                                           'null'),
                           style=self._embedded_css(url_source))
         return javascript
 
     def _draw_js(self, the_id, enable_editing, menu, enable_keys, dev,
-                 fill_screen, scroll_behavior, auto_set_data_domain,
-                 never_ask_before_quit, js_url_parse):
-        draw = (u"options = {{ selection: d3.select('#{the_id}'),\n"
-                u"enable_editing: {enable_editing},\n"
-                u"menu: {menu},\n"
-                u"enable_keys: {enable_keys},\n"
-                u"scroll_behavior: {scroll_behavior},\n"
-                u"fill_screen: {fill_screen},\n"
-                u"map: map_data_{the_id},\n"
-                u"cobra_model: cobra_model_{the_id},\n"
-                u"auto_set_data_domain: {auto_set_data_domain},\n"
-                u"reaction_data: reaction_data_{the_id},\n"
-		u"metabolite_data: metabolite_data_{the_id},\n"
-                u"never_ask_before_quit: {never_ask_before_quit},\n"
-                u"css: css_string_{the_id},\n").format(
+                 fill_screen, scroll_behavior,
+                 never_ask_before_quit, static_site_url_parse):
+        draw = ("options = {{ enable_editing: {enable_editing},\n"
+                "menu: {menu},\n"
+                "enable_keys: {enable_keys},\n"
+                "scroll_behavior: {scroll_behavior},\n"
+                "fill_screen: {fill_screen},\n"
+                "reaction_data: reaction_data_{the_id},\n"
+                "metabolite_data: metabolite_data_{the_id},\n"
+                "gene_data: gene_data_{the_id},\n"
+                "never_ask_before_quit: {never_ask_before_quit},\n").format(
                     the_id=the_id,
                     enable_editing=json.dumps(enable_editing),
                     menu=json.dumps(menu),
                     enable_keys=json.dumps(enable_keys),
                     scroll_behavior=json.dumps(scroll_behavior),
                     fill_screen=json.dumps(fill_screen),
-                    auto_set_data_domain=json.dumps(auto_set_data_domain),
                     never_ask_before_quit=json.dumps(never_ask_before_quit))
         # Add the specified options
         for option in self.options:
             val = getattr(self, option)
             if val is None: continue
-            draw = draw + u"{option}: {value},\n".format(
+            draw = draw + "{option}: {value},\n".format(
                 option=option,
                 value=json.dumps(val)) 
-        draw = draw + u"};\n\n"
+        draw = draw + "};\n\n"
             
         # dev needs escher.
         dev_str = '' if dev else 'escher.'
-        # parse the url in javascript
-        if js_url_parse:
-            o = u'options = %sutils.parse_url_components(window, options);\n' % (dev_str)
+        # parse the url in javascript, for building a static site
+        if static_site_url_parse:
+            # get the relative location of the escher_download urls
+            map_d= get_url('map_download', source='local')
+            model_d= get_url('model_download', source='local')
+            o = ('%sstatic.load_map_model_from_url("%s", "%s", \n%s, \nfunction(map_data_%s, model_data_%s) {\n' %
+                 (dev_str, map_d, model_d, json.dumps(local_index()), the_id, the_id))
             draw = draw + o;
         # make the builder
-        draw = draw + '%sBuilder(options);\n' % dev_str
-
+        draw = draw + ('{dev_str}Builder(map_data_{the_id}, cobra_model_{the_id}, embedded_css_{the_id}, '
+                       'd3.select("#{the_id}"), options);\n'.format(dev_str=dev_str, the_id=the_id))
+        if static_site_url_parse:
+            draw = draw + '});\n'
         return draw
     
     def _get_html(self, js_source='web', menu='none', scroll_behavior='pan',
                   html_wrapper=False, enable_editing=False, enable_keys=False,
                   minified_js=True, fill_screen=False, height='800px',
-                  auto_set_data_domain=True, never_ask_before_quit=False,
-                  js_url_parse=False):
+                  never_ask_before_quit=False, static_site_url_parse=False):
         """Generate the Escher HTML.
 
         Arguments
@@ -386,14 +530,11 @@ class Builder(object):
 
         height: The height of the HTML container.
 
-        auto_set_data_domain: Automatically adjust the color and size scale
-        domains as new data is applied.
-
         never_ask_before_quit: Never display an alert asking if you want to
         leave the page. By default, this message is displayed if enable_editing
         is True.
 
-        js_url_parse: Use javascript to parse the URL options. Used for
+        static_site_url_parse: Use javascript to parse the URL options. Used for
         generating static pages (see static_site.py), and only works if maps and
         models are available locally.
         
@@ -412,11 +553,11 @@ class Builder(object):
 
         # if height is not a string
         if type(height) is int:
-            height = u"%dpx" % height
+            height = "%dpx" % height
         elif type(height) is float:
-            height = u"%fpx" % height
+            height = "%fpx" % height
         elif type(height) is str:
-            height = unicode(height)
+            height = str(height)
             
         # set the proper urls 
         url_source = 'local' if (js_source=='local' or js_source=='dev') else 'web'
@@ -434,6 +575,11 @@ class Builder(object):
                         get_url('boot_js', url_source, self.local_host))
         require_js_url = get_url('require_js', url_source, self.local_host)                     
         escher_css_url = get_url('builder_css', url_source, self.local_host)
+        favicon_url = get_url('favicon', url_source, self.local_host)
+
+        lh_string = ('' if self.local_host is None else
+                     (self.local_host + '/' if not self.local_host.endswith('/') else
+                      self.local_host))
         
         html = content.render(id=self.the_id,
                               height=height,
@@ -446,170 +592,183 @@ class Builder(object):
                               require_js=require_js_url,
                               escher_css=escher_css_url,
                               wrapper=html_wrapper,
-                              host=self.local_host,
+                              favicon=favicon_url,
+                              host=lh_string,
                               initialize_js=self._initialize_javascript(url_source),
                               draw_js=self._draw_js(self.the_id, enable_editing,
                                                     menu, enable_keys, is_dev,
                                                     fill_screen, scroll_behavior,
-                                                    auto_set_data_domain,
                                                     never_ask_before_quit,
-                                                    js_url_parse))
+                                                    static_site_url_parse))
         return html
 
     def display_in_notebook(self, js_source='web', menu='zoom', scroll_behavior='none',
-                            enable_editing=False, enable_keys=False, minified_js=True, 
-                            height=500, auto_set_data_domain=True):
-        """Display the plot in the notebook.
+                            minified_js=True, height=500):
+        """Embed the Map within the current IPython Notebook.
 
-        Arguments
-        --------
+        :param string js_source:
 
-        js_source: Can be one of the following:
-            'web' (Default) - use js files from zakandrewking.github.io/escher.
-            'local' - use compiled js files in the local escher installation. Works offline.
-            'dev' - use the local, uncompiled development files. Works offline.
-
-        menu: Menu bar options include:
-            'none' - No menu or buttons.
-            'zoom' - Just zoom buttons.
-            Note: The 'all' menu option does not work in an IPython notebook.
-
-        scroll_behavior: Scroll behavior options:
-            'pan' - Pan the map.
-            'zoom' - Zoom the map.
-            'none' - (Default) No scroll events.
-
-        enable_editing: Enable the editing modes (build, rotate, etc.).
-
-        enable_keys: Enable keyboard shortcuts.
-
-        minified_js: If True, use the minified version of js files. If js_source
-        is 'dev', then this option is ignored.
-
-        height: Height of the HTML container.
-
-        auto_set_data_domain: Automatically adjust the color and size scale
-        domains as new data is applied.
+            Can be one of the following:
+            
+            - *web* (Default) - Use JavaScript files from zakandrewking.github.io/escher.
+            - *local* - Use compiled JavaScript files in the local Escher installation. Works offline.
+            - *dev* - Use the local, uncompiled development files. Works offline.
+            
+        :param string menu: Menu bar options include:
         
+            - *none* - No menu or buttons.
+            - *zoom* - Just zoom buttons.
+            - Note: The *all* menu option does not work in an IPython notebook.
+
+        :param string scroll_behavior: Scroll behavior options:
+        
+            - *pan* - Pan the map.
+            - *zoom* - Zoom the map.
+            - *none* - (Default) No scroll events.
+
+        :param Boolean minified_js:
+
+            If True, use the minified version of js files. If js_source is
+            *dev*, then this option is ignored.
+
+        :param height: Height of the HTML container.
+
         """
         html = self._get_html(js_source=js_source, menu=menu, scroll_behavior=scroll_behavior,
-                              html_wrapper=False, enable_editing=enable_editing, enable_keys=enable_keys,
+                              html_wrapper=False, enable_editing=False, enable_keys=False,
                               minified_js=minified_js, fill_screen=False, height=height,
-                              auto_set_data_domain=auto_set_data_domain, never_ask_before_quit=True)
+                              never_ask_before_quit=True)
         if menu=='all':
             raise Exception("The 'all' menu option cannot be used in an IPython notebook.")
         # import here, in case users don't have requirements installed
-        from IPython.display import HTML
+        try:
+            from IPython.display import HTML
+        except ImportError:
+            raise Exception('You need to be using the IPython notebook for this function to work')
         return HTML(html)
 
     
     def display_in_browser(self, ip='127.0.0.1', port=7655, n_retries=50, js_source='web',
                            menu='all', scroll_behavior='pan', enable_editing=True, enable_keys=True,
-                           minified_js=True, auto_set_data_domain=True, never_ask_before_quit=False):
+                           minified_js=True, never_ask_before_quit=False):
         """Launch a web browser to view the map.
 
-        Arguments
-        --------
+        :param ip: The IP address to serve the map on.
 
-        js_source: Can be one of the following:
-            'web' - use js files from zakandrewking.github.io/escher.
-            'local' - use compiled js files in the local escher installation. Works offline.
-            'dev' - use the local, uncompiled development files. Works offline.
+        :param port:
 
-        menu: Menu bar options include:
-            'none' - No menu or buttons.
-            'zoom' - Just zoom buttons (does not require bootstrap).
-            'all' - Menu and button bar (requires bootstrap).
+            The port to serve the map on. If specified the port is occupied,
+            then a random free port will be used.
 
-        scroll_behavior: Scroll behavior options:
-            'pan' - (Default) Pan the map.
-            'zoom' - Zoom the map.
-            'none' - No scroll events.
+        :param int n_retries:
+
+            The number of times the server will try to find a port before
+            quitting.
             
-        enable_editing: Enable the editing modes (build, rotate, etc.).
+        :param string js_source:
 
-        enable_keys: Enable keyboard shortcuts.
+            Can be one of the following:
+            
+            - *web* (Default) - Use JavaScript files from zakandrewking.github.io/escher.
+            - *local* - Use compiled JavaScript files in the local Escher installation. Works offline.
+            - *dev* - Use the local, uncompiled development files. Works offline.
 
-        minified_js: If True, use the minified version of js files. If js_source
-        is 'dev', then this option is ignored.
-
-        height: Height of the HTML container.
-
-        auto_set_data_domain: Automatically adjust the color and size scale
-        domains as new data is applied.
+        :param string menu: Menu bar options include:
         
-        never_ask_before_quit: Never display an alert asking if you want to
-        leave the page. By default, this message is displayed if enable_editing
-        is True.
+            - *none* - No menu or buttons.
+            - *zoom* - Just zoom buttons.
+            - *all* (Default) - Menu and button bar (requires Bootstrap).
+
+        :param string scroll_behavior: Scroll behavior options:
+        
+            - *pan* - Pan the map.
+            - *zoom* - Zoom the map.
+            - *none* (Default) - No scroll events.
+                
+        :param Boolean enable_editing: Enable the map editing modes.
+
+        :param Boolean enable_keys: Enable keyboard shortcuts.
+
+        :param Boolean minified_js:
+
+            If True, use the minified version of js files. If js_source is
+            *dev*, then this option is ignored.
+
+        :param Boolean never_ask_before_quit:
+
+            Never display an alert asking if you want to leave the page. By
+            default, this message is displayed if enable_editing is True.
 
         """
         html = self._get_html(js_source=js_source, menu=menu, scroll_behavior=scroll_behavior,
                               html_wrapper=True, enable_editing=enable_editing, enable_keys=enable_keys,
                               minified_js=minified_js, fill_screen=True, height="100%",
-                              auto_set_data_domain=auto_set_data_domain,
                               never_ask_before_quit=never_ask_before_quit)
         serve_and_open(html, ip=ip, port=port, n_retries=n_retries)
         
     def save_html(self, filepath=None, js_source='web', menu='all', scroll_behavior='pan',
                   enable_editing=True, enable_keys=True, minified_js=True,
-                  auto_set_data_domain=True, never_ask_before_quit=False,
-                  js_url_parse=False):
+                  never_ask_before_quit=False, static_site_url_parse=False):
         """Save an HTML file containing the map.
 
-        Arguments
-        --------
+        :param string filepath: The HTML file will be saved to this location.
 
-        js_source: Can be one of the following:
-            'web' - use js files from zakandrewking.github.io/escher.
-            'local' - use compiled js files in the local escher installation. Works offline.
-            'dev' - use the local, uncompiled development files. Works offline.
+        :param string js_source:
 
-        menu: Menu bar options include:
-            'none' - No menu or buttons.
-            'zoom' - Just zoom buttons (does not require bootstrap).
-            'all' - Menu and button bar (requires bootstrap).
-
-        scroll_behavior: Scroll behavior options:
-            'pan' - (Default) Pan the map.
-            'zoom' - Zoom the map.
-            'none' - No scroll events.
+            Can be one of the following:
             
-        enable_editing: Enable the editing modes (build, rotate, etc.).
-
-        enable_keys: Enable keyboard shortcuts.
-
-        minified_js: If True, use the minified version of js files. If js_source
-        is 'dev', then this option is ignored.
-
-        height: Height of the HTML container.
-
-        auto_set_data_domain: Automatically adjust the color and size scale
-        domains as new data is applied.
+            - *web* (Default) - Use JavaScript files from zakandrewking.github.io/escher.
+            - *local* - Use compiled JavaScript files in the local Escher installation. Works offline.
+            - *dev* - Use the local, uncompiled development files. Works offline.
+            
+        :param string menu: Menu bar options include:
         
-        never_ask_before_quit: Never display an alert asking if you want to
-        leave the page. By default, this message is displayed if enable_editing
-        is True.
+            - *none* - No menu or buttons.
+            - *zoom* - Just zoom buttons.
+            - *all* (Default) - Menu and button bar (requires Bootstrap).
 
-        js_url_parse: Use javascript to parse the URL options. Used for
-        generating static pages (see static_site.py), and only works if maps and
-        models are available locally.
+        :param string scroll_behavior: Scroll behavior options:
+        
+            - *pan* - Pan the map.
+            - *zoom* - Zoom the map.
+            - *none* (Default) - No scroll events.
+            
+        :param Boolean enable_editing: Enable the map editing modes.
+
+        :param Boolean enable_keys: Enable keyboard shortcuts.
+
+        :param Boolean minified_js:
+
+            If True, use the minified version of js files. If js_source is
+            *dev*, then this option is ignored.
+
+        :param number height: Height of the HTML container.
+
+        :param Boolean never_ask_before_quit:
+
+            Never display an alert asking if you want to leave the page. By
+            default, this message is displayed if enable_editing is True.
+
+        :param Boolean static_site_url_parse:
+
+            Use JavaScript to parse the URL options. Used for generating static
+            pages (see static_site.py), and only works if maps and models are
+            available locally.
 
         """
         html = self._get_html(js_source=js_source, menu=menu, scroll_behavior=scroll_behavior,
                               html_wrapper=True, enable_editing=enable_editing, enable_keys=enable_keys,
                               minified_js=minified_js, fill_screen=True, height="100%",
-                              auto_set_data_domain=auto_set_data_domain,
                               never_ask_before_quit=never_ask_before_quit,
-                              js_url_parse=js_url_parse)
+                              static_site_url_parse=static_site_url_parse)
         if filepath is not None:
-            with codecs.open(filepath, 'w', encoding='utf-8') as f:
-                f.write(html)
+            with open(filepath, 'wb') as f:
+                f.write(html.encode('utf-8'))
             return filepath
         else:
             from tempfile import mkstemp
             from os import write, close
-            os_file, filename = mkstemp(suffix=".html")
-            write(os_file, unicode(html).encode('utf-8'))
+            os_file, filename = mkstemp(suffix=".html", text=False) # binary
+            write(os_file, html.encode('utf-8'))
             close(os_file)
             return filename
-    

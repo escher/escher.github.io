@@ -1,4 +1,4 @@
-define(["lib/vkbeautify"], function(vkbeautify) {
+define(["lib/vkbeautify", "lib/FileSaver"], function(vkbeautify, FileSaver) {
     return { set_options: set_options,
              setup_svg: setup_svg,
 	     remove_child_nodes: remove_child_nodes,
@@ -10,17 +10,20 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	     draw_an_object: draw_an_object,
 	     draw_a_nested_object: draw_a_nested_object,
 	     make_array: make_array,
+             make_array_ref: make_array_ref,
 	     compare_arrays: compare_arrays,
 	     array_to_object: array_to_object,
 	     clone: clone,
 	     extend: extend,
 	     unique_concat: unique_concat,
 	     object_slice_for_ids: object_slice_for_ids,
+	     object_slice_for_ids_ref: object_slice_for_ids_ref,
 	     c_plus_c: c_plus_c,
 	     c_minus_c: c_minus_c,
 	     c_times_scalar: c_times_scalar,
 	     download_json: download_json,
 	     load_json: load_json,
+	     load_json_or_csv: load_json_or_csv,
 	     export_svg: export_svg,
 	     rotate_coords_recursive: rotate_coords_recursive,
 	     rotate_coords: rotate_coords,
@@ -31,23 +34,42 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	     check_undefined: check_undefined,
 	     compartmentalize: compartmentalize,
 	     decompartmentalize: decompartmentalize,
-	     check_r: check_r,
 	     mean: mean,
+             median: median,
+             quartiles: quartiles,
+             random_characters: random_characters,
 	     check_for_parent_tag: check_for_parent_tag,
 	     name_to_url: name_to_url,
 	     parse_url_components: parse_url_components };
 
     // definitions
-    function set_options(options, defaults) {
-        if (options===undefined) return defaults;
+    function set_options(options, defaults, must_be_float) {
+        if (options === undefined || options === null)
+            return defaults;
         var i = -1,
-            out = defaults;
-	for (var key in options) {
-	    var val = options[key];
-	    if (val===undefined) {
-		val = null;
-	    }
-	    out[key] = val;
+            out = {};
+	for (var key in defaults) {
+            var has_key = ((key in options) &&
+                           (options[key] !== null) &&
+                           (options[key] !== undefined));
+            var val = (has_key ? options[key] : defaults[key]);
+            if (must_be_float && key in must_be_float) {
+                val = parseFloat(val);
+                if (isNaN(val)) {
+                    if (has_key) {
+                        console.warn('Bad float for option ' + key);
+                        val = parseFloat(defaults[key]);
+                        if (isNaN(val)) {
+                            console.warn('Bad float for default ' + key);
+                            val = null;
+                        }
+                    } else {
+                        console.warn('Bad float for default ' + key);
+                        val = null;
+                    }
+                }
+            }
+            out[key] = val;
 	}
         return out;
     }
@@ -168,7 +190,10 @@ define(["lib/vkbeautify"], function(vkbeautify) {
     function setup_defs(svg, style) {
         // add stylesheet
         svg.select("defs").remove();
-        var defs = svg.append("defs");
+	var defs = svg.append("defs");
+	// make sure the defs is the first node
+	var node = defs.node();
+	node.parentNode.insertBefore(node, node.parentNode.firstChild);
         defs.append("style")
             .attr("type", "text/css")
             .text(style);
@@ -178,7 +203,12 @@ define(["lib/vkbeautify"], function(vkbeautify) {
     function draw_an_object(container_sel, parent_node_selector, children_selector,
 			    object, id_key, create_function, update_function,
 			    exit_function) {
-	/** Run through the d3 data binding steps for an object.
+	/** Run through the d3 data binding steps for an object. Also checks to
+            make sure none of the values in the *object* are undefined, and
+            ignores those.
+
+         The create_function, update_function, and exit_function CAN modify the
+         input data object.
 
 	 Arguments
 	 ---------
@@ -201,10 +231,20 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 
 	 exit_function: A function for exit selection.
 	 
-	 */
+	*/
+        var draw_object = {};
+        for (var id in object) {
+            if (object[id] === undefined) {
+                console.warn('Undefined value for id ' + id + ' in object. Ignoring.');
+            } else {
+                draw_object[id] = object[id];
+            }
+        }
+        
 	var sel = container_sel.select(parent_node_selector)
 		.selectAll(children_selector)
-		.data(make_array(object, id_key), function(d) { return d[id_key]; });
+		.data(make_array_ref(draw_object, id_key),
+                      function(d) { return d[id_key]; });
 	// enter: generate and place reaction
 	if (create_function)
 	    sel.enter().call(create_function);
@@ -221,6 +261,9 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 				  exit_function) {
 	/** Run through the d3 data binding steps for an object that is nested
 	 within another element with d3 data.
+
+         The create_function, update_function, and exit_function CAN modify the
+         input data object.
 
 	 Arguments
 	 ---------
@@ -244,7 +287,7 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	 */
 	var sel = container_sel.selectAll(children_selector)
 	    .data(function(d) {
-		return make_array(d[object_data_key], id_key);
+		return make_array_ref(d[object_data_key], id_key);
 	    }, function(d) { return d[id_key]; });
 	// enter: generate and place reaction
 	if (create_function)
@@ -270,6 +313,23 @@ define(["lib/vkbeautify"], function(vkbeautify) {
         return array;
     }
 
+    function make_array_ref(obj, id_key) {
+        /** Turn the object into an array, but only by reference. Faster than
+            make_array.
+
+         */
+        var array = [];
+        for (var key in obj) {
+            // copy object
+            var it = obj[key];
+            // add key as 'id'
+            it[id_key] = key;
+            // add object to array
+            array.push(it);
+        }
+        return array;
+    }
+
     function compare_arrays(a1, a2) {
 	/** Compares two simple (not-nested) arrays.
 
@@ -286,27 +346,31 @@ define(["lib/vkbeautify"], function(vkbeautify) {
     }
 
     function array_to_object(arr) {
+        /** Convert an array of objects to an object with all keys and values
+         that are arrays of the same length as arr. Fills in spaces with null.
+
+         For example, [ { a: 1 }, { b: 2 }] becomes { a: [1, null], b: [null, 2] }.
+
+         */
+        // new object
 	var obj = {};
-	for (var i=0, l=arr.length; i<l; i++) { // 0
-	    var a = arr[i];
-	    for (var id in a) {
-		if (id in obj) {
-		    obj[id][i] = a[id];
-		} else {
+        // for each element of the array
+	for (var i = 0, l = arr.length; i < l; i++) {
+	    var column = arr[i],
+                keys = Object.keys(column);
+            for (var k = 0, nk = keys.length; k < nk; k++) {
+                var id = keys[k];
+		if (!(id in obj)) {
 		    var n = [];
-		    // fill leading spaces with null
-		    for (var j=0; j<i; j++) {
+		    // fill spaces with null
+		    for (var j = 0; j < l; j++) {
 			n[j] = null;
 		    }
-		    n[i] = a[id];
+		    n[i] = column[id];
 		    obj[id] = n;
-		}
-	    }
-	    // fill trailing spaces with null
-	    for (var id in obj) {
-		for (var j=obj[id].length; j<=i; j++) {
-		    obj[id][j] = null;
-		}
+		} else {
+		    obj[id][i] = column[id];
+                }
 	    }
 	}
 	return obj;
@@ -334,17 +398,30 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	throw new Error("Unable to copy obj! Its type isn't supported.");
     }
 
-    function extend(obj1, obj2) {
-	/** Extends obj1 with keys/values from obj2.
+    function extend(obj1, obj2, overwrite) {
+	/** Extends obj1 with keys/values from obj2. Performs the extension
+	    cautiously, and does not override attributes, unless the overwrite
+	    argument is true.
 
-	 Performs the extension cautiously, and does not override attributes.
+	    Arguments
+	    ---------
 
-	 */
+	    obj1: Object to extend
+	    
+	    obj2: Object with which to extend.
+
+	    overwrite: (Optional, Default false) Overwrite attributes in obj1.
+
+	*/
+
+	if (overwrite === undefined)
+	    overwrite = false;
+	
 	for (var attrname in obj2) { 
-	    if (!(attrname in obj1))
+	    if (!(attrname in obj1) || overwrite) // UNIT TEST This
 		obj1[attrname] = obj2[attrname];
 	    else
-		console.error('Attribute ' + attrname + ' already in object.');
+		throw new Error('Attribute ' + attrname + ' already in object.');
 	}
     }
 
@@ -379,6 +456,28 @@ define(["lib/vkbeautify"], function(vkbeautify) {
         }
 	return subset;
     }
+    
+    function object_slice_for_ids_ref(obj, ids) {
+	/** Return a reference of the object with just the given ids. Faster
+	 than object_slice_for_ids.
+	 
+	 Arguments
+	 ---------
+
+	 obj: An object.
+
+	 ids: An array of id strings.
+
+	 */
+        var subset = {}, i = -1;
+        while (++i<ids.length) {
+	    subset[ids[i]] = obj[ids[i]];
+        }
+        if (ids.length != Object.keys(subset).length) {
+	    console.warn('did not find correct reaction subset');
+        }
+	return subset;
+    }
 
     function c_plus_c(coords1, coords2) {
 	if (coords1 === null || coords2 === null || 
@@ -399,42 +498,138 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	return { "x": coords.x * scalar,
 		 "y": coords.y * scalar };
     }
-
+    
     function download_json(json, name) {
-        var a = document.createElement('a');
-        a.download = name + '.json'; // file name
-	var j = JSON.stringify(json);
-        a.setAttribute("href-lang", "application/json");
-        a.href = 'data:application/json,' + j;
-        // <a> constructed, simulate mouse click on it
-        var ev = document.createEvent("MouseEvents");
-        ev.initMouseEvent("click", true, false, self, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-        a.dispatchEvent(ev);
+	/** Download json file in a blob.
 
-        function utf8_to_b64(str) {
-            return window.btoa(unescape(encodeURIComponent( str )));
-        }
+	 */
+	var j = JSON.stringify(json),
+	    blob = new Blob([j], {type: "octet/stream"});
+	FileSaver(blob, name + '.json');
     }
 
-    function load_json(f, callback) {
+    function load_json(f, callback, pre_fn, failure_fn) {
+	/** Try to load the file as JSON.
+
+	    Arguments
+	    ---------
+
+	    f: The file path
+
+	    callback: A callback function that accepts arguments: error, data.
+
+            pre_fn: (optional) A function to call before loading the data.
+
+            failure_fn: (optional) A function to call if the load fails or is aborted.
+            
+	*/
 	// Check for the various File API support.
 	if (!(window.File && window.FileReader && window.FileList && window.Blob))
 	    callback("The File APIs are not fully supported in this browser.", null);
 
-	// The following is not a safe assumption.
-	// if (!f.type.match("application/json"))
-	//     callback.call(target, "Not a json file.", null);
-
 	var reader = new window.FileReader();
 	// Closure to capture the file information.
 	reader.onload = function(event) {
-	    var json = JSON.parse(event.target.result);
-	    callback(null, json);
+	    var result = event.target.result,
+		data;
+	    // try JSON
+	    try {
+		data = JSON.parse(result);
+	    } catch (e) {
+		// if it failed, return the error
+		callback(e, null);
+		return;
+	    }
+	    // if successful, return the data
+	    callback(null, data);
         };
+        if (pre_fn !== undefined && pre_fn !== null) {
+            try { pre_fn(); }
+            catch (e) { console.warn(e); }
+        }
+        reader.onabort = function(event) {
+            try { failure_fn(); }
+            catch (e) { console.warn(e); }
+        }
+        reader.onerror = function(event) {
+            try { failure_fn(); }
+            catch (e) { console.warn(e); }
+        }
 	// Read in the image file as a data URL.
 	reader.readAsText(f);
     }
+    
+    function load_json_or_csv(f, csv_converter, callback, pre_fn, failure_fn,
+                              debug_event) {
+	/** Try to load the file as JSON or CSV (JSON first).
 
+	    Arguments
+	    ---------
+
+	    f: The file path
+
+	    csv_converter: A function to convert the CSV output to equivalent JSON.
+
+	    callback: A callback function that accepts arguments: error, data.
+
+            pre_fn: (optional) A function to call before loading the data.
+
+            failure_fn: (optional) A function to call if the load fails or is aborted.
+
+	    debug_event: (optional) An event, with a string at
+	    event.target.result, to load as though it was the contents of a
+	    loaded file.
+
+	*/
+	// Check for the various File API support.
+	if (!(window.File && window.FileReader && window.FileList && window.Blob))
+	    callback("The File APIs are not fully supported in this browser.", null);
+
+	var reader = new window.FileReader(),
+	    // Closure to capture the file information.
+	    onload_function = function(event) {
+                
+		var result = event.target.result,
+		    data, errors;
+		// try JSON
+		try {
+		    data = JSON.parse(result);
+		} catch (e) {
+		    errors = 'JSON error: ' + e;
+		    
+		    // try csv
+		    try {
+			data = csv_converter(d3.csv.parseRows(result));
+		    } catch (e) {
+			// if both failed, return the errors
+			callback(errors + '\nCSV error: ' + e, null);
+			return;
+		    }
+		}
+		// if successful, return the data
+		callback(null, data);
+            };
+	if (debug_event !== undefined && debug_event !== null) {
+	    console.warn('Debugging load_json_or_csv');
+	    return onload_function(debug_event);
+	}
+        if (pre_fn !== undefined && pre_fn !== null) {
+            try { pre_fn(); }
+            catch (e) { console.warn(e); }
+        }
+        reader.onabort = function(event) {
+            try { failure_fn(); }
+            catch (e) { console.warn(e); }
+        }
+        reader.onerror = function(event) {
+            try { failure_fn(); }
+            catch (e) { console.warn(e); }
+        }
+	// Read in the image file as a data URL.
+	reader.onload = onload_function;
+	reader.readAsText(f);
+    }
+    
     function export_svg(name, svg_sel, do_beautify) {
         var a = document.createElement('a'), xml, ev;
         a.download = name + '.svg'; // file name
@@ -546,53 +741,44 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	}
     }
 
-    function check_r(o, spec, can_be_none) {
-	if (typeof spec == "string") {
-	    var the_type;
-	    if (spec=='String') {
-		the_type = function(x) { return typeof x == "string"; };
-	    } else if (spec=="Float") {
-		the_type = function(x) { return typeof x == "number"; };
-	    } else if (spec=="Integer") {
-		the_type = function(x) { return (typeof x == "number") &&
-					 (parseFloat(x,10) == parseInt(x,10)); };
-	    } else if (spec=="Boolean") {
-		the_type = function(x) { return typeof x == "boolean"; };
-	    } else if (spec!="*") {
-		throw new Error("Bad spec string: " + spec);
-	    }
-	    if (!the_type(o)) {
-		throw new Error('Bad type: '+String(o)+' should be '+spec);
-	    }
-	} else if (spec instanceof Array) {
-	    o.forEach(function(x) {
-		check_r(x, spec[0], can_be_none);
-	    });
-	} else { // dictionary/object
-	    var key = Object.keys(spec)[0];
-	    if (key == "*") {
-		for (var k in o) {
-		    if (o[k]===null && can_be_none.indexOf(k)!=-1) 
-			continue;
-		    check_r(o[k], spec[key], can_be_none);
-		}
-	    } else {
-		for (var k in spec) {
-		    if (!(k in o)) {
-			throw new Error('Missing key: %s' % k);
-		    };
-		    if (o[k]===null && can_be_none.indexOf(k)!=-1) 
-			continue;
-		    check_r(o[k], spec[k], can_be_none);
-		}
-	    }
-	}
-    }
-
     function mean(array) {
 	var sum = array.reduce(function(a, b) { return a + b; });
 	var avg = sum / array.length;
 	return avg;
+    }
+
+    function median(array) {
+        array.sort(function(a, b) { return a - b; });
+        var half = Math.floor(array.length / 2);
+        if(array.length % 2 == 1)
+            return array[half];
+        else
+            return (array[half-1] + array[half]) / 2.0;
+    }
+
+    function quartiles(array) {
+        array.sort(function(a, b) { return a - b; });
+        var half = Math.floor(array.length / 2);
+        if (array.length == 1)
+            return [ array[0], array[0], array[0] ];
+        else if (array.length % 2 == 1)
+            return [ median(array.slice(0, half)),
+                     array[half],
+                     median(array.slice(half + 1)) ];
+        else
+            return [ median(array.slice(0, half)),
+                     (array[half-1] + array[half]) / 2.0,
+                     median(array.slice(half)) ];
+    }
+
+    function random_characters(num) {
+        // Thanks to @csharptest.net
+        // http://stackoverflow.com/questions/1349404/generate-a-string-of-5-random-characters-in-javascript
+        var text = '',
+            possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        for (var i = 0; i < num; i++)
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        return text;
     }
 
     function check_for_parent_tag(el, tag) {
@@ -615,40 +801,28 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	return false;
     }
 
-    function name_to_url(name, download_url, type) {
-	/** Convert short name to url.
-
+    function name_to_url(name, download_url) {
+	/** Convert model or map name to url.
+	 
 	 Arguments
 	 ---------
 
-	 name: The short name, e.g. e_coli:iJO1366:central_metabolism.
+	 name: The short name, e.g. e_coli.iJO1366.central_metabolism.
 
-	 download_url: The url to prepend. (Can be null)
+	 download_url: The url to prepend (optional).
 
-	 type: Either 'model' or 'map'.
+	*/
 
-	 */
-
-	var parts = name.split(':'),
-	    longname;
-	if (['model', 'map'].indexOf(type) == -1)
-	    throw Error('Bad type: ' + type);
-	if (parts.length != (type=='model' ? 2 : 3))
-            throw Error('Bad ' + type + ' name');
-	if (type=='model')
-	    longname = ['organisms', parts[0], 'models', parts[1]+'.json'].join('/');
-	else
-	    longname = ['organisms', parts[0], 'models', parts[1], 'maps', parts[2]+'.json'].join('/');
-	if (download_url!==null) {
+	if (download_url !== undefined && download_url !== null) {
 	    // strip download_url
 	    download_url = download_url.replace(/^\/|\/$/g, '');
-	    longname = [download_url, longname].join('/');
+	    name = [download_url, name].join('/');
 	}
 	// strip final path
-	return longname.replace(/^\/|\/$/g, '');
+	return name.replace(/^\/|\/$/g, '') + '.json';
     }
 
-    function parse_url_components(the_window, options, download_url) {
+    function parse_url_components(the_window, options) {
 	/** Parse the URL and return options based on the URL arguments.
 
 	 Arguments
@@ -659,35 +833,25 @@ define(["lib/vkbeautify"], function(vkbeautify) {
 	 options: (optional) an existing options object to which new options
 	 will be added. Overwrites existing arguments in options.
 
-	 map_download_url: (optional) If map_name is in options, then add map_path
-	 to options, with this url prepended.
-
-	 model_download_url: (optional) If model_name is in options, then add model_path
-	 to options, with this url prepended.
-
 	 Adapted from http://stackoverflow.com/questions/979975/how-to-get-the-value-from-url-parameter
 
 	 */
 	if (options===undefined) options = {};
-	if (download_url===undefined) download_url = null;
 
 	var query = the_window.location.search.substring(1),
 	    vars = query.split("&");
 	for (var i = 0; i < vars.length; i++) {
 	    var pair = vars[i].split("=");
-	    options[pair[0]] = pair[1];
+	    // deal with array options
+	    if (pair[0].indexOf('[]') == pair[0].length - 2) {
+		var o = pair[0].replace('[]', '');
+		if (!(o in options))
+		    options[o] = [];
+		options[o].push(pair[1]);
+	    } else {
+		options[pair[0]] = pair[1];
+	    }
 	}
-
-	// generate map_path and model_path
-	[
-	    ['map', 'map_name', 'map_path'],
-	    ['model', 'model_name', 'cobra_model_path']
-	].forEach(function(ar) {
-	    var type = ar[0], key = ar[1], path = ar[2];
-	    if (key in options)
-		options[path] = name_to_url(options[key], download_url, type);
-	});
-
 	return options;
     }    
 });

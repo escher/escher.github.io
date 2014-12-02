@@ -6,13 +6,17 @@
   <script src="escher/lib/d3.min.js"></script>
 
   <link rel="stylesheet" href="escher/lib/bootstrap-3.1.1.min.css"/>
-  <link rel="stylesheet" href="escher/css/index.css"/>
+  <link rel="stylesheet" href="escher/css/web/index.css"/>
 
+  <link rel="shortcut icon" href="escher/resources/favicon.ico" />
+    
   <!-- This font cannot be downloaded. -->
   <script src="//use.edgefonts.net/tulpen-one.js"></script>
 
     <!-- Require only loaded in standalone file. -->
     <script src=""></script>
+
+    <link rel="shortcut icon" href="escher/resources/favicon.ico" />
 
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, height=device-height,
@@ -82,7 +86,7 @@
 	      <p>Escher is a web-based tool for building, viewing, and sharing
 	      visualizations of metabolic pathways. These 'pathway maps' are a
 	      great way to contextualize data about metabolism. More information
-	      and documentation can be found on <a href="https://github.com/zakandrewking/escher">Github</a>.
+	      and documentation can be found on <a href="https://github.com/zakandrewking/escher/">Github</a>.
 	      </p>
 	    </li>
 	    <li><h4>Are there more maps available? Can I contribute maps?</h4>
@@ -94,14 +98,14 @@
 	      <p>Escher has not yet been published in a peer-reviewed journal,
 		but, in the meantime, you can cite the code by DOI:
 		<a href="http://dx.doi.org/10.5281/zenodo.11712"><img
-		src="https://zenodo.org/badge/6078/zakandrewking/escher.png"><a>.</p>
+		src="https://zenodo.org/badge/6078/zakandrewking/escher.png"></a>.</p>
 	    </li>
 	    <li><h4>I have more questions. Who do I ask?</h4>
 	      <p>You can follow <a href="https://twitter.com/zakandrewking">@zakandrewking</a>
 		for Escher updates, and ask for help on Stack Overflow with the
 		<a href="http://stackoverflow.com/questions/tagged/escher">Escher</a> tag. If
 		you find bugs or would like to contribute to the project, feel
-		free to submit an issue and or a pull request on <a href="https://github.com/zakandrewking/escher">Github</a>.</p> 
+		free to submit an issue and or a pull request on <a href="https://github.com/zakandrewking/escher/">Github</a>.</p> 
 	    </li>
 	  </ol>
 	</div>
@@ -112,19 +116,24 @@
   <footer>
     <div class="container">
       <p class="more">
-	Learn more about <a href="https://github.com/zakandrewking/escher">Escher</a>
+	Learn more about <a href="https://github.com/zakandrewking/escher/">Escher</a>
       </p>
       <p class="version">
-	Version 1.0.0b3
+	Version 1.0.0rc1
       </p>
     </div>
   </footer>
 
-  <script>var data=null;</script>
   <script src="escher/js/web/index.js"></script>
-  
-    <script src="escher/js/web/index_gh_pages.js"></script>
-  
+  <script>
+    
+   // get the models
+   d3.json('1-0-0/index.json', function(d) {
+     var server_index = d, local_index = null;
+     setup(server_index, local_index, '1-0-0/maps/', false);
+   });
+      
+  </script>
 
 
     <script>
