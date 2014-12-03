@@ -45,14 +45,11 @@ def test_clear_cache(tmpdir, request):
 def test_local_index(tmpdir, request):
     maps = tmpdir.mkdir('maps')
     maps.mkdir('Escherichia coli').join('iJO1366.central_metabolism.json').write('temp')
-    maps.mkdir('none').join('my_map.json').write('temp')
     # ignore these
     maps.join('ignore_md.json').write('ignore')
     tmpdir.mkdir('models').mkdir('Escherichia coli').join('iJO1366.json').write('temp')
     assert local_index(str(tmpdir)) == { 'maps': [ { 'organism': 'Escherichia coli',
-                                                     'map_name': 'iJO1366.central_metabolism' },
-                                                   { 'organism': 'none',
-                                                     'map_name': 'my_map' } ],
+                                                     'map_name': 'iJO1366.central_metabolism' } ],
                                          'models': [ { 'organism': 'Escherichia coli',
                                                        'model_name': 'iJO1366' } ] }
     def fin():
@@ -110,8 +107,8 @@ def test__load_resource(tmpdir):
 
 @mark.web
 def test__load_resource_web(tmpdir): 
-    url = '/'.join([get_url('escher_download', protocol='https'),
-                    'maps/Escherichia coli/iJO1366.central_metabolism.json'])
+    url = '/'.join([get_url('map_download', protocol='https'),
+                    'Escherichia%20coli/iJO1366.central_metabolism.json'])
     _ = json.loads(_load_resource(url, 'name'))
                 
 def test_Builder(tmpdir):
@@ -169,3 +166,36 @@ def test_Builder_options():
     assert b.metabolite_no_data_color=='white'
     html = b._get_html(js_source='local')
     assert 'metabolite_no_data_color: "white"' in html
+
+def test__draw_js():
+    b = Builder(map_json='"useless_map"', model_json='"useless_model"',
+                embedded_css='')
+
+    def look_for_string(st, substring):
+        """Look for the string in the substring. This solves a bug in py.test
+        for these cases"""
+        try:
+            found = st.find(substring)
+            assert found > -1
+        except AssertionError:
+            raise AssertionError('Could not find\n\n%s\n\nin\n\n%s' % (substring, st))
+
+    # no static parse, dev
+    ijs = b._initialize_javascript('id', 'local')
+    js = b._draw_js('id', True, 'all', True, True, True, 'pan', True, False)
+    look_for_string(ijs, 'var map_data_id = "useless_map";')
+    look_for_string(ijs, 'var model_data_id = "useless_model";')
+    look_for_string(js, 'Builder(map_data_id, model_data_id, embedded_css_id, d3.select("#id"), options);')
+
+    # static parse, not dev 
+    b.static_site_index_json = '{"my": ["useless", "index"]}'
+    ijs = b._initialize_javascript('id', 'local')
+    js = b._draw_js('id', True, 'all', True, False, True, 'pan', True, True)
+    look_for_string(ijs, 'var map_data_id = "useless_map";')
+    look_for_string(ijs, 'var model_data_id = "useless_model";')
+    look_for_string(js, 'escher.static.load_map_model_from_url("%s/maps/", "%s/models/",' % (__schema_version__, __schema_version__))
+    look_for_string(js, b.static_site_index_json)
+    look_for_string(js, 'function(map_data_id, model_data_id) {')
+    look_for_string(js, 'escher.Builder(map_data_id, model_data_id, embedded_css_id, d3.select("#id"), options);')
+        
+    
