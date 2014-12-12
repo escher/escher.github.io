@@ -1,8 +1,5 @@
 [![Travis](https://api.travis-ci.org/zakandrewking/escher.svg?branch=master)](https://travis-ci.org/zakandrewking/escher)
 
-
-Cite Escher v1.0 Beta 3: &nbsp;&nbsp;[![DOI](https://zenodo.org/badge/6078/zakandrewking/escher.png)](http://dx.doi.org/10.5281/zenodo.11712)
-
 Escher
 ======
 
@@ -17,4 +14,4 @@ Follow [@zakandrewking](https://twitter.com/zakandrewking) for Escher updates.
 Built at SBRG
 =============
 
-[![SBRG](https://raw.githubusercontent.com/zakandrewking/escher/new-website/escher/resources/sbrg-logo.png)](http://systemsbiology.ucsd.edu/)
+[![SBRG](https://raw.githubusercontent.com/zakandrewking/escher/master/escher/resources/sbrg-logo.png)](http://systemsbiology.ucsd.edu/)
