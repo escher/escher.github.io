@@ -46,11 +46,11 @@
 	<div class="col-sm-3">
 	  <h3>Tool</h3>
 	  <select id="tools" class="form-control">
-	    <option class="tool" value="viewer">Viewer</option>
 	    <option class="tool" value="builder">Builder</option>
+	    <option class="tool" value="viewer">Viewer</option>
 	    {% if not web_version and can_dev %}
-	      <option class="tool" value="dev_viewer">Viewer (Dev)</option>
 	      <option class="tool" value="dev_builder">Builder (Dev)</option>
+	      <option class="tool" value="dev_viewer">Viewer (Dev)</option>
 	    {% endif %}
 	  </select>
 	</div>
@@ -58,8 +58,16 @@
       <div class="row">
 	<div class="col-sm-6">
 	  <h3>Options</h3>
-	    <div style="width: 100%"><input type="checkbox" id="scroll"> Scroll to zoom (instead of scroll to pan)</div>
-	    <div style="width: 100%"><input type="checkbox" id="never_ask"> Never ask before reloading</div>
+	  <div style="width: 100%">
+	      <label>
+		  <input type="checkbox" id="scroll"> Scroll to zoom (instead of scroll to pan)
+	      </label>
+	  </div>
+	  <div style="width: 100%">
+	      <label>
+		  <input type="checkbox" id="never_ask"> Never ask before reloading
+	      </label>
+	  </div>
 	</div>
 	<div class="col-sm-6">
 	  <button type="button" id="submit" class="btn btn-default column-button">
@@ -75,7 +83,7 @@
 	  <ol>
 	    <li><h4>What is Escher?</h4>
 	      <p>Escher is a web-based tool for building, viewing, and sharing
-		visualizations of metabolic pathways. These 'pathway maps' are a
+		visualizations of biological pathways. These 'pathway maps' are a
 		great way to contextualize data about metabolism. To get started,
 		load a map by clicking the <b>Load Map</b> button above, or visit
 		the <a href="{{documentation}}">documentation</a> to learn more.

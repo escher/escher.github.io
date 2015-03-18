@@ -145,9 +145,9 @@ define(['utils'], function(utils) {
         throw new Error('Bad data compare_style: ' + compare_style);
 
         // definitions
-	function check_finite(x) {
-	    return isFinite(x) ? x : null;
-	}
+        function check_finite(x) {
+            return isFinite(x) ? x : null;
+        }
         function abs(x, take_abs) {
             return take_abs ? Math.abs(x) : x;
         }
@@ -157,7 +157,8 @@ define(['utils'], function(utils) {
         }
         function fold(x, y, take_abs) {
             if (x == 0 || y == 0) return null;
-            return (y >= x ? y / x : - x / y);
+            var fold = (y >= x ? y / x : - x / y);
+            return take_abs ? Math.abs(fold) : fold;
         }
         function log2_fold(x, y, take_abs) {
             if (x == 0) return null;
@@ -175,13 +176,45 @@ define(['utils'], function(utils) {
 
     function gene_string_for_data(rule, gene_values, genes, styles,
                                   identifiers_on_map, compare_style) {
+        /** Add gene values to the gene_reaction_rule string.
+         
+         Arguments
+         ---------
+
+         rule: (string) The gene reaction rule.
+
+         gene_values: The values.
+
+         genes: An array of objects specifying the gene bigg_id and name.
+
+         styles: The reaction styles.
+
+         identifiers_on_map: The type of identifiers ('bigg_id' or 'name').
+
+         compare_style: The comparison style.
+
+         Returns
+         -------
+
+         The new string with formatted data values.
+
+         */
+
         var out = rule,
-            no_data = (gene_values === null);
+            no_data = (gene_values === null),
+            // keep track of bigg_id's or names to remove repeats
+            genes_found = {};
+
+        
         genes.forEach(function(g_obj) {
             // get id or name
             var name = g_obj[identifiers_on_map];
-            if (name === undefined)
+            if (typeof name === 'undefined')
                 throw new Error('Bad value for identifiers_on_map: ' + identifiers_on_map);
+            // remove repeats that may have found their way into genes object
+            if (typeof genes_found[name] !== 'undefined')
+                return;
+            genes_found[name] = true;   
             // generate the string
             if (no_data) {
                 out = replace_gene_in_rule(out, g_obj.bigg_id, (name + '\n'));
@@ -273,13 +306,18 @@ define(['utils'], function(utils) {
     }
     
     function genes_for_gene_reaction_rule(rule) {
-        /** Find genes in gene_reaction_rule string.
+        /** Find unique genes in gene_reaction_rule string.
 
          Arguments
          ---------
 
          rule: A boolean string containing gene names, parentheses, AND's and
          OR's.
+         
+         Returns
+         -------
+
+         An array of gene strings.
 
          */
         var genes = rule
@@ -290,14 +328,12 @@ define(['utils'], function(utils) {
         // split on whitespace
                 .split(' ')
                 .filter(function(x) { return x != ''; });
-        return genes;
+        // unique strings
+        return utils.unique_strings_array(genes);
     }
     
     function evaluate_gene_reaction_rule(rule, gene_values, and_method_in_gene_reaction_rule) {
         /** Return a value given the rule and gene_values object.
-
-         With the current version, all negative values are converted to zero,
-         OR's are sums and AND's are Min()'s.
 
          Arguments
          ---------
@@ -324,7 +360,7 @@ define(['utils'], function(utils) {
 
         // for each element in the arrays
         var out = [];
-        for (var i=0; i<l; i++) {
+        for (var i = 0; i < l; i++) {
             // get the rule
             var curr_val = rule;
 
@@ -332,7 +368,7 @@ define(['utils'], function(utils) {
             var all_null = true;
             for (var gene_id in gene_values) {
                 var f = _parse_float_or_null(gene_values[gene_id][i]);
-                if (f === null || f < 0) {
+                if (f === null) {
                     f = 0;
                 } else {
                     all_null = false;
@@ -363,9 +399,9 @@ define(['utils'], function(utils) {
                 new_curr_val = new_curr_val.replace(AND_EXPRESSION, function(match, p1, p2, p3) {
                     // find min
                     var nums = p2.split(AND).map(parseFloat),
-                        val = (and_method_in_gene_reaction_rule=='min' ?
+                        val = (and_method_in_gene_reaction_rule == 'min' ?
                                Math.min.apply(null, nums) :
-                               nums.reduce(function(a, b){ return a + b; }) / nums.length);
+                               nums.reduce(function(a, b) { return a + b; }) / nums.length);
                     return p1 + val + p3;
                 });
                 // break if there is no change
@@ -473,7 +509,7 @@ define(['utils'], function(utils) {
 
          gene_data_obj: The gene data object, with the following style:
 
-             { reaction_id: { gene_id: value } }
+         { reaction_id: { gene_id: value } }
 
          styles:  Gene styles array.
 

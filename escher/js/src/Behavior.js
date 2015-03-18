@@ -187,8 +187,7 @@ define(["utils", "build"], function(utils, build) {
                                                                 undo_fn, redo_fn, center_fn,
                                                                 this.map.sel);
             selection_background.call(this.rotation_drag);
-
-
+            this.selectable_drag = this.rotation_drag;
         } else {
             // turn off all listeners
             hide_center.call(this);
@@ -197,6 +196,7 @@ define(["utils", "build"], function(utils, build) {
             selection_background.on('mousedown.drag', null);
             selection_background.on('touchstart.drag', null);
             this.rotation_drag = null;
+            this.selectable_drag = null;
         }
 
         // definitions
@@ -440,8 +440,8 @@ define(["utils", "build"], function(utils, build) {
     }
     
     function turn_off_drag(sel) {
-	sel.on('mousedown.drag', null);
-	sel.on('touchstart.drag', null);
+        sel.on('mousedown.drag', null);
+        sel.on('touchstart.drag', null);
     }    
 
     function _get_selectable_drag(map, undo_stack) {

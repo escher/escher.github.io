@@ -1,17 +1,24 @@
-.. Escher documentation master file, created by
-   sphinx-quickstart on Mon Nov 10 13:25:01 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Escher documentation master file, created by sphinx-quickstart on Mon Nov 10
+   13:25:01 2014.  You can adapt this file completely to your liking, but it
+   should at least contain the root `toctree` directive.
 
 Welcome to the documentation for **Escher**
 ===========================================
 
 Escher is a web-based tool for building, viewing, and sharing visualizations of
-metabolic pathways. These 'pathway maps' are a great way to contextualize data
-about metabolism. The easiest way to use Escher is to browse or build maps on
-the `Escher website`_.
+biological pathways. These 'pathway maps' are a great way to contextualize
+biological datasets. The easiest way to use Escher is to browse and build maps
+on the `Escher website`_. New users may be interested in the
+:doc:`getting_started` guide.
 
 .. image:: _static/screen1.png
+
+Help! I just upgraded to v1.0 and my maps will not load!
+--------------------------------------------------------
+
+If you have been using a pre-release version of Escher, you will need to convert
+your maps to the v1.0 format by following these :doc:`directions <convert_maps>`.
+After version 1.0, the map format will not change until version 2.0.
 
 Features
 --------
@@ -54,9 +61,12 @@ Contents
 
 .. toctree::
    :maxdepth: 2
+   :numbered:
 
    getting_started
+   escher_and_cobrapy
    ipython_notebook
+   convert_maps
    development
    contribute_maps
    javascript_api
