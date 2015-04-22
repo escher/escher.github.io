@@ -13,7 +13,10 @@ import re
 
 try:
     from setuptools import setup, Command
-except:
+    from setuptools.command.sdist import sdist as SDistCommand
+    from setuptools.command.bdist import bdist as BDistCommand
+    from setuptools.command.upload import upload as UploadCommand
+except ImportError:
     from distutils.core import setup, Command
 
 directory = dirname(realpath(__file__))
@@ -176,6 +179,19 @@ setup(name='Escher',
       version=version,
       author='Zachary King',
       url='https://escher.github.io',
+      license='MIT',
+      classifiers=[
+          'Development Status :: 5 - Production/Stable',
+          'License :: OSI Approved :: MIT License',
+          'Topic :: Scientific/Engineering',
+          'Topic :: Scientific/Engineering :: Visualization',
+          'Programming Language :: Python :: 2',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.3',
+          'Programming Language :: Python :: 3.4'
+      ],
+      keywords='visualization, pathway maps, web application, D3.js',
       packages=['escher'],
       package_data={'escher': ['css/web/*.css', 'css/*.css', 'templates/*',
                                'example_data/*', 'lib/*.js', 'lib/*.css',
@@ -191,7 +207,9 @@ setup(name='Escher',
                               'sphinx-rtd-theme>=0.1.6',
                               'jasmine>=2.2.0',
                               'ipython>=2.3.1',
-                              'cobra>=0.3.0b4'] },
+                              'cobra>=0.3.0b4',
+                              'wheel>=0.24.0',
+                              'twine>=1.5.0'] },
       cmdclass={'clean': CleanCommand,
                 'buildjs': JSBuildCommand,
                 'buildgh': BuildGHPagesCommand,
