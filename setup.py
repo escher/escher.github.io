@@ -89,6 +89,7 @@ class BuildGHPagesCommand(Command):
         # generate the static site
         call(['python', join('escher', 'generate_index.py')])
         call(['python', join('escher', 'static_site.py')])
+        call(['python', 'add_google_analytics.py'])
         print('Done building gh-pages')
 
 class BuildRelease(Command):
