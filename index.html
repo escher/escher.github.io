@@ -3,15 +3,15 @@
   <head>
     <title>Escher</title>
     
-  <script src="escher/lib/d3.min.js"></script>
+	<script src="escher/lib/d3.min.js"></script>
 
-  <link rel="stylesheet" href="escher/lib/bootstrap-3.1.1.min.css"/>
-  <link rel="stylesheet" href="escher/css/web/index.css"/>
+	<link rel="stylesheet" href="escher/lib/bootstrap-3.1.1.min.css"/>
+	<link rel="stylesheet" href="escher/css/web/index.css"/>
 
-  <link rel="shortcut icon" href="escher/resources/favicon.ico" />
-    
-  <!-- This font cannot be downloaded. -->
-  <script src="//use.edgefonts.net/tulpen-one.js"></script>
+	<link rel="shortcut icon" href="escher/resources/favicon.ico" />
+  
+	<!-- This font cannot be downloaded. -->
+	<script src="//use.edgefonts.net/tulpen-one.js"></script>
 
     <!-- Require only loaded in standalone file. -->
     <script src=""></script>
@@ -24,127 +24,149 @@
   </head>
   <body>
     
-  <main>
-    <div class="container">
-      <header class="row">
-	<div class="col-sm-12">
-	  <img src="escher/resources/escher-logo@2x.png" id="logo">
-	  <div id="title-box">
-	    <h1 id="title">ESCHER</h1>
-	  </div>
-	</div>
-      </header>
-      <div class="row">	
-	<div class="col-sm-12">
-	  <h3>Filter by organism</h3>
-	  <select id="organisms" class="form-control">
-	    <option value="all">All</option>
-	  </select>
-	</div>
-      </div>
-      <div class="row">
-	<div class="col-sm-5">
-	  <h3>Map</h3>
-	  <select id="maps" class="form-control">
-	    <option value="none">None</option>
-	  </select>
-	</div>
-	<div class="col-sm-4">
-	  <h3>Model (Optional)</h3>
-	  <select id="models" class="form-control">
-	    <option value="none">None</option>
-	  </select>
-	</div>
-	<div class="col-sm-3">
-	  <h3>Tool</h3>
-	  <select id="tools" class="form-control">
-	    <option class="tool" value="builder">Builder</option>
-	    <option class="tool" value="viewer">Viewer</option>
-	    
-	  </select>
-	</div>
-      </div>
-      <div class="row">
-	<div class="col-sm-6">
-	  <h3>Options</h3>
-	  <div style="width: 100%">
-	      <label>
-		  <input type="checkbox" id="scroll"> Scroll to zoom (instead of scroll to pan)
-	      </label>
-	  </div>
-	  <div style="width: 100%">
-	      <label>
-		  <input type="checkbox" id="never_ask"> Never ask before reloading
-	      </label>
-	  </div>
-	</div>
-	<div class="col-sm-6">
-	  <button type="button" id="submit" class="btn btn-default column-button">
-	    Load map
-	  </button>
-	</div>
-      </div>
-      <!-- FAQ  -->
-      <div id="faq" class="row">
-	<hr/>
-	<div class="col-sm-12">
-	  <h2>FAQ</h2>
-	  <ol>
-	    <li><h4>What is Escher?</h4>
-	      <p>Escher is a web-based tool for building, viewing, and sharing
-		visualizations of biological pathways. These 'pathway maps' are a
-		great way to contextualize data about metabolism. To get started,
-		load a map by clicking the <b>Load Map</b> button above, or visit
-		the <a href="https://escher.readthedocs.org/">documentation</a> to learn more.
-	      </p>
-	    </li>
-	    <li><h4>Are there more maps available? Can I contribute maps?</h4>
-	      <p>We will be uploading maps for all of the organisms in the 
-		<a href="http://bigg.ucsd.edu/">BiGG</a> database. If you
-		would like to contribute maps, there is a
-		<a href="https://escher.readthedocs.org/en/latest/contribute_maps.html">guide</a>
-		available in the documentation.
-	    </li>
-	    <li><h4>What browsers can I use?</h4>
-	      <p>We recommend using Google Chrome for optimal performance, but
-		Escher will also run in the latest versions of Firefox, Internet
-		Explorer, and Safari (including mobile Safari).</p>
-	    </li>
-	    <li><h4>I have more questions. Who do I ask?</h4>
-	      <p>Visit the <a href="https://escher.readthedocs.org/">documentation</a>
-		to get started with Escher and explore the API. You can follow
-		<a href="https://twitter.com/zakandrewking">@zakandrewking</a>
-		for Escher updates. If you find bugs or would like to contribute
-		to the project, feel free to submit an issue and or a pull request
-		on <a href="https://github.com/zakandrewking/escher/">Github</a>.</p> 
-	    </li>
-	  </ol>
-	</div>
-      </div>
-    </div>
-    <div id="push"></div>
-  </main>
-  <footer>
-    <div class="container">
-      <p class="more">
-	<a href="https://escher.readthedocs.org/">Documentation</a> – <a href="https://github.com/zakandrewking/escher/">GitHub</a>
-      </p>
-      <p class="version">
-	Version 1.1.2
-      </p>
-    </div>
-  </footer>
+	<main>
+		<div class="container">
+			<header class="row">
+				<div class="col-sm-12">
+					<img src="escher/resources/escher-logo@2x.png" id="logo">
+					<div id="title-box">
+						<h1 id="title">ESCHER</h1>
+					</div>
+				</div>
+			</header>
+			<div class="row">	
+				<div class="col-sm-12">
+					<h3>Filter by organism</h3>
+					<select id="organisms" class="form-control">
+						<option value="all">All</option>
+					</select>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-5">
+					<h3>Map</h3>
+					<select id="maps" class="form-control">
+						<option value="none">None</option>
+					</select>
+				</div>
+				<div class="col-sm-4">
+					<h3>Model (Optional)</h3>
+					<select id="models" class="form-control">
+						<option value="none">None</option>
+					</select>
+				</div>
+				<div class="col-sm-3">
+					<h3>Tool</h3>
+					<select id="tools" class="form-control">
+						<option class="tool" value="builder">Builder</option>
+						<option class="tool" value="viewer">Viewer</option>
+						
+					</select>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-6">
+					<h3>Options</h3>
+					<div style="width: 100%">
+						<label>
+							<input type="checkbox" id="scroll"> Scroll to zoom (instead of scroll to pan)
+						</label>
+					</div>
+					<div style="width: 100%">
+						<label>
+							<input type="checkbox" id="never_ask"> Never ask before reloading
+						</label>
+					</div>
+				</div>
+				<div class="col-sm-6">
+					<button type="button" id="submit" class="btn btn-default column-button">
+						Load map
+					</button>
+				</div>
+			</div>
 
-  <script src="escher/js/web/index.js"></script>
-  <script>
-    
-   // get the models
-   d3.json('1-0-0/index.json', function(d) {
-     var server_index = d, local_index = null;
-     setup(server_index, local_index, '1-0-0/maps/', false);
-   });
-      
-  </script>
+			<hr/>
+
+			
+				<!-- Demos -->
+				<div id="demos" class="row">
+					<div class="col-sm-3">
+						<h2>Demos</h2>
+					</div>	
+					<div class="col-sm-9">
+						<div>
+							<a href="/escher-demo/knockout">
+								<span class="demo-title">Knockout</span>
+								<img class="img-responsive demo-img" src="/escher/resources/knockout-demo-screenshot.png" />
+							</a>
+						</div>
+					</div>
+				</div>
+
+				<hr/>
+				
+
+			<!-- FAQ  -->
+			<div id="faq" class="row">
+				<div class="col-sm-12">
+					<h2>FAQ</h2>
+					<ol>
+						<li><h4>What is Escher?</h4>
+							<p>Escher is a web-based tool for building, viewing, and sharing
+								visualizations of biological pathways. These 'pathway maps' are a
+								great way to contextualize data about metabolism. To get started,
+								load a map by clicking the <b>Load Map</b> button above, or visit
+								the <a href="https://escher.readthedocs.org/">documentation</a> to learn more.
+							</p>
+						</li>
+						<li><h4>Are there more maps available? Can I contribute maps?</h4>
+							<p>We will be uploading maps for all of the organisms in the 
+								<a href="http://bigg.ucsd.edu/">BiGG</a> database. If you
+								would like to contribute maps, there is a
+								<a href="https://escher.readthedocs.org/en/latest/contribute_maps.html">guide</a>
+								available in the documentation.
+						</li>
+						<li><h4>What browsers can I use?</h4>
+							<p>We recommend using Google Chrome for optimal performance, but
+								Escher will also run in the latest versions of Firefox, Internet
+								Explorer, and Safari (including mobile Safari).</p>
+						</li>
+						<li><h4>I have more questions. Who do I ask?</h4>
+							<p>Visit the <a href="https://escher.readthedocs.org/">documentation</a>
+								to get started with Escher and explore the API. You can follow
+								<a href="https://twitter.com/zakandrewking">@zakandrewking</a>
+								for Escher updates. If you find bugs or would like to contribute
+								to the project, feel free to submit an issue and or a pull request
+								on <a href="https://github.com/zakandrewking/escher/">Github</a>.</p> 
+						</li>
+					</ol>
+				</div>
+				
+			</div>
+		</div>
+		<div id="push"></div>
+	</main>
+	<footer>
+		<div class="container">
+			<p class="more">
+				<a href="https://escher.readthedocs.org/">Documentation</a> – <a href="https://github.com/zakandrewking/escher/">GitHub</a>
+			</p>
+			<p class="version">
+				Version 1.1.2
+			</p>
+		</div>
+	</footer>
+
+	<script src="escher/js/web/index.js"></script>
+	<script>
+	 
+	// get the models
+	d3.json('1-0-0/index.json', function(d) {
+		var server_index = d, local_index = null;
+		setup(server_index, local_index, '1-0-0/maps/', false);
+	});
+	   
+	</script>
 
 
     <script>
