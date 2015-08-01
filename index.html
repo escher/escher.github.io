@@ -20,7 +20,7 @@
 
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, height=device-height,
-	  initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui"/>
+                                   initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui"/>
   </head>
   <body>
     
@@ -191,7 +191,7 @@
         <a href="https://escher.readthedocs.org/">Documentation</a> – <a href="https://github.com/zakandrewking/escher/">GitHub</a>
       </p>
       <p class="version">
-        Version 1.1.2
+        <a href="https://github.com/zakandrewking/escher/releases">Version 1.2.0</a>
       </p>
     </div>
   </footer>
@@ -200,9 +200,9 @@
   <script>
     
    // get the models
-   d3.json('1-0-0/index.json', function(d) {
+   d3.json('1-0-0/2/index.json', function(d) {
        var server_index = d, local_index = null;
-       setup(server_index, local_index, '1-0-0/maps/', false);
+       setup(server_index, local_index, '1-0-0/2/maps/', false);
    });
       
   </script>
@@ -211,11 +211,11 @@
     <script>
      // temporary fixes for mobile browsers (currently iOS)
      if (navigator.userAgent.match(/.*OS 7_\d/i)) {
-       $(".fill-screen-div").css('height', window.innerHeight +"px");
-       $(window).resize(function(){
-	 $(".fill-screen-div").css('height', window.innerHeight +"px");
-	 document.body.scrollTop = 0;
-       })
+         $(".fill-screen-div").css('height', window.innerHeight +"px");
+         $(window).resize(function(){
+             $(".fill-screen-div").css('height', window.innerHeight +"px");
+             document.body.scrollTop = 0;
+         })
      }
     </script>
   </body>
