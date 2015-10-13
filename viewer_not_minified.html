@@ -8,7 +8,7 @@
   <script src="escher/lib/bootstrap-3.1.1.min.js"></script>
 
   <link rel="stylesheet" href="escher/lib/bootstrap-3.1.1.min.css"/>
-  <link rel="stylesheet" href="escher/css/builder-1.2.1.css"/>
+  <link rel="stylesheet" href="escher/css/builder-1.3.0.css"/>
 
     <!-- Require only loaded in standalone file. -->
     <script src="escher/lib/require.min.js"></script>
@@ -46,7 +46,7 @@ var embedded_css_static = '@charset "utf-8";svg.escher-svg #mouse-node {  fill: 
        // require.js is available: use it to load d3 and escher
        
        require.config({paths: { d3: "escher/lib/d3.min",
-                                escher: "escher/lib/escher-1.2.1" }});
+                                escher: "escher/lib/escher-1.3.0" }});
        require(["d3", "escher"], function(d3, escher) {
            window.d3 = d3;
            options = { enable_editing: false,
@@ -60,7 +60,7 @@ gene_data: gene_data_static,
 never_ask_before_quit: false,
 };
 
-escher.static.load_map_model_from_url("1-0-0/3/maps/", "1-0-0/3/models/", 
+escher.static.load_map_model_from_url("1-0-0/4/maps/", "1-0-0/4/models/", 
 {"models": [{"organism": "Escherichia coli", "model_name": "e_coli_core"}, {"organism": "Escherichia coli", "model_name": "iJO1366"}, {"organism": "Homo sapiens", "model_name": "RECON1"}, {"organism": "Saccharomyces cerevisiae", "model_name": "iMM904"}], "maps": [{"map_name": "e_coli_core.Core metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Central metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid beta-oxidation", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid biosynthesis (saturated)", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Nucleotide metabolism", "organism": "Escherichia coli"}, {"map_name": "RECON1.Amino acid metabolism (partial)", "organism": "Homo sapiens"}, {"map_name": "RECON1.Carbohydrate metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Glycolysis TCA PPP", "organism": "Homo sapiens"}, {"map_name": "RECON1.Inositol retinol metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Tryptophan metabolism", "organism": "Homo sapiens"}, {"map_name": "iMM904.Central carbon metabolism", "organism": "Saccharomyces cerevisiae"}]}, 
 options, function(map_data_static, model_data_static, options) {
 escher.Builder(map_data_static, model_data_static, embedded_css_static, d3.select("#static"), options);
@@ -83,7 +83,7 @@ gene_data: gene_data_static,
 never_ask_before_quit: false,
 };
 
-escher.static.load_map_model_from_url("1-0-0/3/maps/", "1-0-0/3/models/", 
+escher.static.load_map_model_from_url("1-0-0/4/maps/", "1-0-0/4/models/", 
 {"models": [{"organism": "Escherichia coli", "model_name": "e_coli_core"}, {"organism": "Escherichia coli", "model_name": "iJO1366"}, {"organism": "Homo sapiens", "model_name": "RECON1"}, {"organism": "Saccharomyces cerevisiae", "model_name": "iMM904"}], "maps": [{"map_name": "e_coli_core.Core metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Central metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid beta-oxidation", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid biosynthesis (saturated)", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Nucleotide metabolism", "organism": "Escherichia coli"}, {"map_name": "RECON1.Amino acid metabolism (partial)", "organism": "Homo sapiens"}, {"map_name": "RECON1.Carbohydrate metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Glycolysis TCA PPP", "organism": "Homo sapiens"}, {"map_name": "RECON1.Inositol retinol metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Tryptophan metabolism", "organism": "Homo sapiens"}, {"map_name": "iMM904.Central carbon metabolism", "organism": "Saccharomyces cerevisiae"}]}, 
 options, function(map_data_static, model_data_static, options) {
 escher.Builder(map_data_static, model_data_static, embedded_css_static, d3.select("#static"), options);
@@ -93,7 +93,7 @@ escher.Builder(map_data_static, model_data_static, embedded_css_static, d3.selec
        } else {
            // require.js not available: dynamically load d3 & escher
            escher_load_lib("escher/lib/d3.min.js", function() {
-               escher_load_lib("escher/lib/escher-1.2.1.js", function() {
+               escher_load_lib("escher/lib/escher-1.3.0.js", function() {
                    options = { enable_editing: false,
 menu: "all",
 enable_keys: true,
@@ -105,7 +105,7 @@ gene_data: gene_data_static,
 never_ask_before_quit: false,
 };
 
-escher.static.load_map_model_from_url("1-0-0/3/maps/", "1-0-0/3/models/", 
+escher.static.load_map_model_from_url("1-0-0/4/maps/", "1-0-0/4/models/", 
 {"models": [{"organism": "Escherichia coli", "model_name": "e_coli_core"}, {"organism": "Escherichia coli", "model_name": "iJO1366"}, {"organism": "Homo sapiens", "model_name": "RECON1"}, {"organism": "Saccharomyces cerevisiae", "model_name": "iMM904"}], "maps": [{"map_name": "e_coli_core.Core metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Central metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid beta-oxidation", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid biosynthesis (saturated)", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Nucleotide metabolism", "organism": "Escherichia coli"}, {"map_name": "RECON1.Amino acid metabolism (partial)", "organism": "Homo sapiens"}, {"map_name": "RECON1.Carbohydrate metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Glycolysis TCA PPP", "organism": "Homo sapiens"}, {"map_name": "RECON1.Inositol retinol metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Tryptophan metabolism", "organism": "Homo sapiens"}, {"map_name": "iMM904.Central carbon metabolism", "organism": "Saccharomyces cerevisiae"}]}, 
 options, function(map_data_static, model_data_static, options) {
 escher.Builder(map_data_static, model_data_static, embedded_css_static, d3.select("#static"), options);

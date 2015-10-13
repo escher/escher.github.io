@@ -78,6 +78,11 @@
               <input type="checkbox" id="never_ask"> Never ask before reloading
             </label>
           </div>
+          <div style="width: 100%">
+            <label>
+              <input type="checkbox" id="use_3d_transform"> Responsive pan and zoom
+            </label>
+          </div>
         </div>
         <div class="col-sm-6">
           <button type="button" id="submit" class="btn btn-default column-button">
@@ -148,13 +153,14 @@
               </p>
             </li>
             <li><h4>How do I cite Escher?</h4>
-              <p>Please support this project by citing Escher if you find it
-                useful for a project. You can use the following citation:</p>
+              <p>You can help support Escher by citing our publication when you
+                use Escher or EscherConverter:</p>
               <p>Zachary A. King, Andreas Dräger, Ali Ebrahim, Nikolaus
                 Sonnenschein, Nathan E. Lewis, and Bernhard O. Palsson
                 (2015) <i>Escher: A web application for building, sharing, and
                 embedding data-rich visualizations of biological pathways</i>,
-                PLOS Computational Biology. Accepted for publication.</p>
+                PLOS Computational Biology 11(8): e1004321.
+                doi:<a href="http://dx.doi.org/10.1371/journal.pcbi.1004321">10.1371/journal.pcbi.1004321</a></p>
               <li><h4>Are there more maps available? Can I contribute maps?</h4>
                 <p>We will be uploading maps for all of the organisms in the 
                   <a href="http://bigg.ucsd.edu/">BiGG</a> database. If you
@@ -191,7 +197,7 @@
         <a href="https://escher.readthedocs.org/">Documentation</a> – <a href="https://github.com/zakandrewking/escher/">GitHub</a>
       </p>
       <p class="version">
-        <a href="https://github.com/zakandrewking/escher/releases">Version 1.2.1</a>
+        <a href="https://github.com/zakandrewking/escher/releases">Version 1.3.0</a>
       </p>
     </div>
   </footer>
@@ -200,9 +206,9 @@
   <script>
     
    // get the models
-   d3.json('1-0-0/3/index.json', function(d) {
+   d3.json('1-0-0/4/index.json', function(d) {
        var server_index = d, local_index = null;
-       setup(server_index, local_index, '1-0-0/3/maps/', false);
+       setup(server_index, local_index, '1-0-0/4/maps/', false);
    });
       
   </script>
