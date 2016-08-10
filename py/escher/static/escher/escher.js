@@ -2122,6 +2122,9 @@ function _set_up_menu(menu_selection, map, key_manager, keys, enable_editing,
         .button({ key: keys.save_svg,
                   text: 'Export as SVG',
                   key_text: (enable_keys ? ' (Ctrl+Shift+S)' : null) })
+        .button({ key: keys.save_png,
+                  text: 'Export as PNG',
+                  key_text: (enable_keys ? ' (Ctrl+Shift+P)' : null) })
         .button({ key: keys.clear_map,
                   text: 'Clear map' })
     // model dropdown
@@ -2615,6 +2618,11 @@ function _get_keys(map, zoom_container, search_bar, settings_bar, enable_editing
             key: 'ctrl+shift+s',
             target: map,
             fn: map.save_svg
+        },
+        save_png: {
+            key: 'ctrl+shift+p',
+            target: map,
+            fn: map.save_png
         },
         load: {
             key: 'ctrl+o',
@@ -4582,6 +4590,8 @@ function add_key_listener(key_name, callback, one_time) {
  map.callback_manager.run('select_text_label');
  map.callback_manager.run('before_svg_export');
  map.callback_manager.run('after_svg_export');
+ map.callback_manager.run('before_png_export');
+ map.callback_manager.run('after_png_export');
  map.callback_manager.run('before_convert_map');
  map.callback_manager.run('after_convert_map');
  this.callback_manager.run('calc_data_stats__reaction', null, changed);
@@ -4701,6 +4711,7 @@ Map.prototype = {
     save: save,
     map_for_export: map_for_export,
     save_svg: save_svg,
+    save_png: save_png,
     convert_map: convert_map
 };
 module.exports = Map;
@@ -6676,49 +6687,64 @@ function map_for_export() {
     return out;
 }
 
-function save_svg() {
-    /** Rescale the canvas and save svg.
+function save_map(obj, callback_before, callback_after, map_type) {
+    /** Rescale the canvas and save as svg/png.
 
      */
+
     // run the before callback
-    this.callback_manager.run('before_svg_export');
+    obj.callback_manager.run(callback_before);
 
-    // turn of zoom and translate so that illustrator likes the map
-    var window_scale = this.zoom_container.window_scale,
-        window_translate = this.zoom_container.window_translate,
-        canvas_size_and_loc = this.canvas.size_and_location(),
+    // turn ofo zoom and translate so that illustrator likes the map
+    var window_scale = obj.zoom_container.window_scale,
+        window_translate = obj.zoom_container.window_translate,
+        canvas_size_and_loc = obj.canvas.size_and_location(),
         mouse_node_size_and_trans = {
-            w: this.canvas.mouse_node.attr('width'),
-            h: this.canvas.mouse_node.attr('height'),
-            transform: this.canvas.mouse_node.attr('transform')
+            w: obj.canvas.mouse_node.attr('width'),
+            h: obj.canvas.mouse_node.attr('height'),
+            transform: obj.canvas.mouse_node.attr('transform')
         };
-    this.zoom_container._go_to_svg(1.0, { x: -canvas_size_and_loc.x, y: -canvas_size_and_loc.y }, function() {
-        this.svg.attr('width', canvas_size_and_loc.width);
-        this.svg.attr('height', canvas_size_and_loc.height);
-        this.canvas.mouse_node.attr('width', '0px');
-        this.canvas.mouse_node.attr('height', '0px');
-        this.canvas.mouse_node.attr('transform', null);
-        // hide the segment control points
-        var hidden_sel = this.sel.selectAll('.multimarker-circle,.midmarker-circle,#canvas')
-                .style('visibility', 'hidden');
 
-        // do the epxort
-        utils.download_svg('saved_map', this.svg, true);
+    obj.zoom_container._go_to_svg(1.0, { x: -canvas_size_and_loc.x, y: -canvas_size_and_loc.y }, function() {
+        obj.svg.attr('width', canvas_size_and_loc.width);
+        obj.svg.attr('height', canvas_size_and_loc.height);
+        obj.canvas.mouse_node.attr('width', '0px');
+        obj.canvas.mouse_node.attr('height', '0px');
+        obj.canvas.mouse_node.attr('transform', null);
+
+        // hide the segment control points
+        var hidden_sel = obj.sel.selectAll('.multimarker-circle,.midmarker-circle,#canvas')
+            .style('visibility', 'hidden');
+
+        // do the export
+        if(map_type == 'svg') {
+            utils.download_svg('saved_map', obj.svg, true);
+        } else if(map_type == 'png') {
+            utils.download_png('saved_map', obj.svg, true);
+        }
 
         // revert everything
-        this.zoom_container._go_to_svg(window_scale, window_translate, function() {
-            this.svg.attr('width', null);
-            this.svg.attr('height', null);
-            this.canvas.mouse_node.attr('width', mouse_node_size_and_trans.w);
-            this.canvas.mouse_node.attr('height', mouse_node_size_and_trans.h);
-            this.canvas.mouse_node.attr('transform', mouse_node_size_and_trans.transform);
+        obj.zoom_container._go_to_svg(window_scale, window_translate, function() {
+            obj.svg.attr('width', null);
+            obj.svg.attr('height', null);
+            obj.canvas.mouse_node.attr('width', mouse_node_size_and_trans.w);
+            obj.canvas.mouse_node.attr('height', mouse_node_size_and_trans.h);
+            obj.canvas.mouse_node.attr('transform', mouse_node_size_and_trans.transform);
             // unhide the segment control points
             hidden_sel.style('visibility', null);
 
             // run the after callback
-            this.callback_manager.run('after_svg_export');
-        }.bind(this));
-    }.bind(this));
+            obj.callback_manager.run(callback_after);
+        }.bind(obj));
+    }.bind(obj));
+}
+
+function save_svg() {
+    save_map(this, 'before_svg_export', 'after_svg_export', 'svg');
+}
+
+function save_png() {
+    save_map(this, 'before_png_export', 'after_png_export', 'png');
 }
 
 function convert_map() {
@@ -10717,7 +10743,7 @@ function _parse_float_or_null(x) {
 }
 
 },{"./utils":31,"underscore":35}],27:[function(require,module,exports){
-module.exports = {'version': '1.4.0', builder_embed: 'svg.escher-svg .gene-label,svg.escher-svg .label{text-rendering:optimizelegibility;cursor:default}svg.escher-svg #mouse-node{fill:none}svg.escher-svg #canvas{stroke:#ccc;stroke-width:7px;fill:#fff}svg.escher-svg .resize-rect{fill:#000;opacity:0;stroke:none}svg.escher-svg .label{font-family:sans-serif;font-style:italic;font-weight:700;font-size:8px;fill:#000;stroke:none}svg.escher-svg .reaction-label{font-size:30px;fill:#202078;text-rendering:optimizelegibility}svg.escher-svg .node-label{font-size:20px}svg.escher-svg .gene-label{font-size:18px;fill:#202078}svg.escher-svg .text-label .label,svg.escher-svg .text-label-input{font-size:50px}svg.escher-svg .node-circle{stroke-width:2px}svg.escher-svg .midmarker-circle,svg.escher-svg .multimarker-circle{fill:#fff;fill-opacity:.2;stroke:#323232}svg.escher-svg g.selected .node-circle{stroke-width:6px;stroke:#1471c7}svg.escher-svg g.selected .label{fill:#1471c7}svg.escher-svg .metabolite-circle{stroke:#a24510;fill:#e0865b}svg.escher-svg g.selected .metabolite-circle{stroke:#050200}svg.escher-svg .segment{stroke:#334E75;stroke-width:10px;fill:none}svg.escher-svg .arrowhead{fill:#334E75}svg.escher-svg .stoichiometry-label-rect{fill:#fff;opacity:.5}svg.escher-svg .stoichiometry-label{fill:#334E75;font-size:17px}svg.escher-svg .membrane{fill:none;stroke:#fb0}svg.escher-svg .brush .extent{fill-opacity:.1;fill:#000;stroke:#fff;shape-rendering:crispEdges}svg.escher-svg #brush-container .background{fill:none}svg.escher-svg .bezier-circle{fill:#fff}svg.escher-svg .bezier-circle.b1{stroke:red}svg.escher-svg .bezier-circle.b2{stroke:#00f}svg.escher-svg .connect-line{stroke:#c8c8c8}svg.escher-svg .direction-arrow{stroke:#000;stroke-width:1px;fill:#fff;opacity:.3}svg.escher-svg .start-reaction-cursor{cursor:pointer}svg.escher-svg .start-reaction-target{stroke:#646464;fill:none;opacity:.5}svg.escher-svg .rotation-center-line{stroke:red;stroke-width:5px}svg.escher-svg .highlight{fill:#D97000;text-decoration:underline}svg.escher-svg .cursor-grab{cursor:grab;cursor:-webkit-grab}svg.escher-svg .cursor-grabbing{cursor:grabbing;cursor:-webkit-grabbing}svg.escher-svg .edit-text-cursor{cursor:text}'};
+module.exports = {'version': '1.5.0-beta.1', builder_embed: 'svg.escher-svg .gene-label,svg.escher-svg .label{text-rendering:optimizelegibility;cursor:default}svg.escher-svg #mouse-node{fill:none}svg.escher-svg #canvas{stroke:#ccc;stroke-width:7px;fill:#fff}svg.escher-svg .resize-rect{fill:#000;opacity:0;stroke:none}svg.escher-svg .label{font-family:sans-serif;font-style:italic;font-weight:700;font-size:8px;fill:#000;stroke:none}svg.escher-svg .reaction-label{font-size:30px;fill:#202078;text-rendering:optimizelegibility}svg.escher-svg .node-label{font-size:20px}svg.escher-svg .gene-label{font-size:18px;fill:#202078}svg.escher-svg .text-label .label,svg.escher-svg .text-label-input{font-size:50px}svg.escher-svg .node-circle{stroke-width:2px}svg.escher-svg .midmarker-circle,svg.escher-svg .multimarker-circle{fill:#fff;fill-opacity:.2;stroke:#323232}svg.escher-svg g.selected .node-circle{stroke-width:6px;stroke:#1471c7}svg.escher-svg g.selected .label{fill:#1471c7}svg.escher-svg .metabolite-circle{stroke:#a24510;fill:#e0865b}svg.escher-svg g.selected .metabolite-circle{stroke:#050200}svg.escher-svg .segment{stroke:#334E75;stroke-width:10px;fill:none}svg.escher-svg .arrowhead{fill:#334E75}svg.escher-svg .stoichiometry-label-rect{fill:#fff;opacity:.5}svg.escher-svg .stoichiometry-label{fill:#334E75;font-size:17px}svg.escher-svg .membrane{fill:none;stroke:#fb0}svg.escher-svg .brush .extent{fill-opacity:.1;fill:#000;stroke:#fff;shape-rendering:crispEdges}svg.escher-svg #brush-container .background{fill:none}svg.escher-svg .bezier-circle{fill:#fff}svg.escher-svg .bezier-circle.b1{stroke:red}svg.escher-svg .bezier-circle.b2{stroke:#00f}svg.escher-svg .connect-line{stroke:#c8c8c8}svg.escher-svg .direction-arrow{stroke:#000;stroke-width:1px;fill:#fff;opacity:.3}svg.escher-svg .start-reaction-cursor{cursor:pointer}svg.escher-svg .start-reaction-target{stroke:#646464;fill:none;opacity:.5}svg.escher-svg .rotation-center-line{stroke:red;stroke-width:5px}svg.escher-svg .highlight{fill:#D97000;text-decoration:underline}svg.escher-svg .cursor-grab{cursor:grab;cursor:-webkit-grab}svg.escher-svg .cursor-grabbing{cursor:grabbing;cursor:-webkit-grabbing}svg.escher-svg .edit-text-cursor{cursor:text}'};
 },{}],28:[function(require,module,exports){
 /**
 * @license
@@ -11036,6 +11062,7 @@ module.exports = {
     load_json: load_json,
     load_json_or_csv: load_json_or_csv,
     download_svg: download_svg,
+    download_png: download_png,
     rotate_coords_recursive: rotate_coords_recursive,
     rotate_coords: rotate_coords,
     get_angle: get_angle,
@@ -11728,6 +11755,71 @@ function download_svg(name, svg_sel, do_beautify) {
     saveAs(blob, name + '.svg');
 };
 
+function download_png(name, svg_sel, do_beautify) {
+    /** Download a png file using FileSaver.js.
+     *
+     * Arguments
+     * ---------
+     *
+     * name: The filename (without extension).
+     *
+     * svg_sel: The d3 selection for the SVG element.
+     *
+     * do_beautify: (Boolean) If true, then beautify the SVG output.
+     *
+     */
+
+    // Alert if blob isn't going to work
+    _check_filesaver();
+
+    // Make the xml string
+    var xml = (new XMLSerializer()).serializeToString(svg_sel.node());
+    if (do_beautify) xml = vkbeautify.xml(xml);
+    xml = ('<?xml version="1.0" encoding="utf-8"?>\n' +
+           '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n' +
+           ' "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
+           xml);
+
+    // Canvas to hold the image
+    var canvas = document.createElement('canvas');
+    var context = canvas.getContext('2d');
+
+    // Get SVG size
+    var svg_size = svg_sel.node().getBBox();
+    var svg_width = svg_size.width + svg_size.x;
+    var svg_height = svg_size.height + svg_size.y;
+
+    // Canvas size = SVG size. Constrained to 10000px for very large SVGs
+    if (svg_width < 10000 && svg_height < 10000) {
+        canvas.width = svg_width;
+        canvas.height = svg_height;
+    } else {
+        if (canvas.width > canvas.height) {
+            canvas.width = 10000;
+            canvas.height = 10000*(svg_height/svg_width);
+        } else {
+            canvas.width = 10000*(svg_width/svg_height);
+            canvas.height = 10000;
+        }
+    }
+
+    // Image element appended with data
+    var base_image = new Image();
+    base_image.src = 'data:image/svg+xml;base64,' + btoa(xml);
+
+    base_image.onload = function() {
+        // Draw image to canvas with white background
+        context.fillStyle="#FFF";
+        context.fillRect( 0, 0, canvas.width, canvas.height);
+        context.drawImage(base_image, 0, 0, canvas.width, canvas.height);
+
+        // Save image
+        canvas.toBlob(function(blob) {
+            saveAs(blob, name + ".png");
+        });
+    };
+};
+
 function rotate_coords_recursive(coords_array, angle, center) {
     var rot = function(c) { return rotate_coords(c, angle, center); };
     return coords_array.map(rot);
@@ -11993,16 +12085,13 @@ function check_browser(name) {
 (function (global){
 (function() {
 var _slice = Array.prototype.slice;
-
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i]; return arr2; } else { return Array.from(arr); } }
-
 var Bacon = {
   toString: function () {
     return "Bacon";
   }
 };
 
-Bacon.version = '0.7.82';
+Bacon.version = '0.7.83';
 
 var Exception = (typeof global !== "undefined" && global !== null ? global : this).Error;
 var nop = function () {};
@@ -12578,13 +12667,13 @@ var withMethodCallSupport = function (wrapped) {
       };
       args = args.slice(1);
     }
-    return wrapped.apply(undefined, [f].concat(_toConsumableArray(args)));
+    return wrapped.apply(undefined, [f].concat(args));
   };
 };
 
 var makeFunctionArgs = function (args) {
   args = Array.prototype.slice.call(args);
-  return makeFunction_.apply(undefined, _toConsumableArray(args));
+  return makeFunction_.apply(undefined, args);
 };
 
 var partiallyApplied = function (f, applied) {
@@ -12593,7 +12682,7 @@ var partiallyApplied = function (f, applied) {
       args[_key3] = arguments[_key3];
     }
 
-    return f.apply(undefined, _toConsumableArray(applied.concat(args)));
+    return f.apply(undefined, applied.concat(args));
   };
 };
 
@@ -12649,7 +12738,7 @@ var makeFunction_ = withMethodCallSupport(function (f) {
 });
 
 var makeFunction = function (f, args) {
-  return makeFunction_.apply(undefined, [f].concat(_toConsumableArray(args)));
+  return makeFunction_.apply(undefined, [f].concat(args));
 };
 
 var convertArgsToFunction = function (obs, f, args, method) {
@@ -12980,7 +13069,7 @@ extend(Observable.prototype, {
 
   onValues: function (f) {
     return this.onValue(function (args) {
-      return f.apply(undefined, _toConsumableArray(args));
+      return f.apply(undefined, args);
     });
   },
 
@@ -13435,7 +13524,7 @@ Bacon.when = function () {
                     return result;
                   })();
 
-                  return (_p = p).f.apply(_p, _toConsumableArray(values));
+                  return (_p = p).f.apply(_p, values);
                 }));
                 if (triggers.length) {
                   triggers = _.filter(nonFlattened, triggers);
@@ -13794,9 +13883,9 @@ Bacon.combineWith = function () {
   var streams = _argumentsToObservablesAndFunction[0];
   var f = _argumentsToObservablesAndFunction[1];
 
-  var desc = new Bacon.Desc(Bacon, "combineWith", [f].concat(_toConsumableArray(streams)));
+  var desc = new Bacon.Desc(Bacon, "combineWith", [f].concat(streams));
   return withDesc(desc, Bacon.combineAsArray(streams).map(function (values) {
-    return f.apply(undefined, _toConsumableArray(values));
+    return f.apply(undefined, values);
   }));
 };
 
@@ -14277,7 +14366,7 @@ Bacon.Bus = Bus;
 var liftCallback = function (desc, wrapped) {
   return withMethodCallSupport(function (f) {
     var stream = partiallyApplied(wrapped, [function (values, callback) {
-      return f.apply(undefined, _toConsumableArray(values).concat([callback]));
+      return f.apply(undefined, values.concat([callback]));
     }]);
 
     for (var _len13 = arguments.length, args = Array(_len13 > 1 ? _len13 - 1 : 0), _key13 = 1; _key13 < _len13; _key13++) {
@@ -15315,7 +15404,7 @@ Bacon.update = function (initial) {
       }
 
       return function (i) {
-        return f.apply(undefined, _toConsumableArray([i].concat(args)));
+        return f.apply(undefined, [i].concat(args));
       };
     };
   }
@@ -16259,6 +16348,7 @@ if (typeof module !== "undefined" && module.exports) {
          * @returns void
          */
         function _fireCallback(callback, e, combo, sequence) {
+
             // if this event should not happen stop here
             if (self.stopCallback(e, e.target || e.srcElement, combo, sequence)) {
                 return;

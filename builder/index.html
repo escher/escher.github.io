@@ -78,15 +78,23 @@
            }
        }
 
-       // Load dependencies and draw 
+       // Load dependencies and draw
        if (typeof define === 'function' && define.amd) {
            // require.js is available: use it to load d3 and escher
-           require.config({ paths: { d3: 'escher/static/lib/d3.min',
-                                     escher: 'escher/static/escher/escher.min' }
-           });
+           require.config({
+             paths: {
+               d3: 'escher/static/lib/d3.min',
+               escher: 'escher/static/escher/escher.min',
+             },
+             // Override urlArgs that adds ?v= to the end of the escher URL and
+             // messes up npmcdn links. Honestly, I'm not sure if this will lead
+             // to downstream bugs in the notebook, but they really shouldn't be
+             // doing this cache-busting anyway.
+             urlArgs: null,
+           })
            require(['d3', 'escher'], function(d3, escher) {
                draw_escher(d3, escher);
-           });
+           })
        } else {
            // require.js not available: dynamically load d3 & escher
            check_global_and_load('d3', 'escher/static/lib/d3.min.js', function(d3) {
