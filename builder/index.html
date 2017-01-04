@@ -87,7 +87,7 @@
                escher: 'escher/static/escher/escher.min',
              },
              // Override urlArgs that adds ?v= to the end of the escher URL and
-             // messes up npmcdn links. Honestly, I'm not sure if this will lead
+             // messes up unpkg links. Honestly, I'm not sure if this will lead
              // to downstream bugs in the notebook, but they really shouldn't be
              // doing this cache-busting anyway.
              urlArgs: null,
@@ -111,11 +111,11 @@
                id: JSON.parse('"static_map"'),
                map_download_url: JSON.parse('"../1-0-0/5/maps/"'),
                model_download_url: JSON.parse('"../1-0-0/5/models/"'),
-               options: JSON.parse('{"reaction_data": null, "enable_editing": true, "gene_data": null, "metabolite_data": null, "fill_screen": true, "enable_keys": true, "menu": "all", "scroll_behavior": "pan", "ignore_bootstrap": false, "never_ask_before_quit": false}'),
+               options: JSON.parse('{"enable_keys": true, "enable_editing": true, "never_ask_before_quit": false, "ignore_bootstrap": false, "fill_screen": true, "gene_data": null, "metabolite_data": null, "menu": "all", "scroll_behavior": "pan", "reaction_data": null}'),
                builder_embed_css: JSON.parse('null'),
                map_data: JSON.parse('null'),
                model_data: JSON.parse('null'),
-               static_site_index: JSON.parse('{"models": [{"organism": "Escherichia coli", "model_name": "e_coli_core"}, {"organism": "Escherichia coli", "model_name": "iJO1366"}, {"organism": "Homo sapiens", "model_name": "RECON1"}, {"organism": "Saccharomyces cerevisiae", "model_name": "iMM904"}], "maps": [{"map_name": "e_coli_core.Core metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Central metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid beta-oxidation", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid biosynthesis (saturated)", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Nucleotide and histidine biosynthesis", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Nucleotide metabolism", "organism": "Escherichia coli"}, {"map_name": "RECON1.Amino acid metabolism (partial)", "organism": "Homo sapiens"}, {"map_name": "RECON1.Carbohydrate metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Glycolysis TCA PPP", "organism": "Homo sapiens"}, {"map_name": "RECON1.Inositol retinol metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Tryptophan metabolism", "organism": "Homo sapiens"}, {"map_name": "iMM904.Central carbon metabolism", "organism": "Saccharomyces cerevisiae"}]}'),
+               static_site_index: JSON.parse('{"models": [{"model_name": "e_coli_core", "organism": "Escherichia coli"}, {"model_name": "iJO1366", "organism": "Escherichia coli"}, {"model_name": "RECON1", "organism": "Homo sapiens"}, {"model_name": "iMM904", "organism": "Saccharomyces cerevisiae"}], "maps": [{"map_name": "e_coli_core.Core metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Central metabolism", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid beta-oxidation", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Fatty acid biosynthesis (saturated)", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Nucleotide and histidine biosynthesis", "organism": "Escherichia coli"}, {"map_name": "iJO1366.Nucleotide metabolism", "organism": "Escherichia coli"}, {"map_name": "RECON1.Amino acid metabolism (partial)", "organism": "Homo sapiens"}, {"map_name": "RECON1.Carbohydrate metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Glycolysis TCA PPP", "organism": "Homo sapiens"}, {"map_name": "RECON1.Inositol retinol metabolism", "organism": "Homo sapiens"}, {"map_name": "RECON1.Tryptophan metabolism", "organism": "Homo sapiens"}, {"map_name": "iMM904.Central carbon metabolism", "organism": "Saccharomyces cerevisiae"}]}'),
            };
        }
    })();

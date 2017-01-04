@@ -1,960 +1,992 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.escher = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-/** Behavior. Defines the set of click and drag behaviors for the map, and keeps track
- of which behaviors are activated.
-
- A Behavior instance has the following attributes:
-
- my_behavior.rotation_drag, my_behavior.text_label_mousedown,
- my_behavior.text_label_click, my_behavior.selectable_mousedown,
- my_behavior.selectable_click, my_behavior.selectable_drag,
- my_behavior.node_mouseover, my_behavior.node_mouseout,
- my_behavior.label_mousedown, my_behavior.label_mouseover,
- my_behavior.label_mouseout, my_behavior.bezier_drag,
- my_behavior.bezier_mouseover, my_behavior.bezier_mouseout,
- my_behavior.reaction_label_drag, my_behavior.node_label_drag,
-
+/**
+ * Behavior. Defines the set of click and drag behaviors for the map, and keeps
+ * track of which behaviors are activated.
+ *
+ * A Behavior instance has the following attributes:
+ *
+ * my_behavior.rotation_drag, my_behavior.text_label_mousedown,
+ * my_behavior.text_label_click, my_behavior.selectable_mousedown,
+ * my_behavior.selectable_click, my_behavior.selectable_drag,
+ * my_behavior.node_mouseover, my_behavior.node_mouseout,
+ * my_behavior.label_mousedown, my_behavior.label_mouseover,
+ * my_behavior.label_mouseout, my_behavior.bezier_drag,
+ * my_behavior.bezier_mouseover, my_behavior.bezier_mouseout,
+ * my_behavior.reaction_label_drag, my_behavior.node_label_drag,
+ *
  */
 
 /* global d3 */
 
-var utils = require('./utils');
-var build = require('./build');
+var utils = require('./utils')
+var build = require('./build')
 
 
-var Behavior = utils.make_class();
+var Behavior = utils.make_class()
 // methods
 Behavior.prototype = {
-    init: init,
-    toggle_rotation_mode: toggle_rotation_mode,
-    turn_everything_on: turn_everything_on,
-    turn_everything_off: turn_everything_off,
-    // toggle
-    toggle_selectable_click: toggle_selectable_click,
-    toggle_text_label_edit: toggle_text_label_edit,
-    toggle_selectable_drag: toggle_selectable_drag,
-    toggle_label_drag: toggle_label_drag,
-    toggle_label_mousedown: toggle_label_mousedown,
-    toggle_bezier_drag: toggle_bezier_drag,
-    // util
-    turn_off_drag: turn_off_drag,
-    // get drag behaviors
-    _get_selectable_drag: _get_selectable_drag,
-    _get_bezier_drag: _get_bezier_drag,
-    _get_reaction_label_drag: _get_reaction_label_drag,
-    _get_node_label_drag: _get_node_label_drag,
-    _get_generic_drag: _get_generic_drag,
-    _get_generic_angular_drag: _get_generic_angular_drag
-};
-module.exports = Behavior;
+  init: init,
+  toggle_rotation_mode: toggle_rotation_mode,
+  turn_everything_on: turn_everything_on,
+  turn_everything_off: turn_everything_off,
+  // toggle
+  toggle_selectable_click: toggle_selectable_click,
+  toggle_text_label_edit: toggle_text_label_edit,
+  toggle_selectable_drag: toggle_selectable_drag,
+  toggle_label_drag: toggle_label_drag,
+  toggle_label_mouseover: toggle_label_mouseover,
+  toggle_bezier_drag: toggle_bezier_drag,
+  // util
+  turn_off_drag: turn_off_drag,
+  // get drag behaviors
+  _get_selectable_drag: _get_selectable_drag,
+  _get_bezier_drag: _get_bezier_drag,
+  _get_reaction_label_drag: _get_reaction_label_drag,
+  _get_node_label_drag: _get_node_label_drag,
+  _get_generic_drag: _get_generic_drag,
+  _get_generic_angular_drag: _get_generic_angular_drag
+}
+module.exports = Behavior
 
 
 // definitions
-function init(map, undo_stack) {
-    this.map = map;
-    this.undo_stack = undo_stack;
+function init( map, undo_stack) {
+  this.map = map
+  this.undo_stack = undo_stack
 
-    // make an empty function that can be called as a behavior and does nothing
-    this.empty_behavior = function() {};
+  // make an empty function that can be called as a behavior and does nothing
+  this.empty_behavior = function () {}
 
-    // rotation mode operates separately from the rest
-    this.rotation_mode_enabled = false;
-    this.rotation_drag = d3.behavior.drag();
+  // rotation mode operates separately from the rest
+  this.rotation_mode_enabled = false
+  this.rotation_drag = d3.behavior.drag()
 
-    // behaviors to be applied
-    this.selectable_mousedown = null;
-    this.text_label_mousedown = null;
-    this.text_label_click = null;
-    this.selectable_drag = this.empty_behavior;
-    this.node_mouseover = null;
-    this.node_mouseout = null;
-    this.label_mousedown = null;
-    this.label_mouseover = null;
-    this.label_mouseout = null;
-    this.bezier_drag = this.empty_behavior;
-    this.bezier_mouseover = null;
-    this.bezier_mouseout = null;
-    this.reaction_label_drag = this.empty_behavior;
-    this.node_label_drag = this.empty_behavior;
-    this.turn_everything_on();
-}
-function turn_everything_on() {
-    /** Toggle everything except rotation mode and text mode.
-
-     */
-    this.toggle_selectable_click(true);
-    this.toggle_selectable_drag(true);
-    this.toggle_label_drag(true);
-    this.toggle_label_mousedown(true);
-}
-function turn_everything_off() {
-    /** Toggle everything except rotation mode and text mode.
-
-     */
-    this.toggle_selectable_click(false);
-    this.toggle_selectable_drag(false);
-    this.toggle_label_drag(false);
-    this.toggle_label_mousedown(false);
+  // behaviors to be applied
+  this.selectable_mousedown = null
+  this.text_label_mousedown = null
+  this.text_label_click = null
+  this.selectable_drag = this.empty_behavior
+  this.node_mouseover = null
+  this.node_mouseout = null
+  this.label_mousedown = null
+  this.label_mouseover = null
+  this.label_mouseout = null
+  this.bezier_drag = this.empty_behavior
+  this.bezier_mouseover = null
+  this.bezier_mouseout = null
+  this.reaction_label_drag = this.empty_behavior
+  this.node_label_drag = this.empty_behavior
+  this.dragging = false
+  this.turn_everything_on()
 }
 
-function toggle_rotation_mode(on_off) {
-    /** Listen for rotation, and rotate selected nodes.
-
-     */
-    if (on_off===undefined) {
-        this.rotation_mode_enabled = !this.rotation_mode_enabled;
-    } else {
-        this.rotation_mode_enabled = on_off;
-    }
-
-    var selection_node = this.map.sel.selectAll('.node-circle'),
-        selection_background = this.map.sel.selectAll('#canvas');
-
-    if (this.rotation_mode_enabled) {
-        this.map.callback_manager.run('start_rotation');
-
-        var selected_nodes = this.map.get_selected_nodes();
-        if (Object.keys(selected_nodes).length == 0) {
-            console.warn('No selected nodes');
-            return;
-        }
-
-        // show center
-        this.center = average_location(selected_nodes);
-        show_center.call(this);
-
-        // this.set_status('Drag to rotate.');
-        var map = this.map,
-            selected_node_ids = Object.keys(selected_nodes),
-            reactions = this.map.reactions,
-            nodes = this.map.nodes,
-            beziers = this.map.beziers;
-
-        var start_fn = function(d) {
-            // silence other listeners
-            d3.event.sourceEvent.stopPropagation();
-        },
-            drag_fn = function(d, angle, total_angle, center) {
-                var updated = build.rotate_nodes(selected_nodes, reactions,
-                                                 beziers, angle, center);
-                map.draw_these_nodes(updated.node_ids);
-                map.draw_these_reactions(updated.reaction_ids);
-            },
-            end_fn = function(d) {},
-            undo_fn = function(d, total_angle, center) {
-                // undo
-                var these_nodes = {};
-                selected_node_ids.forEach(function(id) {
-                    these_nodes[id] = nodes[id];
-                });
-                var updated = build.rotate_nodes(these_nodes, reactions,
-                                                 beziers, -total_angle,
-                                                 center);
-                map.draw_these_nodes(updated.node_ids);
-                map.draw_these_reactions(updated.reaction_ids);
-            },
-            redo_fn = function(d, total_angle, center) {
-                // redo
-                var these_nodes = {};
-                selected_node_ids.forEach(function(id) {
-                    these_nodes[id] = nodes[id];
-                });
-                var updated = build.rotate_nodes(these_nodes, reactions,
-                                                 beziers, total_angle,
-                                                 center);
-                map.draw_these_nodes(updated.node_ids);
-                map.draw_these_reactions(updated.reaction_ids);
-            },
-            center_fn = function() {
-                return this.center;
-            }.bind(this);
-        this.rotation_drag = this._get_generic_angular_drag(start_fn, drag_fn, end_fn,
-                                                            undo_fn, redo_fn, center_fn,
-                                                            this.map.sel);
-        selection_background.call(this.rotation_drag);
-        this.selectable_drag = this.rotation_drag;
-    } else {
-        // turn off all listeners
-        hide_center.call(this);
-        selection_node.on('mousedown.center', null);
-        selection_background.on('mousedown.center', null);
-        selection_background.on('mousedown.drag', null);
-        selection_background.on('touchstart.drag', null);
-        this.rotation_drag = null;
-        this.selectable_drag = null;
-    }
-
-    // definitions
-    function show_center() {
-        var s = this.map.sel.selectAll('#rotation-center')
-                .data([0]),
-            enter = s.enter()
-                .append('g').attr('id', 'rotation-center');
-
-        enter.append('path').attr('d', 'M-32 0 L32 0')
-            .attr('class', 'rotation-center-line');
-        enter.append('path').attr('d', 'M0 -32 L0 32')
-            .attr('class', 'rotation-center-line');
-
-        s.attr('transform', 'translate('+this.center.x+','+this.center.y+')')
-            .attr('visibility', 'visible');
-
-        s.call(d3.behavior.drag()
-               .on('drag', function(sel) {
-                   var cur = utils.d3_transform_catch(sel.attr('transform')),
-                       new_loc = [d3.event.dx + cur.translate[0],
-                                  d3.event.dy + cur.translate[1]];
-                   sel.attr('transform', 'translate('+new_loc+')');
-                   this.center = { x: new_loc[0], y: new_loc[1] };
-               }.bind(this, s)));
-        s.on('mouseover', function() {
-            var current = parseFloat(this.selectAll('path').style('stroke-width'));
-            this.selectAll('path').style('stroke-width', current * 2 + 'px');
-        }.bind(s));
-        s.on('mouseout', function() {
-            this.selectAll('path').style('stroke-width', null);
-        }.bind(s));
-    }
-    function hide_center(sel) {
-        this.map.sel.select('#rotation-center')
-            .attr('visibility', 'hidden');
-    }
-    function average_location(nodes) {
-        var xs = [], ys = [];
-        for (var node_id in nodes) {
-            var node = nodes[node_id];
-            if (node.x !== undefined)
-                xs.push(node.x);
-            if (node.y !== undefined)
-                ys.push(node.y);
-        }
-        return { x: utils.mean(xs),
-                 y: utils.mean(ys) };
-    }
-}
-
-function toggle_selectable_click(on_off) {
-    /** With no argument, toggle the node click on or off.
-
-     Pass in a boolean argument to set the on/off state.
-
-     */
-    if (on_off===undefined) on_off = this.selectable_mousedown === null;
-    if (on_off) {
-        var map = this.map;
-        this.selectable_mousedown = function(d) {
-            // stop propogation for the buildinput to work right
-            d3.event.stopPropagation();
-            // this.parentNode.__data__.was_selected = d3.select(this.parentNode).classed('selected');
-            // d3.select(this.parentNode).classed('selected', true);
-        };
-        this.selectable_click = function(d) {
-            // stop propogation for the buildinput to work right
-            d3.event.stopPropagation();
-            // click suppressed. This DOES have en effect.
-            if (d3.event.defaultPrevented) return;
-            // turn off the temporary selection so select_selectable
-            // works. This is a bit of a hack.
-            // if (!this.parentNode.__data__.was_selected)
-            //     d3.select(this.parentNode).classed('selected', false);
-            map.select_selectable(this, d, d3.event.shiftKey);
-            // this.parentNode.__data__.was_selected = false;
-        };
-        this.node_mouseover = function(d) {
-            d3.select(this).style('stroke-width', null);
-            var current = parseFloat(d3.select(this).style('stroke-width'));
-            if (!d3.select(this.parentNode).classed('selected'))
-                d3.select(this).style('stroke-width', current * 3 + 'px');
-        };
-        this.node_mouseout = function(d) {
-            d3.select(this).style('stroke-width', null);
-        };
-    } else {
-        this.selectable_mousedown = null;
-        this.selectable_click = null;
-        this.node_mouseover = null;
-        this.node_mouseout = null;
-        this.map.sel.select('#nodes')
-            .selectAll('.node-circle').style('stroke-width', null);
-    }
-}
-
-function toggle_text_label_edit(on_off) {
-    /** With no argument, toggle the text edit on mousedown on/off.
-
-     Pass in a boolean argument to set the on/off state.
-
-     The backup state is equal to selectable_mousedown.
-
-     */
-    if (on_off===undefined) on_off = this.text_edit_mousedown == null;
-    if (on_off) {
-        var map = this.map,
-            selection = this.selection;
-        this.text_label_mousedown = function() {
-            if (d3.event.defaultPrevented) return; // mousedown suppressed
-            // run the callback
-            var coords_a = utils.d3_transform_catch(d3.select(this).attr('transform')).translate,
-                coords = {x: coords_a[0], y: coords_a[1]};
-            map.callback_manager.run('edit_text_label', null, d3.select(this), coords);
-            d3.event.stopPropagation();
-        };
-        this.text_label_click = null;
-        this.map.sel.select('#text-labels')
-            .selectAll('.label')
-            .classed('edit-text-cursor', true);
-        // add the new-label listener
-        this.map.sel.on('mousedown.new_text_label', function(node) {
-            // silence other listeners
-            d3.event.preventDefault();
-            var coords = { x: d3.mouse(node)[0],
-                           y: d3.mouse(node)[1] };
-            this.map.callback_manager.run('new_text_label', null, coords);
-        }.bind(this, this.map.sel.node()));
-    } else {
-        this.text_label_mousedown = this.selectable_mousedown;
-        this.text_label_click = this.selectable_click;
-        this.map.sel.select('#text-labels')
-            .selectAll('.label')
-            .classed('edit-text-cursor', false);
-        // remove the new-label listener
-        this.map.sel.on('mousedown.new_text_label', null);
-        this.map.callback_manager.run('hide_text_label_editor');
-    }
-}
-
-function toggle_selectable_drag(on_off) {
-    /** With no argument, toggle the node drag & bezier drag on or off.
-
-     Pass in a boolean argument to set the on/off state.
-
-     */
-    if (on_off===undefined) on_off = this.selectable_drag===this.empty_behavior;
-    if (on_off) {
-        this.selectable_drag = this._get_selectable_drag(this.map, this.undo_stack);
-        this.bezier_drag = this._get_bezier_drag(this.map, this.undo_stack);
-    } else {
-        this.selectable_drag = this.empty_behavior;
-        this.bezier_drag = this.empty_behavior;
-    }
-}
-function toggle_label_drag(on_off) {
-    /** With no argument, toggle the label drag on or off.
-
-     Pass in a boolean argument to set the on/off state.
-
-     */
-    if (on_off===undefined) on_off = this.label_drag===this.empty_behavior;
-    if (on_off) {
-        this.reaction_label_drag = this._get_reaction_label_drag(this.map);
-        this.node_label_drag = this._get_node_label_drag(this.map);
-    } else {
-        this.reaction_label_drag = this.empty_behavior;
-        this.node_label_drag = this.empty_behavior;
-    }
-}
-
-function toggle_label_mousedown(on_off) {
-    /** With no argument, toggle the reaction label mousedown on or off.z
-
-     Arguments
-     ---------
-
-     on_off: A boolean argument to set the on/off state.
-
-     */
-    if (on_off===undefined) on_off = this.label_mousedown==null;
-    if (on_off) {
-        var map = this.map;
-        // TODO turn this feature (reaction label selection) back on, but
-        // with correct shift key management
-        this.label_mousedown = function(d) {
-            // if (d3.event.defaultPrevented) return; // mousedown suppressed
-            // // select reaction/node
-            // d3.select(this.parentNode.parentNode)
-            //     .each(function(d) {
-            //         var node_ids = {};
-            //         for (var seg_id in d.segments) {
-            //             ['to_node_id', 'from_node_id'].forEach(function(n) {
-            //                 node_ids[d.segments[seg_id][n]] = true;
-            //             });
-            //         }
-            //         map.sel.selectAll('.selected').classed('selected', false);
-            //         map.sel.selectAll('.node')
-            //             .classed('selected', function(d) {
-            //                 return (d.node_id in node_ids);
-            //             });
-            //     });
-            // d3.event.stopPropagation();
-        };
-        this.label_mouseover = function(d) {
-            // d3.select(this).style('fill', 'rgb(56, 56, 184)');
-        };
-        this.label_mouseout = function(d) {
-            // d3.select(this).style('fill', null);
-        };
-    } else {
-        this.label_mousedown = null;
-        this.label_mouseover = null;
-        this.label_mouseout = null;
-        this.map.sel.select('.node-label,.reaction-label')
-            .style('fill', null);
-    }
-}
-
-function toggle_bezier_drag(on_off) {
-    /** With no argument, toggle the bezier drag on or off.
-
-     Pass in a boolean argument to set the on/off state.
-
-     */
-    if (on_off===undefined) on_off = this.bezier_drag===this.empty_behavior;
-    if (on_off) {
-        this.bezier_drag = this._get_bezier_drag(this.map);
-        this.bezier_mouseover = function(d) {
-            d3.select(this).style('stroke-width', String(3)+'px');
-        };
-        this.bezier_mouseout = function(d) {
-            d3.select(this).style('stroke-width', String(1)+'px');
-        };
-    } else {
-        this.bezier_drag = this.empty_behavior;
-        this.bezier_mouseover = null;
-        this.bezier_mouseout = null;
-    }
-}
-
-function turn_off_drag(sel) {
-    sel.on('mousedown.drag', null);
-    sel.on('touchstart.drag', null);
-}
-
-function _get_selectable_drag(map, undo_stack) {
-    /** Drag the selected nodes and text labels.
-
-     */
-
-    // define some variables
-    var behavior = d3.behavior.drag(),
-        the_timeout = null,
-        total_displacement = null,
-        // for nodes
-        node_ids_to_drag = null,
-        reaction_ids = null,
-        // for text labels
-        text_label_ids_to_drag = null,
-        move_label = function(text_label_id, displacement) {
-            var text_label = map.text_labels[text_label_id];
-            text_label.x = text_label.x + displacement.x;
-            text_label.y = text_label.y + displacement.y;
-        };
-
-    behavior.on("dragstart", function (d) {
-        // silence other listeners (e.g. nodes BELOW this one)
-        d3.event.sourceEvent.stopPropagation();
-        // remember the total displacement for later
-        // total_displacement = {};
-        total_displacement = {x: 0, y: 0};
-
-        // If a text label is selected, the rest is not necessary
-        if (d3.select(this).attr('class').indexOf('label') == -1) {
-            // Note that dragstart is called even for a click event
-            var data = this.parentNode.__data__,
-                bigg_id = data.bigg_id,
-                node_group = this.parentNode;
-            // Move element to back (for the next step to work). Wait 200ms
-            // before making the move, becuase otherwise the element will be
-            // deleted before the click event gets called, and selection
-            // will stop working.
-            the_timeout = setTimeout(function() {
-                node_group.parentNode.insertBefore(node_group,node_group.parentNode.firstChild);
-            }, 200);
-            // prepare to combine metabolites
-            map.sel.selectAll('.metabolite-circle')
-                .on('mouseover.combine', function(d) {
-                    if (d.bigg_id==bigg_id && d.node_id!=data.node_id) {
-                        d3.select(this).style('stroke-width', String(12)+'px')
-                            .classed('node-to-combine', true);
-                    }
-                }).on('mouseout.combine', function(d) {
-                    if (d.bigg_id==bigg_id) {
-                        map.sel.selectAll('.node-to-combine').style('stroke-width', String(2)+'px')
-                            .classed('node-to-combine', false);
-                    }
-                });
-        }
-    });
-    behavior.on("drag", function(d) {
-        // if this node is not already selected, then select this one and
-        // deselect all other nodes. Otherwise, leave the selection alone.
-        if (!d3.select(this.parentNode).classed('selected'))
-            map.select_selectable(this, d);
-
-        // get the grabbed id
-        var grabbed = {};
-        if (d3.select(this).attr('class').indexOf('label') === -1) {
-            // if it is a node
-            grabbed['type'] = 'node';
-            grabbed['id'] = this.parentNode.__data__.node_id;
-        } else {
-            // if it is a text label
-            grabbed['type'] = 'label';
-            grabbed['id'] = this.__data__.text_label_id;
-        }
-
-        var selected_node_ids = map.get_selected_node_ids(),
-            selected_text_label_ids = map.get_selected_text_label_ids();
-        node_ids_to_drag = []; text_label_ids_to_drag = [];
-        // choose the nodes and text labels to drag
-        if (grabbed['type']=='node' &&
-            selected_node_ids.indexOf(grabbed['id'])==-1) {
-            node_ids_to_drag.push(grabbed['id']);
-        } else if (grabbed['type']=='label' &&
-                   selected_text_label_ids.indexOf(grabbed['id'])==-1) {
-            text_label_ids_to_drag.push(grabbed['id']);
-        } else {
-            node_ids_to_drag = selected_node_ids;
-            text_label_ids_to_drag = selected_text_label_ids;
-        }
-        reaction_ids = [];
-        var displacement = { x: d3.event.dx,
-                             y: d3.event.dy };
-        total_displacement = utils.c_plus_c(total_displacement, displacement);
-        node_ids_to_drag.forEach(function(node_id) {
-            // update data
-            var node = map.nodes[node_id],
-                updated = build.move_node_and_dependents(node, node_id,
-                                                         map.reactions,
-                                                         map.beziers,
-                                                         displacement);
-            reaction_ids = utils.unique_concat([reaction_ids, updated.reaction_ids]);
-            // remember the displacements
-            // if (!(node_id in total_displacement))  total_displacement[node_id] = { x: 0, y: 0 };
-            // total_displacement[node_id] = utils.c_plus_c(total_displacement[node_id], displacement);
-        });
-        text_label_ids_to_drag.forEach(function(text_label_id) {
-            move_label(text_label_id, displacement);
-            // remember the displacements
-            // if (!(node_id in total_displacement))  total_displacement[node_id] = { x: 0, y: 0 };
-            // total_displacement[node_id] = utils.c_plus_c(total_displacement[node_id], displacement);
-        });
-        // draw
-        map.draw_these_nodes(node_ids_to_drag);
-        map.draw_these_reactions(reaction_ids);
-        map.draw_these_text_labels(text_label_ids_to_drag);
-    });
-    behavior.on("dragend", function() {
-        if (node_ids_to_drag===null) {
-            // Dragend can be called when drag has not been called. In this,
-            // case, do nothing.
-            total_displacement = null;
-            node_ids_to_drag = null;
-            text_label_ids_to_drag = null;
-            reaction_ids = null;
-            the_timeout = null;
-            return;
-        }
-        // look for mets to combine
-        var node_to_combine_array = [];
-        map.sel.selectAll('.node-to-combine').each(function(d) {
-            node_to_combine_array.push(d.node_id);
-        });
-        if (node_to_combine_array.length==1) {
-            // If a node is ready for it, combine nodes
-            var fixed_node_id = node_to_combine_array[0],
-                dragged_node_id = this.parentNode.__data__.node_id,
-                saved_dragged_node = utils.clone(map.nodes[dragged_node_id]),
-                segment_objs_moved_to_combine = combine_nodes_and_draw(fixed_node_id,
-                                                                       dragged_node_id);
-            undo_stack.push(function() {
-                // undo
-                // put the old node back
-                map.nodes[dragged_node_id] = saved_dragged_node;
-                var fixed_node = map.nodes[fixed_node_id],
-                    updated_reactions = [];
-                segment_objs_moved_to_combine.forEach(function(segment_obj) {
-                    var segment = map.reactions[segment_obj.reaction_id].segments[segment_obj.segment_id];
-                    if (segment.from_node_id==fixed_node_id) {
-                        segment.from_node_id = dragged_node_id;
-                    } else if (segment.to_node_id==fixed_node_id) {
-                        segment.to_node_id = dragged_node_id;
-                    } else {
-                        console.error('Segment does not connect to fixed node');
-                    }
-                    // removed this segment_obj from the fixed node
-                    fixed_node.connected_segments = fixed_node.connected_segments.filter(function(x) {
-                        return !(x.reaction_id==segment_obj.reaction_id && x.segment_id==segment_obj.segment_id);
-                    });
-                    if (updated_reactions.indexOf(segment_obj.reaction_id)==-1)
-                        updated_reactions.push(segment_obj.reaction_id);
-                });
-                map.draw_these_nodes([dragged_node_id]);
-                map.draw_these_reactions(updated_reactions);
-            }, function () {
-                // redo
-                combine_nodes_and_draw(fixed_node_id, dragged_node_id);
-            });
-
-        } else {
-            // otherwise, drag node
-
-            // add to undo/redo stack
-            // remember the displacement, dragged nodes, and reactions
-            var saved_displacement = utils.clone(total_displacement),
-                // BUG TODO this variable disappears!
-                // Happens sometimes when you drag a node, then delete it, then undo twice
-                saved_node_ids = utils.clone(node_ids_to_drag),
-                saved_text_label_ids = utils.clone(text_label_ids_to_drag),
-                saved_reaction_ids = utils.clone(reaction_ids);
-            undo_stack.push(function() {
-                // undo
-                saved_node_ids.forEach(function(node_id) {
-                    var node = map.nodes[node_id];
-                    build.move_node_and_dependents(node, node_id, map.reactions,
-                                                   map.beziers,
-                                                   utils.c_times_scalar(saved_displacement, -1));
-                });
-                saved_text_label_ids.forEach(function(text_label_id) {
-                    move_label(text_label_id,
-                               utils.c_times_scalar(saved_displacement, -1));
-                });
-                map.draw_these_nodes(saved_node_ids);
-                map.draw_these_reactions(saved_reaction_ids);
-                map.draw_these_text_labels(saved_text_label_ids);
-            }, function () {
-                // redo
-                saved_node_ids.forEach(function(node_id) {
-                    var node = map.nodes[node_id];
-                    build.move_node_and_dependents(node, node_id, map.reactions,
-                                                   map.beziers,
-                                                   saved_displacement);
-                });
-                saved_text_label_ids.forEach(function(text_label_id) {
-                    move_label(text_label_id, saved_displacement);
-                });
-                map.draw_these_nodes(saved_node_ids);
-                map.draw_these_reactions(saved_reaction_ids);
-                map.draw_these_text_labels(saved_text_label_ids);
-            });
-        }
-
-        // stop combining metabolites
-        map.sel.selectAll('.metabolite-circle')
-            .on('mouseover.combine', null)
-            .on('mouseout.combine', null);
-
-        // clear the timeout
-        clearTimeout(the_timeout);
-
-        // clear the shared variables
-        total_displacement = null;
-        node_ids_to_drag = null;
-        text_label_ids_to_drag = null;
-        reaction_ids = null;
-        the_timeout = null;
-    });
-    return behavior;
-
-    // definitions
-    function combine_nodes_and_draw(fixed_node_id, dragged_node_id) {
-        var dragged_node = map.nodes[dragged_node_id],
-            fixed_node = map.nodes[fixed_node_id],
-            updated_segment_objs = [];
-        dragged_node.connected_segments.forEach(function(segment_obj) {
-            // change the segments to reflect
-            var segment;
-            try {
-                segment = map.reactions[segment_obj.reaction_id].segments[segment_obj.segment_id];
-                if (segment === undefined) throw new Error('undefined segment');
-            } catch (e) {
-                console.warn('Could not find connected segment ' + segment_obj.segment_id);
-                return;
-            }
-            if (segment.from_node_id==dragged_node_id) segment.from_node_id = fixed_node_id;
-            else if (segment.to_node_id==dragged_node_id) segment.to_node_id = fixed_node_id;
-            else {
-                console.error('Segment does not connect to dragged node');
-                return;
-            }
-            // moved segment_obj to fixed_node
-            fixed_node.connected_segments.push(segment_obj);
-            updated_segment_objs.push(utils.clone(segment_obj));
-            return;
-        });
-        // delete the old node
-        map.delete_node_data([dragged_node_id]);
-        // turn off the class
-        map.sel.selectAll('.node-to-combine').classed('node-to-combine', false);
-        // draw
-        map.draw_everything();
-        // return for undo
-        return updated_segment_objs;
-    }
-}
-function _get_bezier_drag(map) {
-    var move_bezier = function(reaction_id, segment_id, bez, bezier_id, displacement) {
-        var segment = map.reactions[reaction_id].segments[segment_id];
-        segment[bez] = utils.c_plus_c(segment[bez], displacement);
-        map.beziers[bezier_id].x = segment[bez].x;
-        map.beziers[bezier_id].y = segment[bez].y;
-    },
-        start_fn = function(d) {
-            d.dragging = true;
-        },
-        drag_fn = function(d, displacement, total_displacement) {
-            // draw
-            move_bezier(d.reaction_id, d.segment_id, d.bezier, d.bezier_id,
-                        displacement);
-            map.draw_these_reactions([d.reaction_id], false);
-            map.draw_these_beziers([d.bezier_id]);
-        },
-        end_fn = function(d) {
-            d.dragging = false;
-        },
-        undo_fn = function(d, displacement) {
-            move_bezier(d.reaction_id, d.segment_id, d.bezier, d.bezier_id,
-                        utils.c_times_scalar(displacement, -1));
-            map.draw_these_reactions([d.reaction_id], false);
-            map.draw_these_beziers([d.bezier_id]);
-        },
-        redo_fn = function(d, displacement) {
-            move_bezier(d.reaction_id, d.segment_id, d.bezier, d.bezier_id,
-                        displacement);
-            map.draw_these_reactions([d.reaction_id], false);
-            map.draw_these_beziers([d.bezier_id]);
-        };
-    return this._get_generic_drag(start_fn, drag_fn, end_fn, undo_fn,
-                                  redo_fn, this.map.sel);
-}
-function _get_reaction_label_drag(map) {
-    var move_label = function(reaction_id, displacement) {
-        var reaction = map.reactions[reaction_id];
-        reaction.label_x = reaction.label_x + displacement.x;
-        reaction.label_y = reaction.label_y + displacement.y;
-    },
-        start_fn = function(d) {
-        },
-        drag_fn = function(d, displacement, total_displacement) {
-            // draw
-            move_label(d.reaction_id, displacement);
-            map.draw_these_reactions([d.reaction_id]);
-        },
-        end_fn = function(d) {
-        },
-        undo_fn = function(d, displacement) {
-            move_label(d.reaction_id, utils.c_times_scalar(displacement, -1));
-            map.draw_these_reactions([d.reaction_id]);
-        },
-        redo_fn = function(d, displacement) {
-            move_label(d.reaction_id, displacement);
-            map.draw_these_reactions([d.reaction_id]);
-        };
-    return this._get_generic_drag(start_fn, drag_fn, end_fn, undo_fn,
-                                  redo_fn, this.map.sel);
-}
-function _get_node_label_drag(map) {
-    var move_label = function(node_id, displacement) {
-        var node = map.nodes[node_id];
-        node.label_x = node.label_x + displacement.x;
-        node.label_y = node.label_y + displacement.y;
-    },
-        start_fn = function(d) {
-        },
-        drag_fn = function(d, displacement, total_displacement) {
-            // draw
-            move_label(d.node_id, displacement);
-            map.draw_these_nodes([d.node_id]);
-        },
-        end_fn = function(d) {
-        },
-        undo_fn = function(d, displacement) {
-            move_label(d.node_id, utils.c_times_scalar(displacement, -1));
-            map.draw_these_nodes([d.node_id]);
-        },
-        redo_fn = function(d, displacement) {
-            move_label(d.node_id, displacement);
-            map.draw_these_nodes([d.node_id]);
-        };
-    return this._get_generic_drag(start_fn, drag_fn, end_fn, undo_fn,
-                                  redo_fn, this.map.sel);
-}
-
-function _get_generic_drag(start_fn, drag_fn, end_fn, undo_fn, redo_fn, relative_to_selection) {
-    /** Make a generic drag behavior, with undo/redo.
-
-     start_fn: function(d) Called at dragstart.
-
-     drag_fn: function(d, displacement, total_displacement) Called during
-     drag.
-
-     end_fn
-
-     undo_fn
-
-     redo_fn
-
-     relative_to_selection: a d3 selection that the locations are calculated against.
-
-     */
-
-    // define some variables
-    var behavior = d3.behavior.drag(),
-        total_displacement,
-        undo_stack = this.undo_stack,
-        rel = relative_to_selection.node();
-
-    behavior.on("dragstart", function (d) {
-        // silence other listeners
-        d3.event.sourceEvent.stopPropagation();
-        total_displacement = { x: 0, y: 0 };
-        start_fn(d);
-    });
-    behavior.on("drag", function(d) {
-        // update data
-        var displacement = { x: d3.event.dx,
-                             y: d3.event.dy },
-            location = { x: d3.mouse(rel)[0],
-                         y: d3.mouse(rel)[1] };
-
-        // remember the displacement
-        total_displacement = utils.c_plus_c(total_displacement, displacement);
-        drag_fn(d, displacement, total_displacement, location);
-    });
-    behavior.on("dragend", function(d) {
-        // add to undo/redo stack
-        // remember the displacement, dragged nodes, and reactions
-        var saved_d = utils.clone(d),
-            saved_displacement = utils.clone(total_displacement), // BUG TODO this variable disappears!
-            saved_location = { x: d3.mouse(rel)[0],
-                               y: d3.mouse(rel)[1] };
-
-        undo_stack.push(function() {
-            // undo
-            undo_fn(saved_d, saved_displacement, saved_location);
-        }, function () {
-            // redo
-            redo_fn(saved_d, saved_displacement, saved_location);
-        });
-        end_fn(d);
-    });
-    return behavior;
-}
-
-function _get_generic_angular_drag(start_fn, drag_fn, end_fn, undo_fn, redo_fn,
-                                   get_center, relative_to_selection) {
-    /** Make a generic drag behavior, with undo/redo. Supplies angles in
-     place of displacements.
-
-     start_fn: function(d) Called at dragstart.
-
-     drag_fn: function(d, displacement, total_displacement) Called during
-     drag.
-
-     end_fn:
-
-     undo_fn:
-
-     redo_fn:
-
-     get_center:
-
-     relative_to_selection: a d3 selection that the locations are calculated against.
-
-     */
-
-    // define some variables
-    var behavior = d3.behavior.drag(),
-        total_angle,
-        undo_stack = this.undo_stack,
-        rel = relative_to_selection.node();
-
-    behavior.on("dragstart", function (d) {
-        // silence other listeners
-        d3.event.sourceEvent.stopPropagation();
-        total_angle = 0;
-        start_fn(d);
-    });
-    behavior.on("drag", function(d) {
-        // update data
-        var displacement = { x: d3.event.dx,
-                             y: d3.event.dy },
-            location = { x: d3.mouse(rel)[0],
-                         y: d3.mouse(rel)[1] },
-            center = get_center(),
-            angle = utils.angle_for_event(displacement,
-                                          location,
-                                          center);
-        // remember the displacement
-        total_angle = total_angle + angle;
-        drag_fn(d, angle, total_angle, center);
-    });
-    behavior.on("dragend", function(d) {
-        // add to undo/redo stack
-        // remember the displacement, dragged nodes, and reactions
-        var saved_d = utils.clone(d),
-            saved_angle = total_angle,
-            saved_center = utils.clone(get_center());
-
-        undo_stack.push(function() {
-            // undo
-            undo_fn(saved_d, saved_angle, saved_center);
-        }, function () {
-            // redo
-            redo_fn(saved_d, saved_angle, saved_center);
-        });
-        end_fn(d);
-    });
-    return behavior;
-}
-
-},{"./build":24,"./utils":31}],2:[function(require,module,exports){
-/** Brush. Define a brush to select elements in a map.
-
- Arguments
- ---------
-
- selection: A d3 selection to place the brush in.
-
- is_enabled: Whether to turn the brush on.
-
- map: An instance of escher.Map.
-
- insert_after: A d3 selector string to choose the svg element that the brush
- will be inserted after. Often a canvas element (e.g. '.canvas-group').
-
+/**
+ * Toggle everything except rotation mode and text mode.
  */
+function turn_everything_on () {
+  this.toggle_selectable_click(true)
+  this.toggle_selectable_drag(true)
+  this.toggle_label_drag(true)
+  this.toggle_label_mouseover(true)
+}
 
+/**
+ * Toggle everything except rotation mode and text mode.
+ */
+function turn_everything_off () {
+  this.toggle_selectable_click(false)
+  this.toggle_selectable_drag(false)
+  this.toggle_label_drag(false)
+  this.toggle_label_mouseover(false)
+}
+
+function toggle_rotation_mode (on_off) {
+  /** Listen for rotation, and rotate selected nodes.
+
+   */
+  if (on_off === undefined) {
+    this.rotation_mode_enabled = !this.rotation_mode_enabled
+  } else {
+    this.rotation_mode_enabled = on_off
+  }
+
+  var selection_node = this.map.sel.selectAll('.node-circle')
+  var selection_background = this.map.sel.selectAll('#canvas')
+
+  if (this.rotation_mode_enabled) {
+    this.map.callback_manager.run('start_rotation')
+
+    var selected_nodes = this.map.get_selected_nodes()
+    if (Object.keys(selected_nodes).length === 0) {
+      console.warn('No selected nodes')
+      return
+    }
+
+    // show center
+    this.center = average_location(selected_nodes)
+    show_center.call(this)
+
+    // this.set_status('Drag to rotate.')
+    var map = this.map
+    var selected_node_ids = Object.keys(selected_nodes)
+    var reactions = this.map.reactions
+    var nodes = this.map.nodes
+    var beziers = this.map.beziers
+
+    var start_fn = function (d) {
+      // silence other listeners
+      d3.event.sourceEvent.stopPropagation()
+    }
+    var drag_fn = function (d, angle, total_angle, center) {
+      var updated = build.rotate_nodes(selected_nodes, reactions,
+                                       beziers, angle, center)
+      map.draw_these_nodes(updated.node_ids)
+      map.draw_these_reactions(updated.reaction_ids)
+    }
+    var end_fn = function (d) {}
+    var undo_fn = function (d, total_angle, center) {
+      // undo
+      var these_nodes = {}
+      selected_node_ids.forEach(function (id) {
+        these_nodes[id] = nodes[id]
+      })
+      var updated = build.rotate_nodes(these_nodes, reactions,
+                                       beziers, -total_angle,
+                                       center)
+      map.draw_these_nodes(updated.node_ids)
+      map.draw_these_reactions(updated.reaction_ids)
+    }
+    var redo_fn = function (d, total_angle, center) {
+      // redo
+      var these_nodes = {}
+      selected_node_ids.forEach(function (id) {
+        these_nodes[id] = nodes[id]
+      })
+      var updated = build.rotate_nodes(these_nodes, reactions,
+                                       beziers, total_angle,
+                                       center)
+      map.draw_these_nodes(updated.node_ids)
+      map.draw_these_reactions(updated.reaction_ids) }
+    var center_fn = function () {
+      return this.center
+    }.bind(this)
+    this.rotation_drag = this._get_generic_angular_drag(start_fn, drag_fn,
+                                                        end_fn, undo_fn,
+                                                        redo_fn, center_fn,
+                                                        this.map.sel)
+    selection_background.call(this.rotation_drag)
+    this.selectable_drag = this.rotation_drag
+  } else {
+    // turn off all listeners
+    hide_center.call(this)
+    selection_node.on('mousedown.center', null)
+    selection_background.on('mousedown.center', null)
+    selection_background.on('mousedown.drag', null)
+    selection_background.on('touchstart.drag', null)
+    this.rotation_drag = null
+    this.selectable_drag = null
+  }
+
+  // definitions
+  function show_center() {
+    var s = this.map.sel.selectAll('#rotation-center').data([0])
+    var enter = s.enter().append('g').attr('id', 'rotation-center')
+
+    enter.append('path').attr('d', 'M-32 0 L32 0')
+      .attr('class', 'rotation-center-line')
+    enter.append('path').attr('d', 'M0 -32 L0 32')
+      .attr('class', 'rotation-center-line')
+
+    s.attr('transform', 'translate('+this.center.x+','+this.center.y+')')
+      .attr('visibility', 'visible')
+
+    s.call(d3.behavior.drag()
+           .on('drag', function (sel) {
+             var cur = utils.d3_transform_catch(sel.attr('transform')),
+             new_loc = [d3.event.dx + cur.translate[0],
+                        d3.event.dy + cur.translate[1]]
+             sel.attr('transform', 'translate('+new_loc+')')
+             this.center = { x: new_loc[0], y: new_loc[1] }
+           }.bind(this, s)))
+    s.on('mouseover', function () {
+      var current = parseFloat(this.selectAll('path').style('stroke-width'))
+      this.selectAll('path').style('stroke-width', current * 2 + 'px')
+    }.bind(s))
+    s.on('mouseout', function () {
+      this.selectAll('path').style('stroke-width', null)
+    }.bind(s))
+  }
+  function hide_center(sel) {
+    this.map.sel.select('#rotation-center')
+      .attr('visibility', 'hidden')
+  }
+  function average_location(nodes) {
+    var xs = []
+    var ys = []
+    for (var node_id in nodes) {
+      var node = nodes[node_id]
+      if (node.x !== undefined)
+        xs.push(node.x)
+      if (node.y !== undefined)
+        ys.push(node.y)
+    }
+    return { x: utils.mean(xs),
+             y: utils.mean(ys) }
+  }
+}
+
+/**
+ * With no argument, toggle the node click on or off. Pass in a boolean argument
+ * to set the on/off state.
+ */
+function toggle_selectable_click (on_off) {
+  if (on_off === undefined) {
+    on_off = this.selectable_mousedown === null
+  }
+  if (on_off) {
+    var map = this.map
+    this.selectable_mousedown = function (d) {
+      // stop propogation for the buildinput to work right
+      d3.event.stopPropagation()
+      // this.parentNode.__data__.was_selected = d3.select(this.parentNode).classed('selected')
+      // d3.select(this.parentNode).classed('selected', true)
+    }
+    this.selectable_click = function (d) {
+      // stop propogation for the buildinput to work right
+      d3.event.stopPropagation()
+      // click suppressed. This DOES have en effect.
+      if (d3.event.defaultPrevented) return
+      // turn off the temporary selection so select_selectable
+      // works. This is a bit of a hack.
+      // if (!this.parentNode.__data__.was_selected)
+      //     d3.select(this.parentNode).classed('selected', false)
+      map.select_selectable(this, d, d3.event.shiftKey)
+      // this.parentNode.__data__.was_selected = false
+    }
+    this.node_mouseover = function (d) {
+      d3.select(this).style('stroke-width', null)
+      var current = parseFloat(d3.select(this).style('stroke-width'))
+      if (!d3.select(this.parentNode).classed('selected'))
+        d3.select(this).style('stroke-width', current * 3 + 'px')
+    }
+    this.node_mouseout = function (d) {
+      d3.select(this).style('stroke-width', null)
+    }
+  } else {
+    this.selectable_mousedown = null
+    this.selectable_click = null
+    this.node_mouseover = null
+    this.node_mouseout = null
+    this.map.sel.select('#nodes')
+      .selectAll('.node-circle').style('stroke-width', null)
+  }
+}
+
+/**
+ * With no argument, toggle the text edit on mousedown on/off. Pass in a boolean
+ * argument to set the on/off state. The backup state is equal to
+ * selectable_mousedown.
+ */
+function toggle_text_label_edit (on_off) {
+  if (on_off === undefined) {
+    on_off = this.text_edit_mousedown == null
+  }
+  if (on_off) {
+    var map = this.map
+    var selection = this.selection
+    this.text_label_mousedown = function () {
+      if (d3.event.defaultPrevented) {
+        return // mousedown suppressed
+      }
+      // run the callback
+      var coords_a = utils.d3_transform_catch(d3.select(this).attr('transform'))
+          .translate
+      var coords = { x: coords_a[0], y: coords_a[1] }
+      map.callback_manager.run('edit_text_label', null, d3.select(this), coords)
+      d3.event.stopPropagation()
+    }
+    this.text_label_click = null
+    this.map.sel.select('#text-labels')
+      .selectAll('.label')
+      .classed('edit-text-cursor', true)
+    // add the new-label listener
+    this.map.sel.on('mousedown.new_text_label', function (node) {
+      // silence other listeners
+      d3.event.preventDefault()
+      var coords = {
+        x: d3.mouse(node)[0],
+        y: d3.mouse(node)[1],
+      }
+      this.map.callback_manager.run('new_text_label', null, coords)
+    }.bind(this, this.map.sel.node()))
+  } else {
+    this.text_label_mousedown = this.selectable_mousedown
+    this.text_label_click = this.selectable_click
+    this.map.sel.select('#text-labels')
+      .selectAll('.label')
+      .classed('edit-text-cursor', false)
+    // remove the new-label listener
+    this.map.sel.on('mousedown.new_text_label', null)
+    this.map.callback_manager.run('hide_text_label_editor')
+  }
+}
+
+/**
+ * With no argument, toggle the node drag & bezier drag on or off. Pass in a
+ * boolean argument to set the on/off state.
+ */
+function toggle_selectable_drag (on_off) {
+  if (on_off === undefined) {
+    on_off = this.selectable_drag === this.empty_behavior
+  }
+  if (on_off) {
+    this.selectable_drag = this._get_selectable_drag(this.map, this.undo_stack)
+    this.bezier_drag = this._get_bezier_drag(this.map, this.undo_stack)
+  } else {
+    this.selectable_drag = this.empty_behavior
+    this.bezier_drag = this.empty_behavior
+  }
+}
+
+/**
+ * With no argument, toggle the label drag on or off. Pass in a boolean argument
+ * to set the on/off state.
+ * @param {Boolean} on_off - The new on/off state.
+ */
+function toggle_label_drag (on_off) {
+  if (on_off === undefined) {
+    on_off = this.label_drag === this.empty_behavior
+  }
+  if (on_off) {
+    this.reaction_label_drag = this._get_reaction_label_drag(this.map)
+    this.node_label_drag = this._get_node_label_drag(this.map)
+  } else {
+    this.reaction_label_drag = this.empty_behavior
+    this.node_label_drag = this.empty_behavior
+  }
+}
+
+/**
+ * With no argument, toggle the tooltips on mouseover labels.
+ * @param {Boolean} on_off - The new on/off state.
+ */
+function toggle_label_mouseover (on_off) {
+  if (on_off === undefined) {
+    on_off = this.label_mouseover === null
+  }
+
+  if (on_off) {
+
+    // Show/hide tooltip.
+    // @param {String} type - 'reaction_label' or 'node_label'
+    // @param {Object} d - D3 data for DOM element
+    this.label_mouseover = function (type, d) {
+      if (!this.dragging) {
+        this.map.callback_manager.run('show_tooltip', null, type, d)
+      }
+    }.bind(this)
+
+    this.label_mouseout = function () {
+      this.map.callback_manager.run('delay_hide_tooltip')
+    }.bind(this)
+
+  } else {
+    this.label_mouseover = null
+  }
+}
+
+/**
+ * With no argument, toggle the bezier drag on or off. Pass in a boolean
+ * argument to set the on/off state.
+ */
+function toggle_bezier_drag (on_off) {
+  if (on_off === undefined) {
+    on_off = this.bezier_drag === this.empty_behavior
+  }
+  if (on_off) {
+    this.bezier_drag = this._get_bezier_drag(this.map)
+    this.bezier_mouseover = function (d) {
+      d3.select(this).style('stroke-width', String(3)+'px')
+    }
+    this.bezier_mouseout = function (d) {
+      d3.select(this).style('stroke-width', String(1)+'px')
+    }
+  } else {
+    this.bezier_drag = this.empty_behavior
+    this.bezier_mouseover = null
+    this.bezier_mouseout = null
+  }
+}
+
+function turn_off_drag (sel) {
+  sel.on('mousedown.drag', null)
+  sel.on('touchstart.drag', null)
+}
+
+/**
+ * Drag the selected nodes and text labels.
+ */
+function _get_selectable_drag (map, undo_stack) {
+
+  // define some variables
+  var behavior = d3.behavior.drag()
+  var the_timeout = null
+  var total_displacement = null
+  // for nodes
+  var node_ids_to_drag = null
+  var reaction_ids = null
+  // for text labels
+  var text_label_ids_to_drag = null
+  var move_label = function (text_label_id, displacement) {
+    var text_label = map.text_labels[text_label_id]
+    text_label.x = text_label.x + displacement.x
+    text_label.y = text_label.y + displacement.y
+  }
+  var set_dragging = function (on_off) {
+    this.dragging = on_off
+  }.bind(this)
+
+  behavior.on('dragstart', function (d) {
+    set_dragging(true)
+
+    // silence other listeners (e.g. nodes BELOW this one)
+    d3.event.sourceEvent.stopPropagation()
+    // remember the total displacement for later
+    total_displacement = { x: 0, y: 0 }
+
+    // If a text label is selected, the rest is not necessary
+    if (d3.select(this).attr('class').indexOf('label') === -1) {
+      // Note that dragstart is called even for a click event
+      var data = this.parentNode.__data__,
+      bigg_id = data.bigg_id,
+      node_group = this.parentNode
+      // Move element to back (for the next step to work). Wait 200ms
+      // before making the move, becuase otherwise the element will be
+      // deleted before the click event gets called, and selection
+      // will stop working.
+      the_timeout = setTimeout(function () {
+        node_group.parentNode.insertBefore(node_group,
+                                           node_group.parentNode.firstChild)
+      }, 200)
+      // prepare to combine metabolites
+      map.sel.selectAll('.metabolite-circle')
+        .on('mouseover.combine', function (d) {
+          if (d.bigg_id === bigg_id && d.node_id !== data.node_id) {
+            d3.select(this).style('stroke-width', String(12) + 'px')
+              .classed('node-to-combine', true)
+          }
+        })
+        .on('mouseout.combine', function (d) {
+          if (d.bigg_id === bigg_id) {
+            map.sel.selectAll('.node-to-combine')
+              .style('stroke-width', String(2) + 'px')
+              .classed('node-to-combine', false)
+          }
+        })
+    }
+  })
+
+  behavior.on('drag', function (d) {
+    // if this node is not already selected, then select this one and
+    // deselect all other nodes. Otherwise, leave the selection alone.
+    if (!d3.select(this.parentNode).classed('selected')) {
+      map.select_selectable(this, d)
+    }
+
+    // get the grabbed id
+    var grabbed = {}
+    if (d3.select(this).attr('class').indexOf('label') === -1) {
+      // if it is a node
+      grabbed['type'] = 'node'
+      grabbed['id'] = this.parentNode.__data__.node_id
+    } else {
+      // if it is a text label
+      grabbed['type'] = 'label'
+      grabbed['id'] = this.__data__.text_label_id
+    }
+
+    var selected_node_ids = map.get_selected_node_ids()
+    var selected_text_label_ids = map.get_selected_text_label_ids()
+    node_ids_to_drag = []; text_label_ids_to_drag = []
+    // choose the nodes and text labels to drag
+    if (grabbed['type']=='node' &&
+        selected_node_ids.indexOf(grabbed['id']) === -1) {
+      node_ids_to_drag.push(grabbed['id'])
+    } else if (grabbed['type'] === 'label' &&
+               selected_text_label_ids.indexOf(grabbed['id']) === -1) {
+      text_label_ids_to_drag.push(grabbed['id'])
+    } else {
+      node_ids_to_drag = selected_node_ids
+      text_label_ids_to_drag = selected_text_label_ids
+    }
+    reaction_ids = []
+    var displacement = {
+      x: d3.event.dx,
+      y: d3.event.dy,
+    }
+    total_displacement = utils.c_plus_c(total_displacement, displacement)
+    node_ids_to_drag.forEach(function (node_id) {
+      // update data
+      var node = map.nodes[node_id],
+      updated = build.move_node_and_dependents(node, node_id,
+                                               map.reactions,
+                                               map.beziers,
+                                               displacement)
+      reaction_ids = utils.unique_concat([ reaction_ids, updated.reaction_ids ])
+      // remember the displacements
+      // if (!(node_id in total_displacement))  total_displacement[node_id] = { x: 0, y: 0 }
+      // total_displacement[node_id] = utils.c_plus_c(total_displacement[node_id], displacement)
+    })
+    text_label_ids_to_drag.forEach(function (text_label_id) {
+      move_label(text_label_id, displacement)
+      // remember the displacements
+      // if (!(node_id in total_displacement))  total_displacement[node_id] = { x: 0, y: 0 }
+      // total_displacement[node_id] = utils.c_plus_c(total_displacement[node_id], displacement)
+    })
+    // draw
+    map.draw_these_nodes(node_ids_to_drag)
+    map.draw_these_reactions(reaction_ids)
+    map.draw_these_text_labels(text_label_ids_to_drag)
+  })
+
+  behavior.on('dragend', function () {
+    set_dragging(false)
+
+    if (node_ids_to_drag === null) {
+      // Dragend can be called when drag has not been called. In this,
+      // case, do nothing.
+      total_displacement = null
+      node_ids_to_drag = null
+      text_label_ids_to_drag = null
+      reaction_ids = null
+      the_timeout = null
+      return
+    }
+    // look for mets to combine
+    var node_to_combine_array = []
+    map.sel.selectAll('.node-to-combine').each(function (d) {
+      node_to_combine_array.push(d.node_id)
+    })
+    if (node_to_combine_array.length === 1) {
+      // If a node is ready for it, combine nodes
+      var fixed_node_id = node_to_combine_array[0],
+      dragged_node_id = this.parentNode.__data__.node_id,
+      saved_dragged_node = utils.clone(map.nodes[dragged_node_id]),
+      segment_objs_moved_to_combine = combine_nodes_and_draw(fixed_node_id,
+                                                             dragged_node_id)
+      undo_stack.push(function () {
+        // undo
+        // put the old node back
+        map.nodes[dragged_node_id] = saved_dragged_node
+        var fixed_node = map.nodes[fixed_node_id],
+            updated_reactions = []
+        segment_objs_moved_to_combine.forEach(function (segment_obj) {
+          var segment = map.reactions[segment_obj.reaction_id].segments[segment_obj.segment_id]
+          if (segment.from_node_id==fixed_node_id) {
+            segment.from_node_id = dragged_node_id
+          } else if (segment.to_node_id==fixed_node_id) {
+            segment.to_node_id = dragged_node_id
+          } else {
+            console.error('Segment does not connect to fixed node')
+          }
+          // removed this segment_obj from the fixed node
+          fixed_node.connected_segments = fixed_node.connected_segments.filter(function (x) {
+            return !(x.reaction_id==segment_obj.reaction_id && x.segment_id==segment_obj.segment_id)
+          })
+          if (updated_reactions.indexOf(segment_obj.reaction_id)==-1)
+            updated_reactions.push(segment_obj.reaction_id)
+        })
+        map.draw_these_nodes([dragged_node_id])
+        map.draw_these_reactions(updated_reactions)
+      }, function () {
+        // redo
+        combine_nodes_and_draw(fixed_node_id, dragged_node_id)
+      })
+
+    } else {
+      // otherwise, drag node
+
+      // add to undo/redo stack
+      // remember the displacement, dragged nodes, and reactions
+      var saved_displacement = utils.clone(total_displacement),
+      // BUG TODO this variable disappears!
+      // Happens sometimes when you drag a node, then delete it, then undo twice
+      saved_node_ids = utils.clone(node_ids_to_drag),
+      saved_text_label_ids = utils.clone(text_label_ids_to_drag),
+      saved_reaction_ids = utils.clone(reaction_ids)
+      undo_stack.push(function () {
+        // undo
+        saved_node_ids.forEach(function (node_id) {
+          var node = map.nodes[node_id]
+          build.move_node_and_dependents(node, node_id, map.reactions,
+                                         map.beziers,
+                                         utils.c_times_scalar(saved_displacement, -1))
+        })
+        saved_text_label_ids.forEach(function (text_label_id) {
+          move_label(text_label_id,
+                     utils.c_times_scalar(saved_displacement, -1))
+        })
+        map.draw_these_nodes(saved_node_ids)
+        map.draw_these_reactions(saved_reaction_ids)
+        map.draw_these_text_labels(saved_text_label_ids)
+      }, function () {
+        // redo
+        saved_node_ids.forEach(function (node_id) {
+          var node = map.nodes[node_id]
+          build.move_node_and_dependents(node, node_id, map.reactions,
+                                         map.beziers,
+                                         saved_displacement)
+        })
+        saved_text_label_ids.forEach(function (text_label_id) {
+          move_label(text_label_id, saved_displacement)
+        })
+        map.draw_these_nodes(saved_node_ids)
+        map.draw_these_reactions(saved_reaction_ids)
+        map.draw_these_text_labels(saved_text_label_ids)
+      })
+    }
+
+    // stop combining metabolites
+    map.sel.selectAll('.metabolite-circle')
+      .on('mouseover.combine', null)
+      .on('mouseout.combine', null)
+
+    // clear the timeout
+    clearTimeout(the_timeout)
+
+    // clear the shared variables
+    total_displacement = null
+    node_ids_to_drag = null
+    text_label_ids_to_drag = null
+    reaction_ids = null
+    the_timeout = null
+  })
+
+  return behavior
+
+  // definitions
+  function combine_nodes_and_draw (fixed_node_id, dragged_node_id) {
+    var dragged_node = map.nodes[dragged_node_id]
+    var fixed_node = map.nodes[fixed_node_id]
+    var updated_segment_objs = []
+    dragged_node.connected_segments.forEach(function (segment_obj) {
+      // change the segments to reflect
+      var segment
+      try {
+        segment = map.reactions[segment_obj.reaction_id].segments[segment_obj.segment_id]
+        if (segment === undefined) throw new Error('undefined segment')
+      } catch (e) {
+        console.warn('Could not find connected segment ' + segment_obj.segment_id)
+        return
+      }
+      if (segment.from_node_id==dragged_node_id) segment.from_node_id = fixed_node_id
+      else if (segment.to_node_id==dragged_node_id) segment.to_node_id = fixed_node_id
+      else {
+        console.error('Segment does not connect to dragged node')
+        return
+      }
+      // moved segment_obj to fixed_node
+      fixed_node.connected_segments.push(segment_obj)
+      updated_segment_objs.push(utils.clone(segment_obj))
+      return
+    })
+    // delete the old node
+    map.delete_node_data([dragged_node_id])
+    // turn off the class
+    map.sel.selectAll('.node-to-combine').classed('node-to-combine', false)
+    // draw
+    map.draw_everything()
+    // return for undo
+    return updated_segment_objs
+  }
+}
+
+function _get_bezier_drag (map) {
+  var move_bezier = function (reaction_id, segment_id, bez, bezier_id,
+                              displacement) {
+    var segment = map.reactions[reaction_id].segments[segment_id]
+    segment[bez] = utils.c_plus_c(segment[bez], displacement)
+    map.beziers[bezier_id].x = segment[bez].x
+    map.beziers[bezier_id].y = segment[bez].y
+  }
+  var start_fn = function (d) {
+    d.dragging = true
+  }
+  var drag_fn = function (d, displacement, total_displacement) {
+    // draw
+    move_bezier(d.reaction_id, d.segment_id, d.bezier, d.bezier_id,
+                displacement)
+    map.draw_these_reactions([d.reaction_id], false)
+    map.draw_these_beziers([d.bezier_id])
+  }
+  var end_fn = function (d) {
+    d.dragging = false
+  }
+  var undo_fn = function (d, displacement) {
+    move_bezier(d.reaction_id, d.segment_id, d.bezier, d.bezier_id,
+                utils.c_times_scalar(displacement, -1))
+    map.draw_these_reactions([d.reaction_id], false)
+    map.draw_these_beziers([d.bezier_id])
+  }
+  var redo_fn = function (d, displacement) {
+    move_bezier(d.reaction_id, d.segment_id, d.bezier, d.bezier_id,
+                displacement)
+    map.draw_these_reactions([d.reaction_id], false)
+    map.draw_these_beziers([d.bezier_id])
+  }
+  return this._get_generic_drag(start_fn, drag_fn, end_fn, undo_fn, redo_fn,
+                                this.map.sel)
+}
+
+function _get_reaction_label_drag (map) {
+  var move_label = function (reaction_id, displacement) {
+    var reaction = map.reactions[reaction_id]
+    reaction.label_x = reaction.label_x + displacement.x
+    reaction.label_y = reaction.label_y + displacement.y
+  }
+  var start_fn = function (d) {
+    // hide tooltips when drag starts
+    map.callback_manager.run('hide_tooltip')
+  }
+  var drag_fn = function (d, displacement, total_displacement) {
+    // draw
+    move_label(d.reaction_id, displacement)
+    map.draw_these_reactions([ d.reaction_id ])
+  }
+  var end_fn = function (d) {
+  }
+  var undo_fn = function (d, displacement) {
+    move_label(d.reaction_id, utils.c_times_scalar(displacement, -1))
+    map.draw_these_reactions([ d.reaction_id ])
+  }
+  var redo_fn = function (d, displacement) {
+    move_label(d.reaction_id, displacement)
+    map.draw_these_reactions([ d.reaction_id ])
+  }
+  return this._get_generic_drag(start_fn, drag_fn, end_fn, undo_fn, redo_fn,
+                                this.map.sel)
+}
+
+function _get_node_label_drag (map) {
+  var move_label = function (node_id, displacement) {
+    var node = map.nodes[node_id]
+    node.label_x = node.label_x + displacement.x
+    node.label_y = node.label_y + displacement.y
+  }
+  var start_fn = function (d) {
+    // hide tooltips when drag starts
+    map.callback_manager.run('hide_tooltip')
+  }
+  var drag_fn = function (d, displacement, total_displacement) {
+    // draw
+    move_label(d.node_id, displacement)
+    map.draw_these_nodes([ d.node_id ])
+  }
+  var end_fn = function (d) {
+  }
+  var undo_fn = function (d, displacement) {
+    move_label(d.node_id, utils.c_times_scalar(displacement, -1))
+    map.draw_these_nodes ([ d.node_id ])
+  }
+  var redo_fn = function (d, displacement) {
+    move_label(d.node_id, displacement)
+    map.draw_these_nodes([ d.node_id ])
+  }
+  return this._get_generic_drag(start_fn, drag_fn, end_fn, undo_fn, redo_fn,
+                                this.map.sel)
+}
+
+/**
+ * Make a generic drag behavior, with undo/redo.
+ *
+ * start_fn: function (d) Called at dragstart.
+ *
+ * drag_fn: function (d, displacement, total_displacement) Called during drag.
+ *
+ * end_fn
+ *
+ * undo_fn
+ *
+ * redo_fn
+ *
+ * relative_to_selection: a d3 selection that the locations are calculated
+ * against.
+ *
+ */
+function _get_generic_drag (start_fn, drag_fn, end_fn, undo_fn, redo_fn,
+                            relative_to_selection) {
+  // define some variables
+  var behavior = d3.behavior.drag()
+  var total_displacement
+  var undo_stack = this.undo_stack
+  var rel = relative_to_selection.node()
+
+  behavior.on('dragstart', function (d) {
+    this.dragging = true
+
+    // silence other listeners
+    d3.event.sourceEvent.stopPropagation()
+    total_displacement = { x: 0, y: 0 }
+    start_fn(d)
+  }.bind(this))
+
+  behavior.on('drag', function (d) {
+    // update data
+    var displacement = {
+      x: d3.event.dx,
+      y: d3.event.dy,
+    }
+    var location = {
+      x: d3.mouse(rel)[0],
+      y: d3.mouse(rel)[1],
+    }
+
+    // remember the displacement
+    total_displacement = utils.c_plus_c(total_displacement, displacement)
+    drag_fn(d, displacement, total_displacement, location)
+  }.bind(this))
+
+  behavior.on('dragend', function (d) {
+    this.dragging = false
+
+    // add to undo/redo stack
+    // remember the displacement, dragged nodes, and reactions
+    var saved_d = utils.clone(d)
+    var saved_displacement = utils.clone(total_displacement) // BUG TODO this variable disappears!
+    var saved_location = {
+      x: d3.mouse(rel)[0],
+      y: d3.mouse(rel)[1],
+    }
+
+    undo_stack.push(function () {
+      // undo
+      undo_fn(saved_d, saved_displacement, saved_location)
+    }, function () {
+      // redo
+      redo_fn(saved_d, saved_displacement, saved_location)
+    })
+    end_fn(d)
+  }.bind(this))
+
+  return behavior
+}
+
+/** Make a generic drag behavior, with undo/redo. Supplies angles in place of
+ * displacements.
+ *
+ * start_fn: function (d) Called at dragstart.
+ *
+ * drag_fn: function (d, displacement, total_displacement) Called during drag.
+ *
+ * end_fn:
+ *
+ * undo_fn:
+ *
+ * redo_fn:
+ *
+ * get_center:
+ *
+ * relative_to_selection: a d3 selection that the locations are calculated
+ * against.
+ *
+ */
+function _get_generic_angular_drag (start_fn, drag_fn, end_fn, undo_fn, redo_fn,
+                                   get_center, relative_to_selection) {
+
+  // define some variables
+  var behavior = d3.behavior.drag()
+  var total_angle
+  var undo_stack = this.undo_stack
+  var rel = relative_to_selection.node()
+
+  behavior.on('dragstart', function (d) {
+    this.dragging = true
+
+    // silence other listeners
+    d3.event.sourceEvent.stopPropagation()
+    total_angle = 0
+    start_fn(d)
+  }.bind(this))
+
+  behavior.on('drag', function (d) {
+    // update data
+    var displacement = {
+      x: d3.event.dx,
+      y: d3.event.dy,
+    }
+    var location = {
+      x: d3.mouse(rel)[0],
+      y: d3.mouse(rel)[1],
+    }
+    var center = get_center()
+    var angle = utils.angle_for_event(displacement, location, center)
+    // remember the displacement
+    total_angle = total_angle + angle
+    drag_fn(d, angle, total_angle, center)
+  }.bind(this))
+
+  behavior.on('dragend', function (d) {
+    this.dragging = false
+
+    // add to undo/redo stack
+    // remember the displacement, dragged nodes, and reactions
+    var saved_d = utils.clone(d)
+    var saved_angle = total_angle
+    var saved_center = utils.clone(get_center())
+
+    undo_stack.push(function () {
+      // undo
+      undo_fn(saved_d, saved_angle, saved_center)
+    }, function () {
+      // redo
+      redo_fn(saved_d, saved_angle, saved_center)
+    })
+    end_fn(d)
+  }.bind(this))
+
+  return behavior
+}
+
+},{"./build":26,"./utils":33}],2:[function(require,module,exports){
 /* global d3 */
 
-var utils = require('./utils');
+var utils = require('./utils')
 
-
-var Brush = utils.make_class();
+/**
+ * Define a brush to select elements in a map.
+ * @param {D3 Selection} selection - A d3 selection to place the brush in.
+ * @param {Boolean} is_enabled - Whether to turn the brush on.
+ * @param {escher.Map} map - The map where the brush will be active.
+ * @param {String} insert_after - A d3 selector string to choose the svg element
+ *                                that the brush will be inserted after. Often a
+ *                                canvas element (e.g. '.canvas-group').
+ */
+var Brush = utils.make_class()
 Brush.prototype = {
-    init: init,
-    toggle: toggle,
-    setup_selection_brush: setup_selection_brush
-};
-module.exports = Brush;
-
+  init: init,
+  toggle: toggle,
+  setup_selection_brush: setup_selection_brush,
+}
+module.exports = Brush
 
 // definitions
-function init(selection, is_enabled, map, insert_after) {
-    this.brush_sel = selection.append('g')
-        .attr('id', 'brush-container');
-    var node = this.brush_sel.node(),
-        insert_before_node = selection.select(insert_after).node().nextSibling;
-    if (!(node===insert_before_node))
-        node.parentNode.insertBefore(node, insert_before_node);
-    this.enabled = is_enabled;
-    this.map = map;
-};
+function init (selection, is_enabled, map, insert_after) {
+  this.brush_sel = selection.append('g').attr('id', 'brush-container')
+  var node = this.brush_sel.node()
+  var insert_before_node = selection.select(insert_after).node().nextSibling
+  if (node !== insert_before_node) {
+    node.parentNode.insertBefore(node, insert_before_node)
+  }
+  this.enabled = is_enabled
+  this.map = map
+}
 
 /**
  * Returns a boolean for the on/off status of the brush
  * @return {Boolean}
  */
 function brush_is_enabled () {
-    return this.map.sel.select('.brush').empty()
+  return this.map.sel.select('.brush').empty()
 }
 
 /**
@@ -962,73 +994,74 @@ function brush_is_enabled () {
  * @param {Boolean} on_off
  */
 function toggle (on_off) {
-    if (on_off === undefined) on_off = !this.enabled
-    if (on_off) {
-        this.selection_brush = this.setup_selection_brush()
-    } else {
-        this.brush_sel.selectAll('.brush').remove()
-    }
+  if (on_off === undefined) {
+    on_off = !this.enabled
+  }
+  if (on_off) {
+    this.selection_brush = this.setup_selection_brush()
+  } else {
+    this.brush_sel.selectAll('.brush').remove()
+  }
 }
 
-function setup_selection_brush() {
-    var selection = this.brush_sel
-    var selectable_selection = this.map.sel.selectAll('#nodes,#text-labels')
-    var size_and_location = this.map.canvas.size_and_location()
-    var width = size_and_location.width
-    var height = size_and_location.height
-    var x = size_and_location.x
-    var y = size_and_location.y
+function setup_selection_brush () {
+  var map = this.map
+  var selection = this.brush_sel
+  var selectable_selection = map.sel.selectAll('#nodes,#text-labels')
+  var size_and_location = map.canvas.size_and_location()
+  var width = size_and_location.width
+  var height = size_and_location.height
+  var x = size_and_location.x
+  var y = size_and_location.y
 
-    // clear existing brush
-    selection.selectAll('g').remove()
+  // clear existing brush
+  selection.selectAll('g').remove()
 
-    var brush_fn = d3.svg.brush()
-            .x(d3.scale.identity().domain([ x, x + width ]))
-            .y(d3.scale.identity().domain([ y, y + height ]))
-            .on('brush', function() {
-                var shift_key_on = d3.event.sourceEvent.shiftKey
-                var extent = d3.event.target.extent()
-                var selection
-                if (shift_key_on) {
-                    // when shift is pressed, ignore the currently selected nodes
-                    selection = selectable_selection
-                        .selectAll('.node:not(.selected),.text-label:not(.selected)')
-                } else {
-                    // otherwise, brush all nodes
-                    selection = selectable_selection
-                        .selectAll('.node,.text-label')
-                }
-                selection.classed('selected', function(d) {
-                    var sx = d.x
-                    var sy = d.y
-                    return (extent[0][0] <= sx && sx < extent[1][0] &&
-                            extent[0][1] <= sy && sy < extent[1][1] &&
-                            d3.select(this).select('.node-circle').style('visibility') !== 'hidden')
-                    // TODO this is a bit of a hack. The best behavior would be:
-                    // When secondary metabolites are hidden, have them 'follow'
-                    // the nearest attached multimarker. If that multimarker
-                    // moves, the metabolite moves. If that multimarker is
-                    // deleted, the metabolite is deleted.
-                })
-            })
-            .on('brushend', function() {
-                d3.event.target.clear();
-                d3.select(this).call(d3.event.target)
-            })
-    var brush = selection.append('g')
-            .attr('class', 'brush')
-            .call(brush_fn)
+  var brush_fn = d3.svg.brush()
+        .x(d3.scale.identity().domain([ x, x + width ]))
+        .y(d3.scale.identity().domain([ y, y + height ]))
+        .on('brushstart', function () {
+          // unhide secondary metabolites if they are hidden
+          if (map.settings.get_option('hide_secondary_metabolites')) {
+            map.settings.set_conditional('hide_secondary_metabolites', false)
+            map.draw_everything()
+            map.set_status('Showing secondary metabolites. You can hide them ' +
+                           'again in Settings.', 2000)
+          }
+        })
+        .on('brush', function () {
+          var shift_key_on = d3.event.sourceEvent.shiftKey
+          var extent = d3.event.target.extent()
+          // When shift is pressed, ignore the currently selected nodes.
+          // Otherwise, brush all nodes.
+          var selection = shift_key_on ?
+                selectable_selection.selectAll('.node:not(.selected),.text-label:not(.selected)') :
+                selectable_selection.selectAll('.node,.text-label')
+          selection.classed('selected', function (d) {
+            var sx = d.x
+            var sy = d.y
+            return (extent[0][0] <= sx && sx < extent[1][0] &&
+                    extent[0][1] <= sy && sy < extent[1][1])
+          })
+        })
+        .on('brushend', function () {
+          d3.event.target.clear()
+          d3.select(this).call(d3.event.target)
+        })
+  var brush = selection.append('g')
+        .attr('class', 'brush')
+        .call(brush_fn)
 
-    // turn off the mouse crosshair
-    selection.selectAll('.background')
-        .classed('cursor-grab', false)
-        .classed('cursor-grabbing', false)
-        .style('cursor', null)
+  // turn off the mouse crosshair
+  selection.selectAll('.background')
+    .classed('cursor-grab', false)
+    .classed('cursor-grabbing', false)
+    .style('cursor', null)
 
-    return brush
+  return brush
 }
 
-},{"./utils":31}],3:[function(require,module,exports){
+},{"./utils":33}],3:[function(require,module,exports){
 /** BuildInput
 
  Arguments
@@ -1434,7 +1467,7 @@ function show_target(map, coords) {
     this.target_coords = coords;
 }
 
-},{"./CobraModel":7,"./DirectionArrow":9,"./PlacedDiv":13,"./complete.ly":25,"./utils":31,"underscore":35}],4:[function(require,module,exports){
+},{"./CobraModel":7,"./DirectionArrow":9,"./PlacedDiv":13,"./complete.ly":27,"./utils":33,"underscore":37}],4:[function(require,module,exports){
 /**
  * For documentation of this class, see docs/javascript_api.rst
  */
@@ -1456,6 +1489,8 @@ var TextEditInput = require('./TextEditInput');
 var QuickJump = require('./QuickJump');
 var data_styles = require('./data_styles');
 var builder_embed = require('./inline').builder_embed;
+var TooltipContainer = require('./TooltipContainer')
+var DefaultTooltip = require('./Tooltip').DefaultTooltip
 var _ = require('underscore')
 
 var Builder = utils.make_class();
@@ -1486,158 +1521,166 @@ Builder.prototype = {
 module.exports = Builder;
 
 
-function init(map_data, model_data, embedded_css, selection, options) {
+function init (map_data, model_data, embedded_css, selection, options) {
 
-    // defaults
-    if (!selection)
-        selection = d3.select('body').append('div');
-    if (!options)
-        options = {};
-    if (!embedded_css)
-        embedded_css = builder_embed;
+  // defaults
+  if (!selection) {
+    selection = d3.select('body').append('div')
+  }
+  if (!options) {
+    options = {}
+  }
+  if (!embedded_css) {
+    embedded_css = builder_embed
+  }
 
-    this.map_data = map_data;
-    this.model_data = model_data;
-    this.embedded_css = embedded_css;
-    this.selection = selection;
+  this.map_data = map_data
+  this.model_data = model_data
+  this.embedded_css = embedded_css
+  this.selection = selection
 
-    // apply this object as data for the selection
-    this.selection.datum(this)
-    this.selection.__builder__ = this
+  // apply this object as data for the selection
+  this.selection.datum(this)
+  this.selection.__builder__ = this
 
-    // set defaults
-    this.options = utils.set_options(options, {
-        // view options
-        menu: 'all',
-        scroll_behavior: 'pan',
-        use_3d_transform: !utils.check_browser('safari'),
-        enable_editing: true,
-        enable_keys: true,
-        enable_search: true,
-        fill_screen: false,
-        zoom_to_element: null,
-        full_screen_button: false,
-        ignore_bootstrap: false,
-        // map, model, and styles
-        starting_reaction: null,
-        never_ask_before_quit: false,
-        unique_map_id: null,
-        primary_metabolite_radius: 20,
-        secondary_metabolite_radius: 10,
-        marker_radius: 5,
-        gene_font_size: 18,
-        hide_secondary_metabolites: false,
-        show_gene_reaction_rules: false,
-        hide_all_labels: false,
-        // applied data
-        // reaction
-        reaction_data: null,
-        reaction_styles: ['color', 'size', 'text'],
-        reaction_compare_style: 'log2_fold',
-        reaction_scale: [{ type: 'min', color: '#c8c8c8', size: 12 },
-                         { type: 'median', color: '#9696ff', size: 20 },
-                         { type: 'max', color: '#ff0000', size: 25 }],
-        reaction_no_data_color: '#dcdcdc',
-        reaction_no_data_size: 8,
-        // gene
-        gene_data: null,
-        and_method_in_gene_reaction_rule: 'mean',
-        // metabolite
-        metabolite_data: null,
-        metabolite_styles: ['color', 'size', 'text'],
-        metabolite_compare_style: 'log2_fold',
-        metabolite_scale: [ { type: 'min', color: '#fffaf0', size: 20 },
-                            { type: 'median', color: '#f1c470', size: 30 },
-                            { type: 'max', color: '#800000', size: 40 } ],
-        metabolite_no_data_color: '#ffffff',
-        metabolite_no_data_size: 10,
-        // View and build options
-        identifiers_on_map: 'bigg_id',
-        highlight_missing: false,
-        allow_building_duplicate_reactions: false,
-        cofactors: ['atp', 'adp', 'nad', 'nadh', 'nadp', 'nadph', 'gtp', 'gdp',
-                    'h', 'coa', 'ump', 'h20', 'ppi'],
-        // Callbacks
-        first_load_callback: null
-    }, {
-        primary_metabolite_radius: true,
-        secondary_metabolite_radius: true,
-        marker_radius: true,
-        gene_font_size: true,
-        reaction_no_data_size: true,
-        metabolite_no_data_size: true
-    });
+  // set defaults
+  this.options = utils.set_options(options, {
+    // view options
+    menu: 'all',
+    scroll_behavior: 'pan',
+    use_3d_transform: !utils.check_browser('safari'),
+    enable_editing: true,
+    enable_keys: true,
+    enable_search: true,
+    fill_screen: false,
+    zoom_to_element: null,
+    full_screen_button: false,
+    ignore_bootstrap: false,
+    // map, model, and styles
+    starting_reaction: null,
+    never_ask_before_quit: false,
+    unique_map_id: null,
+    primary_metabolite_radius: 20,
+    secondary_metabolite_radius: 10,
+    marker_radius: 5,
+    gene_font_size: 18,
+    hide_secondary_metabolites: false,
+    show_gene_reaction_rules: false,
+    hide_all_labels: false,
+    // applied data
+    // reaction
+    reaction_data: null,
+    reaction_styles: ['color', 'size', 'text'],
+    reaction_compare_style: 'log2_fold',
+    reaction_scale: [{ type: 'min', color: '#c8c8c8', size: 12 },
+                     { type: 'median', color: '#9696ff', size: 20 },
+                     { type: 'max', color: '#ff0000', size: 25 }],
+    reaction_no_data_color: '#dcdcdc',
+    reaction_no_data_size: 8,
+    // gene
+    gene_data: null,
+    and_method_in_gene_reaction_rule: 'mean',
+    // metabolite
+    metabolite_data: null,
+    metabolite_styles: ['color', 'size', 'text'],
+    metabolite_compare_style: 'log2_fold',
+    metabolite_scale: [ { type: 'min', color: '#fffaf0', size: 20 },
+                        { type: 'median', color: '#f1c470', size: 30 },
+                        { type: 'max', color: '#800000', size: 40 } ],
+    metabolite_no_data_color: '#ffffff',
+    metabolite_no_data_size: 10,
+    // View and build options
+    identifiers_on_map: 'bigg_id',
+    highlight_missing: false,
+    allow_building_duplicate_reactions: false,
+    cofactors: ['atp', 'adp', 'nad', 'nadh', 'nadp', 'nadph', 'gtp', 'gdp',
+                'h', 'coa', 'ump', 'h20', 'ppi'],
+    // Extensions
+    tooltip_component: DefaultTooltip,
+    enable_tooltips: true,
+    // Callbacks
+    first_load_callback: null,
+  }, {
+    primary_metabolite_radius: true,
+    secondary_metabolite_radius: true,
+    marker_radius: true,
+    gene_font_size: true,
+    reaction_no_data_size: true,
+    metabolite_no_data_size: true,
+  })
 
-    // check the location
-    if (utils.check_for_parent_tag(this.selection, 'svg')) {
-        throw new Error('Builder cannot be placed within an svg node '+
-                        'becuase UI elements are html-based.');
-    }
+  // check the location
+  if (utils.check_for_parent_tag(this.selection, 'svg')) {
+    throw new Error('Builder cannot be placed within an svg node '+
+                    'becuase UI elements are html-based.')
+  }
 
-    // Initialize the settings
-    var set_option = function(option, new_value) {
-        this.options[option] = new_value;
-    }.bind(this),
-        get_option = function(option) {
-            return this.options[option];
-        }.bind(this),
-        // the options that are erased when the settings menu is canceled
-        conditional_options = ['hide_secondary_metabolites', 'show_gene_reaction_rules',
-                               'hide_all_labels', 'scroll_behavior', 'reaction_styles',
-                               'reaction_compare_style', 'reaction_scale',
-                               'reaction_no_data_color', 'reaction_no_data_size',
-                               'and_method_in_gene_reaction_rule', 'metabolite_styles',
-                               'metabolite_compare_style', 'metabolite_scale',
-                               'metabolite_no_data_color', 'metabolite_no_data_size',
-                               'identifiers_on_map', 'highlight_missing',
-                               'allow_building_duplicate_reactions',];
-    this.settings = new Settings(set_option, get_option, conditional_options);
+  // Initialize the settings
+  var set_option = function (option, new_value) {
+    this.options[option] = new_value
+  }.bind(this)
+  var get_option = function (option) {
+    return this.options[option]
+  }.bind(this)
+  // the options that are erased when the settings menu is canceled
+  var conditional = [ 'hide_secondary_metabolites', 'show_gene_reaction_rules',
+                      'hide_all_labels', 'scroll_behavior', 'reaction_styles',
+                      'reaction_compare_style', 'reaction_scale',
+                      'reaction_no_data_color', 'reaction_no_data_size',
+                      'and_method_in_gene_reaction_rule', 'metabolite_styles',
+                      'metabolite_compare_style', 'metabolite_scale',
+                      'metabolite_no_data_color', 'metabolite_no_data_size',
+                      'identifiers_on_map', 'highlight_missing',
+                      'allow_building_duplicate_reactions', 'enable_tooltips' ]
+  this.settings = new Settings(set_option, get_option, conditional)
 
-    // check the scales have max and min
-    ['reaction_scale', 'metabolite_scale'].forEach(function(name) {
-        this.settings.streams[name].onValue(function(val) {
-            ['min', 'max'].forEach(function(type) {
-                var has = val.reduce(function(has_found, scale_el) {
-                    return has_found || (scale_el.type == type);
-                }, false);
-                if (!has) {
-                    val.push({ type: type, color: '#ffffff', size: 10 });
-                    this.settings.set_conditional(name, val);
-                }
-            }.bind(this));
-        }.bind(this));
-    }.bind(this));
-    // TODO warn about repeated types in the scale
+  // check the scales have max and min
+  var scales = [ 'reaction_scale', 'metabolite_scale' ]
+  scales.forEach(function(name) {
+    this.settings.streams[name].onValue(function(val) {
+      ['min', 'max'].forEach(function(type) {
+        var has = val.reduce(function(has_found, scale_el) {
+          return has_found || (scale_el.type == type)
+        }, false)
+        if (!has) {
+          val.push({ type: type, color: '#ffffff', size: 10 })
+          this.settings.set_conditional(name, val)
+        }
+      }.bind(this))
+    }.bind(this))
+  }.bind(this))
+  // TODO warn about repeated types in the scale
 
-    // set up this callback manager
-    this.callback_manager = CallbackManager();
-    if (this.options.first_load_callback !== null)
-        this.callback_manager.set('first_load', this.options.first_load_callback);
+  // set up this callback manager
+  this.callback_manager = CallbackManager()
+  if (this.options.first_load_callback !== null) {
+    this.callback_manager.set('first_load', this.options.first_load_callback)
+  }
 
-    // load the model, map, and update data in both
-    this.load_model(this.model_data, false)
-    this.load_map(this.map_data, false)
-    this._update_data(true, true)
+  // load the model, map, and update data in both
+  this.load_model(this.model_data, false)
+  this.load_map(this.map_data, false)
+  this._update_data(true, true)
 
-    // Setting callbacks. TODO enable atomic updates. Right now, every time the
-    // menu closes, everything is drawn.
-    this.settings.status_bus
-        .onValue(function(x) {
-            if (x === 'accepted') {
-                this._update_data(true, true, ['reaction', 'metabolite'], false)
-                if (this.zoom_container !== null) {
-                    var new_behavior = this.settings.get_option('scroll_behavior')
-                    this.zoom_container.set_scroll_behavior(new_behavior)
-                }
-                if (this.map !== null) {
-                    this.map.draw_all_nodes(false)
-                    this.map.draw_all_reactions(true, false)
-                    this.map.select_none()
-                }
-            }
-        }.bind(this))
+  // Setting callbacks. TODO enable atomic updates. Right now, every time the
+  // menu closes, everything is drawn.
+  this.settings.status_bus
+    .onValue(function(x) {
+      if (x === 'accepted') {
+        this._update_data(true, true, [ 'reaction', 'metabolite' ], false)
+        if (this.zoom_container !== null) {
+          var new_behavior = this.settings.get_option('scroll_behavior')
+          this.zoom_container.set_scroll_behavior(new_behavior)
+        }
+        if (this.map !== null) {
+          this.map.draw_all_nodes(false)
+          this.map.draw_all_reactions(true, false)
+          this.map.select_none()
+        }
+      }
+    }.bind(this))
 
-    this.callback_manager.run('first_load', this)
+  this.callback_manager.run('first_load', this)
 }
 
 function load_model(model_data, should_update_data) {
@@ -1730,6 +1773,11 @@ function load_map(map_data, should_update_data) {
     // set up the text edit input
     this.text_edit_input = new TextEditInput(this.selection, this.map,
                                              this.zoom_container)
+
+    // set up the tooltip container
+    this.tooltip_container = new TooltipContainer(this.selection, this.map,
+                                                  this.options.tooltip_component,
+                                                  this.zoom_container)
 
     // set up the Brush
     this.brush = new Brush(zoomed_sel, false, this.map, '.canvas-group')
@@ -1853,38 +1901,39 @@ function load_map(map_data, should_update_data) {
 }
 
 function _set_mode(mode) {
-    this.search_bar.toggle(false);
-    // input
-    this.build_input.toggle(mode=='build');
-    this.build_input.direction_arrow.toggle(mode=='build');
-    if (this.options.menu=='all' && this.options.enable_editing)
-        this._toggle_direction_buttons(mode=='build');
-    // brush
-    this.brush.toggle(mode=='brush');
-    // zoom
-    this.zoom_container.toggle_pan_drag(mode=='zoom' || mode=='view');
-    // resize canvas
-    this.map.canvas.toggle_resize(mode=='zoom' || mode=='brush');
-    // Behavior. Be careful of the order becuase rotation and
-    // toggle_selectable_drag both use Behavior.selectable_drag.
-    if (mode == 'rotate') {
-        this.map.behavior.toggle_selectable_drag(false); // before toggle_rotation_mode
-        this.map.behavior.toggle_rotation_mode(true);
-    } else {
-        this.map.behavior.toggle_rotation_mode(mode=='rotate'); // before toggle_selectable_drag
-        this.map.behavior.toggle_selectable_drag(mode=='brush');
-    }
-    this.map.behavior.toggle_selectable_click(mode=='build' || mode=='brush');
-    this.map.behavior.toggle_label_drag(mode=='brush');
-    this.map.behavior.toggle_label_mousedown(mode=='brush');
-    this.map.behavior.toggle_text_label_edit(mode=='text');
-    this.map.behavior.toggle_bezier_drag(mode=='brush');
-    // edit selections
-    if (mode=='view' || mode=='text')
-        this.map.select_none();
-    if (mode=='rotate')
-        this.map.deselect_text_labels();
-    this.map.draw_everything();
+  this.search_bar.toggle(false)
+  // input
+  this.build_input.toggle(mode == 'build')
+  this.build_input.direction_arrow.toggle(mode == 'build')
+  if (this.options.menu == 'all' && this.options.enable_editing) {
+    this._toggle_direction_buttons(mode == 'build')
+  }
+  // brush
+  this.brush.toggle(mode == 'brush')
+  // zoom
+  this.zoom_container.toggle_pan_drag(mode == 'zoom' || mode == 'view')
+  // resize canvas
+  this.map.canvas.toggle_resize(mode == 'zoom' || mode == 'brush')
+  // Behavior. Be careful of the order becuase rotation and
+  // toggle_selectable_drag both use Behavior.selectable_drag.
+  if (mode  ==  'rotate') {
+    this.map.behavior.toggle_selectable_drag(false) // before toggle_rotation_mode
+    this.map.behavior.toggle_rotation_mode(true)
+  } else {
+    this.map.behavior.toggle_rotation_mode(mode == 'rotate') // before toggle_selectable_drag
+    this.map.behavior.toggle_selectable_drag(mode == 'brush')
+  }
+  this.map.behavior.toggle_selectable_click(mode == 'build' || mode == 'brush')
+  this.map.behavior.toggle_label_drag(mode == 'brush')
+  this.map.behavior.toggle_label_mouseover(true)
+  this.map.behavior.toggle_text_label_edit(mode == 'text')
+  this.map.behavior.toggle_bezier_drag(mode == 'brush')
+  // edit selections
+  if (mode == 'view' || mode == 'text')
+    this.map.select_none()
+  if (mode == 'rotate')
+    this.map.deselect_text_labels()
+  this.map.draw_everything()
 }
 
 function view_mode() {
@@ -2584,26 +2633,26 @@ function _setup_quick_jump(selection) {
     this.quick_jump = QuickJump(selection, load_fn)
 }
 
-function _setup_modes(map, brush, zoom_container) {
-    // set up zoom+pan and brush modes
-    var was_enabled = {};
-    map.callback_manager.set('start_rotation', function() {
-        was_enabled.brush = brush.enabled;
-        brush.toggle(false);
-        was_enabled.zoom = zoom_container.zoom_on;
-        zoom_container.toggle_pan_drag(false);
-        was_enabled.selectable_mousedown = map.behavior.selectable_mousedown!=null;
-        map.behavior.toggle_selectable_click(false);
-        was_enabled.label_mousedown = map.behavior.label_mousedown!=null;
-        map.behavior.toggle_label_mousedown(false);
-    });
-    map.callback_manager.set('end_rotation', function() {
-        brush.toggle(was_enabled.brush);
-        zoom_container.toggle_pan_drag(was_enabled.zoom);
-        map.behavior.toggle_selectable_click(was_enabled.selectable_mousedown);
-        map.behavior.toggle_label_mousedown(was_enabled.label_mousedown);
-        was_enabled = {};
-    });
+function _setup_modes (map, brush, zoom_container) {
+  // set up zoom+pan and brush modes
+  var was_enabled = {}
+  map.callback_manager.set('start_rotation', function () {
+    was_enabled.brush = brush.enabled
+    brush.toggle(false)
+    was_enabled.zoom = zoom_container.zoom_on
+    zoom_container.toggle_pan_drag(false)
+    was_enabled.selectable_mousedown = map.behavior.selectable_mousedown !== null
+    map.behavior.toggle_selectable_click(false)
+    was_enabled.label_mouseover = map.behavior.label_mouseover !== null
+    map.behavior.toggle_label_mouseover(false)
+  })
+  map.callback_manager.set('end_rotation', function () {
+    brush.toggle(was_enabled.brush)
+    zoom_container.toggle_pan_drag(was_enabled.zoom)
+    map.behavior.toggle_selectable_click(was_enabled.selectable_mousedown)
+    map.behavior.toggle_label_mouseover(was_enabled.label_mouseover)
+    was_enabled = {}
+  })
 }
 
 function _get_keys(map, zoom_container, search_bar, settings_bar, enable_editing, full_screen_button) {
@@ -2830,7 +2879,7 @@ function _setup_confirm_before_exit() {
     }.bind(this);
 }
 
-},{"./Brush":2,"./BuildInput":3,"./CallbackManager":5,"./CobraModel":7,"./Map":12,"./QuickJump":14,"./SearchBar":17,"./Settings":19,"./SettingsMenu":20,"./TextEditInput":21,"./ZoomContainer":23,"./data_styles":26,"./inline":27,"./ui":30,"./utils":31,"underscore":35}],5:[function(require,module,exports){
+},{"./Brush":2,"./BuildInput":3,"./CallbackManager":5,"./CobraModel":7,"./Map":12,"./QuickJump":14,"./SearchBar":17,"./Settings":19,"./SettingsMenu":20,"./TextEditInput":21,"./Tooltip":22,"./TooltipContainer":23,"./ZoomContainer":25,"./data_styles":28,"./inline":29,"./ui":32,"./utils":33,"underscore":37}],5:[function(require,module,exports){
 /** CallbackManager */
 
 var utils = require('./utils');
@@ -2913,7 +2962,7 @@ function run(name, this_arg) {
     return this;
 }
 
-},{"./utils":31,"underscore":35}],6:[function(require,module,exports){
+},{"./utils":33,"underscore":37}],6:[function(require,module,exports){
 /** Canvas. Defines a canvas that accepts drag/zoom events and can be resized.
 
  Canvas(selection, x, y, width, height)
@@ -3168,26 +3217,25 @@ function size_and_location() {
              height: this.height };
 }
 
-},{"./CallbackManager":5,"./utils":31}],7:[function(require,module,exports){
+},{"./CallbackManager":5,"./utils":33}],7:[function(require,module,exports){
 /** CobraModel
  *
  */
 
-var utils = require('./utils');
-var data_styles = require('./data_styles');
+var utils = require('./utils')
+var data_styles = require('./data_styles')
 
-var CobraModel = utils.make_class();
+var CobraModel = utils.make_class()
 // class methods
-CobraModel.from_exported_data = from_exported_data;
-CobraModel.from_cobra_json = from_cobra_json;
-CobraModel.build_reaction_string = build_reaction_string;
+CobraModel.from_cobra_json = from_cobra_json
+CobraModel.build_reaction_string = build_reaction_string
 // instance methods
 CobraModel.prototype = { init: init,
                          apply_reaction_data: apply_reaction_data,
                          apply_metabolite_data: apply_metabolite_data,
                          apply_gene_data: apply_gene_data,
-                         model_for_export: model_for_export };
-module.exports = CobraModel;
+                       }
+module.exports = CobraModel
 
 // class methods
 function build_reaction_string(stoichiometries, is_reversible) {
@@ -3207,42 +3255,28 @@ function build_reaction_string(stoichiometries, is_reversible) {
 
     var format = function(number) {
         if (number == 1)
-            return "";
-        return String(number) + " ";
-    };
+            return ""
+        return String(number) + " "
+    }
     var reactant_dict = {},
         product_dict = {},
         reactant_bits = [],
-        product_bits = [];
+        product_bits = []
     for (var the_metabolite in stoichiometries) {
-        var coefficient = stoichiometries[the_metabolite];
+        var coefficient = stoichiometries[the_metabolite]
         if (coefficient > 0)
-            product_bits.push(format(coefficient) + the_metabolite);
+            product_bits.push(format(coefficient) + the_metabolite)
         else
-            reactant_bits.push(format(Math.abs(coefficient)) + the_metabolite);
+            reactant_bits.push(format(Math.abs(coefficient)) + the_metabolite)
     }
-    var reaction_string = reactant_bits.join(' + ');
+    var reaction_string = reactant_bits.join(' + ')
     if (is_reversible) {
-        reaction_string += ' ↔ ';
+        reaction_string += ' ↔ '
     } else {
-        reaction_string += ' → ';
+        reaction_string += ' → '
     }
-    reaction_string += product_bits.join(' + ');
-    return reaction_string;
-}
-
-function from_exported_data(data) {
-    /** Use data generated by CobraModel.model_for_export() to make a new
-     CobraModel object.
-
-     */
-    if (!(data.reactions && data.metabolites))
-        throw new Error('Bad model data.');
-
-    var model = new CobraModel();
-    model.reactions = data.reactions;
-    model.metabolites = data.metabolites;
-    return model;
+    reaction_string += product_bits.join(' + ')
+    return reaction_string
 }
 
 function from_cobra_json(model_data) {
@@ -3257,71 +3291,71 @@ function from_cobra_json(model_data) {
      */
     // reactions and metabolites
     if (!(model_data.reactions && model_data.metabolites))
-        throw new Error('Bad model data.');
+        throw new Error('Bad model data.')
 
     // make a gene dictionary
-    var genes = {};
+    var genes = {}
     for (var i = 0, l = model_data.genes.length; i < l; i++) {
         var r = model_data.genes[i],
-            the_id = r.id;
-        genes[the_id] = r;
+            the_id = r.id
+        genes[the_id] = r
     }
 
-    var model = new CobraModel();
+    var model = new CobraModel()
 
-    model.reactions = {};
+    model.reactions = {}
     for (var i = 0, l = model_data.reactions.length; i<l; i++) {
         var r = model_data.reactions[i],
             the_id = r.id,
-            reaction = utils.clone(r);
-        delete reaction.id;
-        reaction.bigg_id = the_id;
+            reaction = utils.clone(r)
+        delete reaction.id
+        reaction.bigg_id = the_id
         // add the appropriate genes
-        reaction.genes = [];
+        reaction.genes = []
 
         // set reversibility
-        reaction.reversibility = (reaction.lower_bound < 0 && reaction.upper_bound > 0);
+        reaction.reversibility = (reaction.lower_bound < 0 && reaction.upper_bound > 0)
         if (reaction.upper_bound <= 0 && reaction.lower_bound < 0) {
             // reverse stoichiometries
             for (var met_id in reaction.metabolites) {
-                reaction.metabolites[met_id] = -reaction.metabolites[met_id];
+                reaction.metabolites[met_id] = -reaction.metabolites[met_id]
             }
         }
-        delete reaction.lower_bound;
-        delete reaction.upper_bound;
+        delete reaction.lower_bound
+        delete reaction.upper_bound
 
         if ('gene_reaction_rule' in reaction) {
-            var gene_ids = data_styles.genes_for_gene_reaction_rule(reaction.gene_reaction_rule);
+            var gene_ids = data_styles.genes_for_gene_reaction_rule(reaction.gene_reaction_rule)
             gene_ids.forEach(function(gene_id) {
                 if (gene_id in genes) {
-                    var gene = utils.clone(genes[gene_id]);
+                    var gene = utils.clone(genes[gene_id])
                     // rename id to bigg_id
-                    gene.bigg_id = gene.id;
-                    delete gene.id;
-                    reaction.genes.push(gene);
+                    gene.bigg_id = gene.id
+                    delete gene.id
+                    reaction.genes.push(gene)
                 } else {
-                    console.warn('Could not find gene for gene_id ' + gene_id);
+                    console.warn('Could not find gene for gene_id ' + gene_id)
                 }
-            });
+            })
         }
-        model.reactions[the_id] = reaction;
+        model.reactions[the_id] = reaction
     }
-    model.metabolites = {};
+    model.metabolites = {}
     for (var i=0, l=model_data.metabolites.length; i<l; i++) {
         var r = model_data.metabolites[i],
             the_id = r.id,
-            met = utils.clone(r);
-        delete met.id;
-        met.bigg_id = the_id;
-        model.metabolites[the_id] = met;
+            met = utils.clone(r)
+        delete met.id
+        met.bigg_id = the_id
+        model.metabolites[the_id] = met
     }
-    return model;
+    return model
 }
 
 // instance methods
 function init() {
-    this.reactions = {};
-    this.metabolites = {};
+  this.reactions = {}
+  this.metabolites = {}
 }
 
 function apply_reaction_data(reaction_data, styles, compare_style) {
@@ -3332,7 +3366,7 @@ function apply_reaction_data(reaction_data, styles, compare_style) {
 
      */
     data_styles.apply_reaction_data_to_reactions(this.reactions, reaction_data,
-                                                 styles, compare_style);
+                                                 styles, compare_style)
 }
 
 function apply_metabolite_data(metabolite_data, styles, compare_style) {
@@ -3341,35 +3375,22 @@ function apply_metabolite_data(metabolite_data, styles, compare_style) {
 
      */
     data_styles.apply_metabolite_data_to_nodes(this.metabolites, metabolite_data,
-                                               styles, compare_style);
+                                               styles, compare_style)
 }
 
-function apply_gene_data(gene_data_obj, styles, identifiers_on_map,
+/**
+ * Apply data to model. This is only used to display options in
+ * BuildInput. Overrides apply_reaction_data.
+ */
+function apply_gene_data (gene_data_obj, styles, identifiers_on_map,
                          compare_style, and_method_in_gene_reaction_rule) {
-    /** Apply data to model. This is only used to display options in
-     BuildInput.
-
-     apply_gene_data overrides apply_reaction_data.
-
-     */
     data_styles.apply_gene_data_to_reactions(this.reactions, gene_data_obj,
                                              styles, identifiers_on_map,
                                              compare_style,
-                                             and_method_in_gene_reaction_rule);
+                                             and_method_in_gene_reaction_rule)
 }
 
-function model_for_export() {
-    /** Export a CobraModel object for reloading later.
-
-     This object is not for loading into COBRApy! Export to COBRApy is not
-     currently supported.
-
-     */
-    return { reactions: this.reactions,
-             metabolites: this.metabolites };
-}
-
-},{"./data_styles":26,"./utils":31}],8:[function(require,module,exports){
+},{"./data_styles":28,"./utils":33}],8:[function(require,module,exports){
 /** DataMenu */
 
 /* global d3 */
@@ -3466,7 +3487,7 @@ module.exports = function(options) {
     };
 };
 
-},{"./utils":31}],9:[function(require,module,exports){
+},{"./utils":33}],9:[function(require,module,exports){
 /** DirectionArrow. A constructor for an arrow that can be rotated and dragged,
  and supplies its direction. */
 
@@ -3596,7 +3617,7 @@ function _setup_drag() {
     this.arrow_container.call(b);
 }
 
-},{"./utils":31}],10:[function(require,module,exports){
+},{"./utils":33}],10:[function(require,module,exports){
 /** Draw. Manages creating, updating, and removing objects during d3 data binding.
 
  Arguments
@@ -3734,20 +3755,19 @@ function update_reaction(update_selection, scale, cobra_model, drawn_nodes,
     this.callback_manager.run('update_reaction', this, update_selection);
 }
 
-function create_reaction_label(enter_selection) {
-    /** Draw reaction label for selection.
+function create_reaction_label(enter_selection, tool) {
+  /** Draw reaction label for selection.
 
-     */
+   */
 
-    var group = enter_selection.append('g')
-            .attr('class', 'reaction-label-group');
-    group.append('title'); // tooltip
-    group.append('text')
-        .attr('class', 'reaction-label label');
-    group.append('g')
-        .attr('class', 'all-genes-label-group');
+  var group = enter_selection.append('g')
+        .attr('class', 'reaction-label-group')
+  group.append('text')
+    .attr('class', 'reaction-label label')
+  group.append('g')
+    .attr('class', 'all-genes-label-group')
 
-    this.callback_manager.run('create_reaction_label', this, enter_selection);
+  this.callback_manager.run('create_reaction_label', this, enter_selection);
 }
 
 /**
@@ -3756,94 +3776,103 @@ function create_reaction_label(enter_selection) {
  * @param {Boolean} has_data_on_reactions - Whether data needs to be drawn.
  */
 function update_reaction_label (update_selection, has_data_on_reactions) {
-    var decimal_format = d3.format('.4g')
-    var identifiers_on_map = this.settings.get_option('identifiers_on_map')
-    var identifiers_in_tooltip = (identifiers_on_map == 'bigg_id' ? 'name' : 'bigg_id')
-    var reaction_data_styles = this.settings.get_option('reaction_styles')
-    var show_gene_reaction_rules = this.settings.get_option('show_gene_reaction_rules')
-    var hide_all_labels = this.settings.get_option('hide_all_labels')
-    var gene_font_size = this.settings.get_option('gene_font_size')
-    var label_mousedown_fn = this.behavior.label_mousedown
-    var label_mouseover_fn = this.behavior.label_mouseover
-    var label_mouseout_fn = this.behavior.label_mouseout
+  var decimal_format = d3.format('.4g')
+  var identifiers_on_map = this.settings.get_option('identifiers_on_map')
+  var reaction_data_styles = this.settings.get_option('reaction_styles')
+  var show_gene_reaction_rules = this.settings.get_option('show_gene_reaction_rules')
+  var hide_all_labels = this.settings.get_option('hide_all_labels')
+  var gene_font_size = this.settings.get_option('gene_font_size')
+  var label_mousedown_fn = this.behavior.label_mousedown
+  var label_mouseover_fn = this.behavior.label_mouseover
+  var label_mouseout_fn = this.behavior.label_mouseout
 
-    // label location
-    update_selection
-        .attr('transform', function(d) {
-            return 'translate(' + d.label_x + ',' + d.label_y + ')'
-        })
-        .call(this.behavior.turn_off_drag)
-        .call(this.behavior.reaction_label_drag)
+  // label location
+  update_selection
+    .attr('transform', function(d) {
+      return 'translate(' + d.label_x + ',' + d.label_y + ')'
+    })
+    .call(this.behavior.turn_off_drag)
+    .call(this.behavior.reaction_label_drag)
 
-    // update label visibility
-    var label = update_selection.select('.reaction-label')
-            .attr('visibility', hide_all_labels ? 'hidden' : 'visible')
-    if (!hide_all_labels) {
-        label
-            .text(function(d) {
-                var t = d[identifiers_on_map];
-                if (has_data_on_reactions && reaction_data_styles.indexOf('text') != -1)
-                    t += ' ' + d.data_string
-                return t
-            })
-            .on('mousedown', label_mousedown_fn)
-            .on('mouseover', label_mouseover_fn)
-            .on('mouseout', label_mouseout_fn)
+  // update label visibility
+  var label = update_selection.select('.reaction-label')
+    .attr('visibility', hide_all_labels ? 'hidden' : 'visible')
+  if (!hide_all_labels) {
+    label
+      .text(function(d) {
+        var t = d[identifiers_on_map];
+        if (has_data_on_reactions && reaction_data_styles.indexOf('text') != -1)
+          t += ' ' + d.data_string
+        return t
+      })
+      .on('mousedown', label_mousedown_fn)
+      .on('mouseover', function (d) {
+        label_mouseover_fn('reaction_label', d)
+      })
+      .on('mouseout', label_mouseout_fn)
+  }
 
-        // tooltip
-        update_selection.select('title').text(function(d) {
-            return d[identifiers_in_tooltip]
-        })
-    }
-    // gene label
-    var all_genes_g = update_selection.select('.all-genes-label-group')
-            .selectAll('.gene-label-group')
-            .data(function(d) {
-                var show_gene_string = ('gene_string' in d &&
-                                        d.gene_string !== null &&
-                                        show_gene_reaction_rules &&
-                                        (!hide_all_labels) &&
-                                        reaction_data_styles.indexOf('text') !== -1)
-                var show_gene_reaction_rule = ('gene_reaction_rule' in d &&
-                                               d.gene_reaction_rule !== null &&
-                                               show_gene_reaction_rules &&
-                                               (!hide_all_labels) )
-                if (show_gene_string) {
-                    return d.gene_string
-                } else if (show_gene_reaction_rule) {
-                    // make the gene string with no data
-                    return data_styles.gene_string_for_data(d.gene_reaction_rule, null,
-                                                            d.genes, null, identifiers_on_map,
-                                                            null)
-                } else {
-                    return []
-                }
-            })
-    // enter
-    var gene_g = all_genes_g.enter()
-            .append('g')
-            .attr('class', 'gene-label-group')
-    gene_g.append('text')
-        .attr('class', 'gene-label')
-        .style('font-size', gene_font_size + 'px')
-    gene_g.append('title')
-    // update
-    all_genes_g.attr('transform', function(d, i) {
-        return 'translate(0, ' + (gene_font_size * 1.5 * (i + 1)) + ')'
-    });
-    // update text
-    all_genes_g.select('text').text(function(d) {
-        return d['text']
-    });
-    // update tooltip
-    all_genes_g.select('title').text(function(d) {
-        return d[identifiers_in_tooltip]
-    });
-    // exit
-    all_genes_g.exit()
-        .remove()
+  var add_gene_height = function (y, i) {
+    return y + (gene_font_size * 1.5 * (i + 1))
+  }
 
-    this.callback_manager.run('update_reaction_label', this, update_selection)
+  // gene label
+  var all_genes_g = update_selection.select('.all-genes-label-group')
+      .selectAll('.gene-label-group')
+      .data(function (d) {
+        var show_gene_string = ('gene_string' in d &&
+                                d.gene_string !== null &&
+                                show_gene_reaction_rules &&
+                                (!hide_all_labels) &&
+                                reaction_data_styles.indexOf('text') !== -1)
+        var show_gene_reaction_rule = ('gene_reaction_rule' in d &&
+                                       d.gene_reaction_rule !== null &&
+                                       show_gene_reaction_rules &&
+                                       (!hide_all_labels) )
+        if (show_gene_string) {
+          // TODO do we ever use gene_string?
+          console.warn('Showing gene_string. See TODO in source.')
+          return d.gene_string
+        } else if (show_gene_reaction_rule) {
+          // make the gene string with no data
+          var sd = data_styles.gene_string_for_data(d.gene_reaction_rule, null,
+                                                    d.genes, null,
+                                                    identifiers_on_map, null)
+          // add coords for tooltip
+          sd.forEach(function (td, i) {
+            td.label_x = d.label_x
+            td.label_y = add_gene_height(d.label_y, i)
+          })
+          return sd
+        } else {
+          return []
+        }
+      })
+  // enter
+  var gene_g = all_genes_g.enter()
+    .append('g')
+    .attr('class', 'gene-label-group')
+  gene_g.append('text')
+    .attr('class', 'gene-label')
+    .style('font-size', gene_font_size + 'px')
+    .on('mousedown', label_mousedown_fn)
+    .on('mouseover', function (d) {
+      label_mouseover_fn('gene_label', d)
+    })
+    .on('mouseout', label_mouseout_fn)
+  // update
+  all_genes_g.attr('transform', function (d, i) {
+    return 'translate(0, ' + add_gene_height(0, i) + ')'
+  })
+  // update text
+  all_genes_g.select('text').text(function (d) {
+    return d['text']
+  })
+  // exit
+  all_genes_g.exit()
+    .remove()
+
+  this.callback_manager.run('update_reaction_label', this, update_selection)
 }
 
 function create_segment(enter_selection) {
@@ -4224,7 +4253,6 @@ function create_node(enter_selection, drawn_nodes, drawn_reactions) {
     });
     metabolite_groups.append('text')
         .attr('class', 'node-label label');
-    metabolite_groups.append('title'); // tooltip
 
     this.callback_manager.run('create_node', this, enter_selection);
 }
@@ -4244,95 +4272,97 @@ function create_node(enter_selection, drawn_nodes, drawn_reactions) {
 function update_node (update_selection, scale, has_data_on_nodes,
                       mousedown_fn, click_fn, mouseover_fn, mouseout_fn,
                       drag_behavior, label_drag_behavior) {
-    // update circle and label location
-    var hide_secondary_metabolites = this.settings.get_option('hide_secondary_metabolites')
-    var primary_r = this.settings.get_option('primary_metabolite_radius')
-    var secondary_r = this.settings.get_option('secondary_metabolite_radius')
-    var marker_r = this.settings.get_option('marker_radius')
-    var hide_all_labels = this.settings.get_option('hide_all_labels')
-    var identifiers_on_map = this.settings.get_option('identifiers_on_map')
-    var identifiers_in_tooltip = (identifiers_on_map === 'bigg_id' ? 'name' : 'bigg_id')
-    var metabolite_data_styles = this.settings.get_option('metabolite_styles')
-    var no_data_style = { color: this.settings.get_option('metabolite_no_data_color'),
-                          size: this.settings.get_option('metabolite_no_data_size') }
+  // update circle and label location
+  var hide_secondary_metabolites = this.settings.get_option('hide_secondary_metabolites')
+  var primary_r = this.settings.get_option('primary_metabolite_radius')
+  var secondary_r = this.settings.get_option('secondary_metabolite_radius')
+  var marker_r = this.settings.get_option('marker_radius')
+  var hide_all_labels = this.settings.get_option('hide_all_labels')
+  var identifiers_on_map = this.settings.get_option('identifiers_on_map')
+  var metabolite_data_styles = this.settings.get_option('metabolite_styles')
+  var no_data_style = { color: this.settings.get_option('metabolite_no_data_color'),
+                        size: this.settings.get_option('metabolite_no_data_size') }
+  var label_mousedown_fn = this.behavior.label_mousedown
+  var label_mouseover_fn = this.behavior.label_mouseover
+  var label_mouseout_fn = this.behavior.label_mouseout
 
-    var mg = update_selection
-            .select('.node-circle')
-            .attr('transform', function(d) {
-                return 'translate('+d.x+','+d.y+')'
-            })
-            .style('visibility', function(d) {
-                return hideNode(d, hide_secondary_metabolites) ? 'hidden' : null
-            })
-            .attr('r', function(d) {
-                if (d.node_type === 'metabolite') {
-                    var should_scale = (has_data_on_nodes &&
-                                        metabolite_data_styles.indexOf('size') !== -1)
-                    if (should_scale) {
-                        var f = d.data
-                        return f === null ? no_data_style['size'] : scale.metabolite_size(f)
-                    } else {
-                        return d.node_is_primary ? primary_r : secondary_r
-                    }
-                }
-                // midmarkers and multimarkers
-                return marker_r
-            })
-            .style('fill', function(d) {
-                if (d.node_type=='metabolite') {
-                    var should_color_data = (has_data_on_nodes &&
-                                             metabolite_data_styles.indexOf('color') != -1)
-                    if (should_color_data) {
-                        var f = d.data
-                        return f===null ? no_data_style['color'] : scale.metabolite_color(f)
-                    } else {
-                        return null
-                    }
-                }
-                // midmarkers and multimarkers
-                return null
-            })
-            .call(this.behavior.turn_off_drag)
-            .call(drag_behavior)
-            .on('mousedown', mousedown_fn)
-            .on('click', click_fn)
-            .on('mouseover', mouseover_fn)
-            .on('mouseout', mouseout_fn)
+  var mg = update_selection
+    .select('.node-circle')
+    .attr('transform', function(d) {
+      return 'translate(' + d.x + ',' + d.y + ')'
+    })
+    .style('visibility', function(d) {
+      return hideNode(d, hide_secondary_metabolites) ? 'hidden' : null
+    })
+    .attr('r', function(d) {
+      if (d.node_type === 'metabolite') {
+        var should_scale = (has_data_on_nodes &&
+                            metabolite_data_styles.indexOf('size') !== -1)
+        if (should_scale) {
+          var f = d.data
+          return f === null ? no_data_style['size'] : scale.metabolite_size(f)
+        } else {
+          return d.node_is_primary ? primary_r : secondary_r
+        }
+      }
+      // midmarkers and multimarkers
+      return marker_r
+    })
+    .style('fill', function(d) {
+      if (d.node_type=='metabolite') {
+        var should_color_data = (has_data_on_nodes &&
+                                 metabolite_data_styles.indexOf('color') !== -1)
+        if (should_color_data) {
+          var f = d.data
+          return f === null ? no_data_style['color'] : scale.metabolite_color(f)
+        } else {
+          return null
+        }
+      }
+      // midmarkers and multimarkers
+      return null
+    })
+    .call(this.behavior.turn_off_drag)
+    .call(drag_behavior)
+    .on('mousedown', mousedown_fn)
+    .on('click', click_fn)
+    .on('mouseover', mouseover_fn)
+    .on('mouseout', mouseout_fn)
 
-    // update node label visibility
-    var node_label = update_selection
-            .select('.node-label')
-            .attr('visibility', hide_all_labels ? 'hidden' : 'visible')
-    if (!hide_all_labels) {
-        node_label
-            .style('visibility', function(d) {
-                return hideNode(d, hide_secondary_metabolites) ? 'hidden' : null
-            })
-            .attr('transform', function(d) {
-                return 'translate(' + d.label_x + ',' + d.label_y + ')'
-            })
-            .text(function(d) {
-                var t = d[identifiers_on_map]
-                if (has_data_on_nodes && metabolite_data_styles.indexOf('text') !== -1)
-                    t += ' ' + d.data_string
-                return t
-            })
-            .call(this.behavior.turn_off_drag)
-            .call(label_drag_behavior)
+  // update node label visibility
+  var node_label = update_selection
+      .select('.node-label')
+    .attr('visibility', hide_all_labels ? 'hidden' : 'visible')
+  if (!hide_all_labels) {
+    node_label
+      .style('visibility', function(d) {
+        return hideNode(d, hide_secondary_metabolites) ? 'hidden' : null
+      })
+      .attr('transform', function(d) {
+        return 'translate(' + d.label_x + ',' + d.label_y + ')'
+      })
+      .text(function(d) {
+        var t = d[identifiers_on_map]
+        if (has_data_on_nodes && metabolite_data_styles.indexOf('text') !== -1)
+          t += ' ' + d.data_string
+        return t
+      })
+      .call(this.behavior.turn_off_drag)
+      .call(label_drag_behavior)
+      .on('mousedown', label_mousedown_fn)
+      .on('mouseover', function (d) {
+        label_mouseover_fn('node_label', d)
+      })
+      .on('mouseout', label_mouseout_fn)
+  }
 
-        // tooltip
-        update_selection.select('title').text(function(d) {
-            return d[identifiers_in_tooltip]
-        })
-    }
+  this.callback_manager.run('update_node', this, update_selection)
 
-    this.callback_manager.run('update_node', this, update_selection)
-
-    function hideNode (d, hide_secondary_metabolites) {
-        return (d.node_type === 'metabolite' &&
-                hide_secondary_metabolites &&
-                !d.node_is_primary)
-    }
+  function hideNode (d, hide_secondary_metabolites) {
+    return (d.node_type === 'metabolite' &&
+            hide_secondary_metabolites &&
+            !d.node_is_primary)
+  }
 }
 
 function create_text_label(enter_selection) {
@@ -4345,22 +4375,24 @@ function create_text_label(enter_selection) {
     this.callback_manager.run('create_text_label', this, enter_selection);
 }
 
-function update_text_label(update_selection) {
-    var mousedown_fn = this.behavior.text_label_mousedown,
-        click_fn = this.behavior.text_label_click,
-        drag_behavior = this.behavior.selectable_drag,
-        turn_off_drag = this.behavior.turn_off_drag;
+function update_text_label (update_selection) {
+  var mousedown_fn = this.behavior.text_label_mousedown
+  var click_fn = this.behavior.text_label_click
+  var drag_behavior = this.behavior.selectable_drag
+  var turn_off_drag = this.behavior.turn_off_drag
 
-    update_selection
-        .select('.label')
-        .text(function(d) { return d.text; })
-        .attr('transform', function(d) { return 'translate('+d.x+','+d.y+')';})
-        .on('mousedown', mousedown_fn)
-        .on('click', click_fn)
-        .call(turn_off_drag)
-        .call(drag_behavior);
+  update_selection
+    .select('.label')
+    .text(function (d) { return d.text })
+    .attr('transform', function (d) {
+      return 'translate(' + d.x + ',' + d.y + ')'
+    })
+    .on('mousedown', mousedown_fn)
+    .on('click', click_fn)
+    .call(turn_off_drag)
+    .call(drag_behavior)
 
-    this.callback_manager.run('update_text_label', this, update_selection);
+  this.callback_manager.run('update_text_label', this, update_selection)
 }
 
 function displaced_coords(reaction_arrow_displacement, start, end, displace) {
@@ -4380,7 +4412,7 @@ function displaced_coords(reaction_arrow_displacement, start, end, displace) {
     return {x: new_x, y: new_y};
 }
 
-},{"./CallbackManager":5,"./data_styles":26,"./utils":31}],11:[function(require,module,exports){
+},{"./CallbackManager":5,"./data_styles":28,"./utils":33}],11:[function(require,module,exports){
 /** KeyManager
 
  Manage key listeners and events.
@@ -4547,7 +4579,7 @@ function add_key_listener(key_name, callback, one_time) {
     return unbind;
 }
 
-},{"./utils":31,"mousetrap":34,"underscore":35}],12:[function(require,module,exports){
+},{"./utils":33,"mousetrap":36,"underscore":37}],12:[function(require,module,exports){
 /** Map
 
  Defines the metabolic map data, and manages drawing and building.
@@ -6835,68 +6867,74 @@ function convert_map() {
     this.callback_manager.run('after_convert_map');
 }
 
-},{"./Behavior":1,"./CallbackManager":5,"./Canvas":6,"./Draw":10,"./KeyManager":11,"./Scale":15,"./SearchIndex":18,"./UndoStack":22,"./build":24,"./data_styles":26,"./utils":31,"baconjs":32,"underscore":35}],13:[function(require,module,exports){
-/** PlacedDiv. A container to position an html div to match the coordinates of a
- SVG element. */
+},{"./Behavior":1,"./CallbackManager":5,"./Canvas":6,"./Draw":10,"./KeyManager":11,"./Scale":15,"./SearchIndex":18,"./UndoStack":24,"./build":26,"./data_styles":28,"./utils":33,"baconjs":34,"underscore":37}],13:[function(require,module,exports){
+/**
+ * PlacedDiv. A container to position an html div to match the coordinates of a
+ * SVG element.
+ */
 
-var utils = require('./utils');
+var utils = require('./utils')
 
-
-var PlacedDiv = utils.make_class();
+var PlacedDiv = utils.make_class()
 // instance methods
 PlacedDiv.prototype = {
-    init: init,
-    is_visible: is_visible,
-    place: place,
-    hide: hide
-};
-module.exports = PlacedDiv;
+  init: init,
+  is_visible: is_visible,
+  place: place,
+  hide: hide,
+}
+module.exports = PlacedDiv
 
+function init (div, map, displacement) {
+  this.div = div
+  this.map = map
+  this.displacement = displacement === undefined ? { x: 0, y: 0 } : displacement
 
-// definitions
-function init(div, map, displacement) {
-    // make the input box
-    this.div = div;
-
-    if (displacement===undefined)
-        displacement = {x: 0, y: 0};
-    this.displacement = displacement;
-
-    this.map = map;
+  this.visible = false
 }
 
-function is_visible() {
-    return this.div.style('display') != 'none';
+function is_visible () {
+  return this.visible
 }
 
-function place(coords) {
-    /** Position the html div to match the given SVG coordinates.
+/**
+ * Position the html div to match the given SVG coordinates.
+ */
+function place (coords) {
+  // show the input
+  this.div.style('display', null)
 
-     */
-    // show the input
-    this.div.style('display', null);
+  // move the new input
+  var window_translate = this.map.zoom_container.window_translate
+  var window_scale = this.map.zoom_container.window_scale
+  var map_size = this.map.get_size()
+  var left = Math.max(20,
+                      Math.min(map_size.width - 270,
+                               (window_scale * coords.x + window_translate.x -
+                                this.displacement.x)))
+  var top = Math.max(20,
+                     Math.min(map_size.height - 40,
+                              (window_scale * coords.y + window_translate.y -
+                               this.displacement.y)))
+  this.div.style('position', 'absolute')
+    .style('display', 'block')
+    .style('left', left+'px')
+    .style('top', top+'px')
 
-    // move the new input
-    var window_translate = this.map.zoom_container.window_translate,
-        window_scale = this.map.zoom_container.window_scale,
-        map_size = this.map.get_size(),
-        left = Math.max(20,
-                        Math.min(map_size.width - 270,
-                                 (window_scale * coords.x + window_translate.x - this.displacement.x))),
-        top = Math.max(20,
-                       Math.min(map_size.height - 40,
-                                (window_scale * coords.y + window_translate.y - this.displacement.y)));
-    this.div.style('position', 'absolute')
-        .style('display', 'block')
-        .style('left', left+'px')
-        .style('top', top+'px');
+  this.visible = true
 }
 
-function hide() {
-    this.div.style('display', 'none');
+/**
+ * Hide the PlacedDiv.
+ */
+function hide () {
+  if (this.visible) {
+    this.div.style('display', 'none')
+    this.visible = false
+  }
 }
 
-},{"./utils":31}],14:[function(require,module,exports){
+},{"./utils":33}],14:[function(require,module,exports){
 /** A QuickJump menu to move between maps.
 
  Arguments
@@ -6991,7 +7029,7 @@ function replace_state_for_map_name(map_name) {
     window.history.replaceState('Not implemented', '', url);
 }
 
-},{"./utils":31}],15:[function(require,module,exports){
+},{"./utils":33}],15:[function(require,module,exports){
 /** Scale */
 
 /* global d3 */
@@ -7093,7 +7131,7 @@ function connect_to_settings(settings, map, get_data_statistics) {
     }
 }
 
-},{"./utils":31}],16:[function(require,module,exports){
+},{"./utils":33}],16:[function(require,module,exports){
 /** ScaleEditor. An interactive UI to edit color and size scales.
 
  Attributes
@@ -7603,7 +7641,7 @@ function _data_not_loaded() {
     return (stats.max === null || stats.min === null);
 }
 
-},{"./utils":31,"baconjs":32}],17:[function(require,module,exports){
+},{"./utils":33,"baconjs":34}],17:[function(require,module,exports){
 /** SearchBar */
 
 var utils = require('./utils');
@@ -7763,7 +7801,7 @@ function previous() {
     this.update();
 }
 
-},{"./CallbackManager":5,"./utils":31,"underscore":35}],18:[function(require,module,exports){
+},{"./CallbackManager":5,"./utils":33,"underscore":37}],18:[function(require,module,exports){
 /** SearchIndex. Define an index for searching for reaction and metabolites in
  the map.
 
@@ -7847,7 +7885,7 @@ function find(substring) {
     return matches;
 }
 
-},{"./utils":31}],19:[function(require,module,exports){
+},{"./utils":33}],19:[function(require,module,exports){
 /** Settings. A class to manage settings for a Map.
 
  Arguments
@@ -7885,37 +7923,38 @@ module.exports = Settings;
 
 
 // instance methods
-function init(set_option, get_option, conditional_options) {
-    this.set_option = set_option;
-    this.get_option = get_option;
+function init (set_option, get_option, conditional_options) {
+  this.set_option = set_option
+  this.get_option = get_option
 
-    // manage accepting/abandoning changes
-    this.status_bus = new bacon.Bus();
+  // manage accepting/abandoning changes
+  this.status_bus = new bacon.Bus()
 
-    // force an update of ui components
-    this.force_update_bus = new bacon.Bus();
+  // force an update of ui components
+  this.force_update_bus = new bacon.Bus()
 
-    // modify bacon.observable
-    bacon.Observable.prototype.convert_to_conditional_stream = _convert_to_conditional_stream;
-    bacon.Observable.prototype.force_update_with_bus = _force_update_with_bus;
+  // modify bacon.observable
+  bacon.Observable.prototype.convert_to_conditional_stream = _convert_to_conditional_stream
+  bacon.Observable.prototype.force_update_with_bus = _force_update_with_bus
 
-    // create the options
-    this.busses = {};
-    this.streams = {};
-    for (var i = 0, l = conditional_options.length; i < l; i++) {
-        var name = conditional_options[i],
-            out = _create_conditional_setting(name, get_option(name), set_option,
-                                              this.status_bus, this.force_update_bus);
-        this.busses[name] = out.bus;
-        this.streams[name] = out.stream;
-    }
+  // create the options
+  this.busses = {}
+  this.streams = {}
+  for (var i = 0, l = conditional_options.length; i < l; i++) {
+    var name = conditional_options[i]
+    var out = _create_conditional_setting(name, get_option(name), set_option,
+                                          this.status_bus,
+                                          this.force_update_bus)
+    this.busses[name] = out.bus
+    this.streams[name] = out.stream
+  }
 }
 
-function _convert_to_conditional_stream(status_stream) {
-    /** Hold on to event when hold_property is true, and only keep them
-     if accept_property is true (when hold_property becomes false).
-
-     */
+/**
+ * Hold on to event when hold_property is true, and only keep them if
+ * accept_property is true (when hold_property becomes false).
+ */
+function _convert_to_conditional_stream (status_stream) {
 
     // true if hold is pressed
     var is_not_hold_event = status_stream
@@ -8024,435 +8063,432 @@ function accept_changes() {
     this.status_bus.push('accepted');
 }
 
-},{"./utils":31,"baconjs":32}],20:[function(require,module,exports){
-/** SettingsMenu */
+},{"./utils":33,"baconjs":34}],20:[function(require,module,exports){
+/**
+ * SettingsMenu
+ */
 
-'strict mode';
+var utils = require('./utils')
+var CallbackManager = require('./CallbackManager')
+var ScaleEditor = require('./ScaleEditor')
 
-var utils = require('./utils');
-var CallbackManager = require('./CallbackManager');
-var ScaleEditor = require('./ScaleEditor');
-
-
-var SettingsMenu = utils.make_class();
-// instance methods
+var SettingsMenu = utils.make_class()
 SettingsMenu.prototype = {
-    init: init,
-    is_visible: is_visible,
-    toggle: toggle,
-    hold_changes: hold_changes,
-    abandon_changes: abandon_changes,
-    accept_changes: accept_changes,
-    style_gui: style_gui,
-    view_gui: view_gui
-};
-module.exports = SettingsMenu;
+  init: init,
+  is_visible: is_visible,
+  toggle: toggle,
+  hold_changes: hold_changes,
+  abandon_changes: abandon_changes,
+  accept_changes: accept_changes,
+  style_gui: style_gui,
+  view_gui: view_gui,
+}
+module.exports = SettingsMenu
 
+function init (sel, settings, map, toggle_abs_and_apply_data) {
+  this.sel = sel
+  this.settings = settings
+  this.draw = false
 
-// instance methods
-function init(sel, settings, map, toggle_abs_and_apply_data) {
-    this.sel = sel;
-    this.settings = settings;
-    this.draw = false;
+  var unique_map_id = this.settings.get_option('unique_map_id')
+  this.unique_string = (unique_map_id === null ? '' : '.' + unique_map_id)
 
-    var unique_map_id = this.settings.get_option('unique_map_id');
-    this.unique_string = (unique_map_id === null ? '' : '.' + unique_map_id);
+  var background = sel.append('div')
+    .attr('class', 'settings-box-background')
+    .style('display', 'none')
+  var container = background.append('div')
+    .attr('class', 'settings-box-container')
+    .style('display', 'none')
 
-    var background = sel.append('div')
-            .attr('class', 'settings-box-background')
-            .style('display', 'none'),
-        container = background.append('div')
-            .attr('class', 'settings-box-container')
-            .style('display', 'none');
+  // done button
+  container.append('button')
+    .attr("class", "btn btn-sm btn-default settings-button")
+    .on('click', function () {
+      this.accept_changes()
+    }.bind(this))
+    .append("span").attr("class",  "glyphicon glyphicon-ok")
+  // quit button
+  container.append('button')
+    .attr("class", "btn btn-sm btn-default settings-button settings-button-close")
+    .on('click', function () {
+      this.abandon_changes()
+    }.bind(this))
+    .append("span").attr("class",  "glyphicon glyphicon-remove")
 
-    // done button
-    container.append('button')
-        .attr("class", "btn btn-sm btn-default settings-button")
-        .on('click', function() {
-            this.accept_changes();
-        }.bind(this))
-        .append("span").attr("class",  "glyphicon glyphicon-ok");
-    // quit button
-    container.append('button')
-        .attr("class", "btn btn-sm btn-default settings-button settings-button-close")
-        .on('click', function() {
-            this.abandon_changes();
-        }.bind(this))
-        .append("span").attr("class",  "glyphicon glyphicon-remove");
+  var box = container.append('div')
+    .attr('class', 'settings-box')
 
-    var box = container.append('div')
-            .attr('class', 'settings-box');
+  // Tip
+  box.append('div')
+    .text('Tip: Hover over an option to see more details about it.')
+    .classed('settings-tip', true)
+  box.append('hr')
 
-    // Tip
-    box.append('div')
-        .text('Tip: Hover over an option to see more details about it.')
-        .classed('settings-tip', true);
-    box.append('hr');
+  // view and build
+  box.append('div').text('View and build options')
+    .attr('class', 'settings-section-heading-large')
+  this.view_gui(box.append('div'))
 
-    // view and build
-    box.append('div').text('View and build options')
-        .attr('class', 'settings-section-heading-large');
-    this.view_gui(box.append('div'));
+  // reactions
+  box.append('hr')
+  box.append('div')
+    .text('Reactions').attr('class', 'settings-section-heading-large')
+  var rse = new ScaleEditor(box.append('div'), 'reaction', this.settings,
+                            map.get_data_statistics.bind(map))
+  map.callback_manager.set('calc_data_stats__reaction', function (changed) {
+    if (changed) {
+      rse.update()
+      rse.update_no_data()
+    }
+  })
+  box.append('div')
+    .text('Reaction or Gene data').attr('class', 'settings-section-heading')
+  this.style_gui(box.append('div'), 'reaction', function (on_off) {
+    if (toggle_abs_and_apply_data) {
+      toggle_abs_and_apply_data('reaction', on_off)
+      rse.update()
+      rse.update_no_data()
+    }
+  })
 
-    // reactions
-    box.append('hr');
-    box.append('div')
-        .text('Reactions').attr('class', 'settings-section-heading-large');
-    var rse = new ScaleEditor(box.append('div'), 'reaction', this.settings,
-                              map.get_data_statistics.bind(map));
-    map.callback_manager.set('calc_data_stats__reaction', function(changed) {
-        if (changed) {
-            rse.update();
-            rse.update_no_data();
-        }
-    });
-    box.append('div')
-        .text('Reaction or Gene data').attr('class', 'settings-section-heading');
-    this.style_gui(box.append('div'), 'reaction', function(on_off) {
-        if (toggle_abs_and_apply_data) {
-            toggle_abs_and_apply_data('reaction', on_off);
-            rse.update();
-            rse.update_no_data();
-        }
-    });
+  // metabolite data
+  box.append('hr')
+  box.append('div').text('Metabolites')
+    .attr('class', 'settings-section-heading-large')
+  var mse = new ScaleEditor(box.append('div'), 'metabolite', this.settings,
+                            map.get_data_statistics.bind(map))
+  map.callback_manager.set('calc_data_stats__metabolite', function (changed) {
+    if (changed) {
+      mse.update()
+      mse.update_no_data()
+    }
+  })
+  box.append('div').text('Metabolite data')
+    .attr('class', 'settings-section-heading')
+  this.style_gui(box.append('div'), 'metabolite', function (on_off) {
+    if (toggle_abs_and_apply_data) {
+      toggle_abs_and_apply_data('metabolite', on_off)
+      mse.update()
+      mse.update_no_data()
+    }
+  })
 
-    // metabolite data
-    box.append('hr');
-    box.append('div').text('Metabolites')
-        .attr('class', 'settings-section-heading-large');
-    var mse = new ScaleEditor(box.append('div'), 'metabolite', this.settings,
-                              map.get_data_statistics.bind(map));
-    map.callback_manager.set('calc_data_stats__metabolite', function(changed) {
-        if (changed) {
-            mse.update();
-            mse.update_no_data();
-        }
-    });
-    box.append('div').text('Metabolite data')
-        .attr('class', 'settings-section-heading');
-    this.style_gui(box.append('div'), 'metabolite', function(on_off) {
-        if (toggle_abs_and_apply_data) {
-            toggle_abs_and_apply_data('metabolite', on_off);
-            mse.update();
-            mse.update_no_data();
-        }
-    });
+  this.callback_manager = new CallbackManager()
 
-    this.callback_manager = new CallbackManager();
-
-    this.map = map;
-    this.selection = container;
-    this.background = background;
+  this.map = map
+  this.selection = container
+  this.background = background
 }
 function is_visible() {
-    return this.selection.style('display') != 'none';
+  return this.selection.style('display') != 'none'
 }
 function toggle(on_off) {
-    if (on_off===undefined) on_off = !this.is_visible();
+  if (on_off===undefined) on_off = !this.is_visible()
 
-    if (on_off) {
-        // hold changes until accepting/abandoning
-        this.hold_changes();
-        // show the menu
-        this.selection.style("display", "inline-block");
-        this.background.style("display", "block");
-        this.selection.select('input').node().focus();
-        // escape key
-        this.clear_escape = this.map.key_manager
-            .add_escape_listener(function() {
-                this.abandon_changes();
-            }.bind(this), true);
-        // enter key
-        this.clear_enter = this.map.key_manager
-            .add_enter_listener(function() {
-                this.accept_changes();
-            }.bind(this), true);
-        // run the show callback
-        this.callback_manager.run('show');
-    } else {
-        // draw on finish
-        if (this.draw) this.map.draw_everything();
-        // hide the menu
-        this.selection.style("display", "none");
-        this.background.style("display", "none");
-        if (this.clear_escape) this.clear_escape();
-        this.clear_escape = null;
-        if (this.clear_enter) this.clear_enter();
-        this.clear_enter = null;
-        // run the hide callback
-        this.callback_manager.run('hide');
-    }
+  if (on_off) {
+    // hold changes until accepting/abandoning
+    this.hold_changes()
+    // show the menu
+    this.selection.style("display", "inline-block")
+    this.background.style("display", "block")
+    this.selection.select('input').node().focus()
+    // escape key
+    this.clear_escape = this.map.key_manager
+      .add_escape_listener(function () {
+        this.abandon_changes()
+      }.bind(this), true)
+    // enter key
+    this.clear_enter = this.map.key_manager
+      .add_enter_listener(function () {
+        this.accept_changes()
+      }.bind(this), true)
+    // run the show callback
+    this.callback_manager.run('show')
+  } else {
+    // draw on finish
+    if (this.draw) this.map.draw_everything()
+    // hide the menu
+    this.selection.style("display", "none")
+    this.background.style("display", "none")
+    if (this.clear_escape) this.clear_escape()
+    this.clear_escape = null
+    if (this.clear_enter) this.clear_enter()
+    this.clear_enter = null
+    // run the hide callback
+    this.callback_manager.run('hide')
+  }
 }
 function hold_changes() {
-    this.settings.hold_changes();
+  this.settings.hold_changes()
 }
 function abandon_changes() {
-    this.draw = false;
-    this.settings.abandon_changes();
-    this.toggle(false);
+  this.draw = false
+  this.settings.abandon_changes()
+  this.toggle(false)
 }
 function accept_changes() {
-    this.sel.selectAll('input').each(function (s) {
-        this.blur();
-    });
-    this.draw = true;
-    this.settings.accept_changes();
-    this.toggle(false);
+  this.sel.selectAll('input').each(function (s) {
+    this.blur()
+  })
+  this.draw = true
+  this.settings.accept_changes()
+  this.toggle(false)
 }
 
 function style_gui(sel, type, abs_callback) {
-    /** A UI to edit style.
+  /** A UI to edit style.
 
-     */
+   */
 
-    var t = sel.append('table').attr('class', 'settings-table'),
-        settings = this.settings;
+  var t = sel.append('table').attr('class', 'settings-table'),
+  settings = this.settings
 
-    // styles
-    t.append('tr').call(function(r) {
-        r.append('td').text('Options:')
-            .attr('class', 'options-label')
-            .attr('title', ('Options for ' + type + ' data.'));
-        var cell = r.append('td');
+  // styles
+  t.append('tr').call(function (r) {
+    r.append('td').text('Options:')
+      .attr('class', 'options-label')
+      .attr('title', ('Options for ' + type + ' data.'))
+    var cell = r.append('td')
 
-        var styles = [['Absolute value', 'abs',
-                       ('If checked, use the absolute value when ' +
-                        'calculating colors and sizes of ' + type + 's on the map')],
-                      ['Size', 'size',
-                       ('If checked, then size the ' +
-                        (type == 'metabolite' ? 'radius of metabolite circles ' : 'thickness of reaction lines ') +
-                        'according to the value of the ' + type + ' data')],
-                      ['Color', 'color',
-                       ('If checked, then color the ' +
-                        (type == 'metabolite' ? 'metabolite circles ' : 'reaction lines ') +
-                        'according to the value of the ' + type + ' data')],
-                      ['Text (Show data in label)', 'text',
-                       ('If checked, then show data values in the ' + type + ' ' +
-                        'labels')]],
-            style_cells = cell.selectAll('.option-group')
-                .data(styles),
-            s = style_cells.enter()
-                .append('label')
-                .attr('class', 'option-group');
+    var styles = [['Absolute value', 'abs',
+                   ('If checked, use the absolute value when ' +
+                    'calculating colors and sizes of ' + type + 's on the map')],
+                  ['Size', 'size',
+                   ('If checked, then size the ' +
+                    (type == 'metabolite' ? 'radius of metabolite circles ' : 'thickness of reaction lines ') +
+                    'according to the value of the ' + type + ' data')],
+                  ['Color', 'color',
+                   ('If checked, then color the ' +
+                    (type == 'metabolite' ? 'metabolite circles ' : 'reaction lines ') +
+                    'according to the value of the ' + type + ' data')],
+                  ['Text (Show data in label)', 'text',
+                   ('If checked, then show data values in the ' + type + ' ' +
+                    'labels')]],
+    style_cells = cell.selectAll('.option-group')
+      .data(styles),
+    s = style_cells.enter()
+      .append('label')
+      .attr('class', 'option-group')
 
-        // make the checkbox
-        var streams = [],
-            get_styles = function() {
-                var styles = [];
-                cell.selectAll('input')
-                    .each(function(d) { if (this.checked) styles.push(d[1]); });
-                return styles;
-            };
-        s.append('input').attr('type', 'checkbox')
-            .on('change', function(d) {
-                settings.set_conditional(type + '_styles', get_styles());
-                if (d[1] == 'abs')
-                    abs_callback(this.checked);
-            }).each(function(d) {
-                // subscribe to changes in the model
-                settings.streams[type + '_styles'].onValue(function(ar) {
-                    // check the box if the style is present
-                    this.checked = (ar.indexOf(d[1]) != -1);
-                }.bind(this));
-            });
-        s.append('span')
-            .text(function(d) { return d[0]; })
-            .attr('title', function(d) { return d[2]; });
-    });
-
-    // compare_style
-    t.append('tr').call(function(r) {
-        r.append('td')
-            .text('Comparison:')
-            .attr('class', 'options-label')
-            .attr('title', ('The function that will be used to compare ' +
-                            'datasets, when paired data is loaded'));
-        var cell = r.append('td')
-                .attr('title', ('The function that will be used to compare ' +
-                                'datasets, when paired data is loaded'));;
-
-        var styles = [['Fold Change', 'fold'],
-                      ['Log2(Fold Change)', 'log2_fold'],
-                      ['Difference', 'diff']],
-            style_cells = cell.selectAll('.option-group')
-                .data(styles),
-            s = style_cells.enter()
-                .append('label')
-                .attr('class', 'option-group');
-
-        // make the radio
-        s.append('input').attr('type', 'radio')
-            .attr('name', type + '_compare_style' + this.unique_string)
-            .attr('value', function(d) { return d[1]; })
-            .on('change', function() {
-                if (this.checked)
-                    settings.set_conditional(type + '_compare_style', this.value);
-            })
-            .each(function() {
-                // subscribe to changes in the model
-                settings.streams[type + '_compare_style'].onValue(function(value) {
-                    // check the box for the new value
-                    this.checked = (this.value == value);
-                }.bind(this));
-            });
-        s.append('span')
-            .text(function(d) { return d[0]; });
-
-    }.bind(this));
-
-    // gene-specific settings
-    if (type=='reaction') {
-        var t = sel.append('table').attr('class', 'settings-table')
-                .attr('title', ('The function that will be used to evaluate ' +
-                                'AND connections in gene reaction rules (AND ' +
-                                'connections generally connect components of ' +
-                                'an enzyme complex)'));
-
-        // and_method_in_gene_reaction_rule
-        t.append('tr').call(function(r) {
-            r.append('td')
-                .text('Method for evaluating AND:')
-                .attr('class', 'options-label-wide');
-            var cell = r.append('td');
-
-            var styles = [['Mean', 'mean'], ['Min', 'min']],
-                style_cells = cell.selectAll('.option-group')
-                    .data(styles),
-                s = style_cells.enter()
-                    .append('label')
-                    .attr('class', 'option-group');
-
-            // make the radio
-            var name = 'and_method_in_gene_reaction_rule';
-            s.append('input').attr('type', 'radio')
-                .attr('name', name + this.unique_string)
-                .attr('value', function(d) { return d[1]; })
-                .on('change', function() {
-                    if (this.checked)
-                        settings.set_conditional(name, this.value);
-                })
-                .each(function() {
-                    // subscribe to changes in the model
-                    settings.streams[name].onValue(function(value) {
-                        // check the box for the new value
-                        this.checked = (this.value == value);
-                    }.bind(this));
-                });
-            s.append('span')
-                .text(function(d) { return d[0]; });
-        }.bind(this));
-
+    // make the checkbox
+    var streams = [],
+    get_styles = function () {
+      var styles = []
+      cell.selectAll('input')
+        .each(function (d) { if (this.checked) styles.push(d[1]); })
+      return styles
     }
+    s.append('input').attr('type', 'checkbox')
+      .on('change', function (d) {
+        settings.set_conditional(type + '_styles', get_styles())
+        if (d[1] == 'abs')
+          abs_callback(this.checked)
+      }).each(function (d) {
+        // subscribe to changes in the model
+        settings.streams[type + '_styles'].onValue(function (ar) {
+          // check the box if the style is present
+          this.checked = (ar.indexOf(d[1]) != -1)
+        }.bind(this))
+      })
+    s.append('span')
+      .text(function (d) { return d[0]; })
+      .attr('title', function (d) { return d[2]; })
+  })
+
+  // compare_style
+  t.append('tr').call(function (r) {
+    r.append('td')
+      .text('Comparison:')
+      .attr('class', 'options-label')
+      .attr('title', ('The function that will be used to compare ' +
+                      'datasets, when paired data is loaded'))
+    var cell = r.append('td')
+      .attr('title', ('The function that will be used to compare ' +
+                      'datasets, when paired data is loaded'));
+
+    var styles = [['Fold Change', 'fold'],
+                  ['Log2(Fold Change)', 'log2_fold'],
+                  ['Difference', 'diff']],
+    style_cells = cell.selectAll('.option-group')
+      .data(styles),
+    s = style_cells.enter()
+      .append('label')
+      .attr('class', 'option-group')
+
+    // make the radio
+    s.append('input').attr('type', 'radio')
+      .attr('name', type + '_compare_style' + this.unique_string)
+      .attr('value', function (d) { return d[1]; })
+      .on('change', function () {
+        if (this.checked)
+          settings.set_conditional(type + '_compare_style', this.value)
+      })
+      .each(function () {
+        // subscribe to changes in the model
+        settings.streams[type + '_compare_style'].onValue(function (value) {
+          // check the box for the new value
+          this.checked = (this.value == value)
+        }.bind(this))
+      })
+    s.append('span')
+      .text(function (d) { return d[0]; })
+
+  }.bind(this))
+
+  // gene-specific settings
+  if (type=='reaction') {
+    var t = sel.append('table').attr('class', 'settings-table')
+      .attr('title', ('The function that will be used to evaluate ' +
+                      'AND connections in gene reaction rules (AND ' +
+                      'connections generally connect components of ' +
+                      'an enzyme complex)'))
+
+    // and_method_in_gene_reaction_rule
+    t.append('tr').call(function (r) {
+      r.append('td')
+        .text('Method for evaluating AND:')
+        .attr('class', 'options-label-wide')
+      var cell = r.append('td')
+
+      var styles = [['Mean', 'mean'], ['Min', 'min']],
+      style_cells = cell.selectAll('.option-group')
+        .data(styles),
+      s = style_cells.enter()
+        .append('label')
+        .attr('class', 'option-group')
+
+      // make the radio
+      var name = 'and_method_in_gene_reaction_rule'
+      s.append('input').attr('type', 'radio')
+        .attr('name', name + this.unique_string)
+        .attr('value', function (d) { return d[1]; })
+        .on('change', function () {
+          if (this.checked)
+            settings.set_conditional(name, this.value)
+        })
+        .each(function () {
+          // subscribe to changes in the model
+          settings.streams[name].onValue(function (value) {
+            // check the box for the new value
+            this.checked = (this.value == value)
+          }.bind(this))
+        })
+      s.append('span')
+        .text(function (d) { return d[0]; })
+    }.bind(this))
+
+  }
 }
 
 function view_gui(s, option_name, string, options) {
 
-    // columns
-    var settings = this.settings;
+  // columns
+  var settings = this.settings
 
-    var t = s.append('table').attr('class', 'settings-table');
-    t.append('tr').call(function(r) {
-        // identifiers
-        r.attr('title', ('The identifiers that are show in the reaction, ' +
-                         'gene, and metabolite labels on the map.'));
-        r.append('td').text('Identifiers:')
-            .attr('class', 'options-label');
-        var cell = r.append('td');
+  var t = s.append('table').attr('class', 'settings-table')
+  t.append('tr').call(function (r) {
+    // identifiers
+    r.attr('title', ('The identifiers that are show in the reaction, ' +
+                     'gene, and metabolite labels on the map.'))
+    r.append('td').text('Identifiers:')
+      .attr('class', 'options-label')
+    var cell = r.append('td')
 
-        var options = [['ID\'s', 'bigg_id'], ['Descriptive names', 'name']],
-            style_cells = cell.selectAll('.option-group')
-                .data(options),
-            s = style_cells.enter()
-                .append('label')
-                .attr('class', 'option-group');
+    var options = [['ID\'s', 'bigg_id'], ['Descriptive names', 'name']],
+    style_cells = cell.selectAll('.option-group')
+      .data(options),
+    s = style_cells.enter()
+      .append('label')
+      .attr('class', 'option-group')
 
-        // make the checkbox
-        var name = 'identifiers_on_map';
-        s.append('input').attr('type', 'radio')
-            .attr('name', name + this.unique_string)
-            .attr('value', function(d) { return d[1]; })
-            .on('change', function() {
-                if (this.checked)
-                    settings.set_conditional(name, this.value);
-            })
-            .each(function() {
-                // subscribe to changes in the model
-                settings.streams[name].onValue(function(value) {
-                    // check the box for the new value
-                    this.checked = (this.value == value);
-                }.bind(this));
-            });
-        s.append('span').text(function(d) { return d[0]; });
+    // make the checkbox
+    var name = 'identifiers_on_map'
+    s.append('input').attr('type', 'radio')
+      .attr('name', name + this.unique_string)
+      .attr('value', function (d) { return d[1]; })
+      .on('change', function () {
+        if (this.checked)
+          settings.set_conditional(name, this.value)
+      })
+      .each(function () {
+        // subscribe to changes in the model
+        settings.streams[name].onValue(function (value) {
+          // check the box for the new value
+          this.checked = (this.value == value)
+        }.bind(this))
+      })
+    s.append('span').text(function (d) { return d[0]; })
 
-    }.bind(this));
+  }.bind(this))
 
-    var boolean_options = [
-        ['scroll_behavior', 'Scroll to zoom (instead of scroll to pan)',
-         ('If checked, then the scroll wheel and trackpad will control zoom ' +
-          'rather than pan.'), {'zoom': true, 'pan': false}],
-        ['hide_secondary_metabolites', 'Hide secondary metabolites',
-         ('If checked, then only the primary metabolites ' +
-          'will be displayed.')],
-        ['show_gene_reaction_rules', 'Show gene reaction rules',
-         ('If checked, then gene reaction rules will be displayed ' +
-          'below each reaction label. (Gene reaction rules are always ' +
-          'shown when gene data is loaded.)')],
-        ['hide_all_labels', 'Hide reaction, gene, and metabolite labels',
-         ('If checked, hide all reaction, gene, and metabolite labels')],
-        ['allow_building_duplicate_reactions', 'Allow duplicate reactions',
-         ('If checked, then allow duplicate reactions during model building.')],
-        ['highlight_missing', 'Highlight reactions not in model',
-         ('If checked, then highlight in red all the ' +
-          'reactions on the map that are not present in ' +
-          'the loaded model.')],
-    ];
+  var boolean_options = [
+    ['scroll_behavior', 'Scroll to zoom (instead of scroll to pan)',
+     ('If checked, then the scroll wheel and trackpad will control zoom ' +
+      'rather than pan.'), {'zoom': true, 'pan': false}],
+    ['hide_secondary_metabolites', 'Hide secondary metabolites',
+     ('If checked, then only the primary metabolites ' +
+      'will be displayed.')],
+    ['show_gene_reaction_rules', 'Show gene reaction rules',
+     ('If checked, then gene reaction rules will be displayed ' +
+      'below each reaction label. (Gene reaction rules are always ' +
+      'shown when gene data is loaded.)')],
+    ['hide_all_labels', 'Hide reaction, gene, and metabolite labels',
+     ('If checked, hide all reaction, gene, and metabolite labels')],
+    ['allow_building_duplicate_reactions', 'Allow duplicate reactions',
+     ('If checked, then allow duplicate reactions during model building.')],
+    ['highlight_missing', 'Highlight reactions not in model',
+     ('If checked, then highlight in red all the ' +
+      'reactions on the map that are not present in ' +
+      'the loaded model.')],
+    ['enable_tooltips', 'Show tooltips',
+     ('Show tooltips when hovering over reactions, metabolites, and genes')],
+  ]
 
-    var opts = s.append('div').attr('class', 'settings-container')
-            .selectAll('.option-group')
-            .data(boolean_options);
-    // enter
-    var e = opts.enter()
-            .append('label')
-            .attr('class', 'option-group full-line');
-    e.append('input').attr('type', 'checkbox');
-    e.append('span');
-    // update
-    opts.attr('title', function(d) { return d[2]; });
-    opts.select('input')
-        .on('change', function(d) {
-            if (d.length >= 4) { // not a boolean setting
-                for (var key in d[3]) {
-                    if (d[3][key] == this.checked) {
-                        settings.set_conditional(d[0], key);
-                        break;
-                    }
-                }
-            } else { // boolean setting
-                settings.set_conditional(d[0], this.checked);
-            }
-        })
-        .each(function(d) {
-            settings.streams[d[0]].onValue(function(value) {
-                if (d.length >= 4) { // not a boolean setting
-                    this.checked = d[3][value];
-                } else { // boolean setting
-                    this.checked = value;
-                }
-            }.bind(this));
-        });
-    opts.select('span')
-        .text(function(d) { return d[1]; });
-    // exit
-    opts.exit().remove();
+  var opts = s.append('div').attr('class', 'settings-container')
+    .selectAll('.option-group')
+    .data(boolean_options)
+  // enter
+  var e = opts.enter()
+      .append('label')
+      .attr('class', 'option-group full-line')
+  e.append('input').attr('type', 'checkbox')
+  e.append('span')
+  // update
+  opts.attr('title', function (d) { return d[2]; })
+  opts.select('input')
+    .on('change', function (d) {
+      if (d.length >= 4) { // not a boolean setting
+        for (var key in d[3]) {
+          if (d[3][key] == this.checked) {
+            settings.set_conditional(d[0], key)
+            break
+          }
+        }
+      } else { // boolean setting
+        settings.set_conditional(d[0], this.checked)
+      }
+    })
+    .each(function (d) {
+      settings.streams[d[0]].onValue(function (value) {
+        if (d.length >= 4) { // not a boolean setting
+          this.checked = d[3][value]
+        } else { // boolean setting
+          this.checked = value
+        }
+      }.bind(this))
+    })
+  opts.select('span').text(function (d) { return d[1] })
+  // exit
+  opts.exit().remove()
 
-    // message about text performance
-    s.append('div')
-        .style('margin-top', '16px')
-        .classed('settings-tip', true)
-        .text('Tip: To increase map performance, turn off text boxes (i.e. labels and gene reaction rules).');
+  // message about text performance
+  s.append('div')
+    .style('margin-top', '16px')
+    .classed('settings-tip', true)
+    .text('Tip: To increase map performance, turn off text boxes (i.e. labels and gene reaction rules).')
 }
 
-},{"./CallbackManager":5,"./ScaleEditor":16,"./utils":31}],21:[function(require,module,exports){
+},{"./CallbackManager":5,"./ScaleEditor":16,"./utils":33}],21:[function(require,module,exports){
 /** TextEditInput */
 
 var utils = require('./utils');
@@ -8604,7 +8640,277 @@ function _add_and_edit(coords) {
     this.show(sel, coords);
 }
 
-},{"./PlacedDiv":13,"./build":24,"./utils":31}],22:[function(require,module,exports){
+},{"./PlacedDiv":13,"./build":26,"./utils":33}],22:[function(require,module,exports){
+/* global d3, window, XMLHttpRequest */
+
+/**
+ * Define a Tooltip component and interface with Tinier.
+ */
+
+var utils = require('./utils')
+var tinier = require('tinier')
+var createComponent = tinier.createComponent
+var createInterface = tinier.createInterface
+var typ = tinier.interfaceTypes
+var h = tinier.createElement
+var render = tinier.render
+var _ = require('underscore')
+
+// Define styles
+var containerStyle = {
+  'min-width': '270px',
+  'min-height': '100px',
+  'border-radius': '2px',
+  'border': '1px solid #b58787',
+  'padding': '7px',
+  'background-color': '#fff',
+  'text-align': 'left',
+  'font-size': '16px',
+  'font-family': 'sans-serif',
+  'color': '#111',
+  'box-shadow': '4px 6px 20px 0px rgba(0, 0, 0, 0.4)',
+}
+
+var idStyle = {
+  'font-size': '18px',
+  'font-weight': 'bold',
+}
+
+var buttonStyle = {
+  'border-radius': '3px',
+  'background-color': '#eee',
+  'border': '1px solid #ddd',
+  'margin-top': '4px',
+}
+
+var typeLabelStyle = {
+  'position': 'absolute',
+  'top': '4px',
+  'right': '4px',
+  'color': '#d27066',
+  'background-color': '#ffeded',
+  'border-radius': '2px',
+  'font-size': '14px',
+  'text-align': 'right',
+  'padding': '0px 5px',
+}
+
+function decompartmentalizeCheck (id, type) {
+  // ID without compartment, if metabolite.
+  return type === 'metabolite' ? utils.decompartmentalize(id)[0] : id
+
+}
+
+function capitalizeFirstLetter (s) {
+  return s === null ? s : s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+// Create the component
+var DefaultTooltip = createComponent({
+  displayName: 'DefaultTooltip',
+
+  init: function () {
+    return {
+      biggId: '',
+      name: '',
+      loc: { x: 0, y: 0 },
+      data: null,
+      type: null,
+    }
+  },
+
+  reducers: {
+    setContainerData: function (args) {
+      return Object.assign({}, args.state, {
+        biggId: args.biggId,
+        name: args.name,
+        loc: args.loc,
+        data: args.data,
+        type: args.type,
+      })
+    },
+  },
+
+  methods: {
+    openBigg: function (args) {
+      var type = args.state.type
+      var biggId = args.state.biggId
+      var pref = 'http://bigg.ucsd.edu/'
+      var url = (type === 'gene' ?
+                 pref + 'search?query=' + biggId :
+                 pref + 'universal/' + type + 's/' + decompartmentalizeCheck(biggId, type))
+      window.open(url)
+    },
+  },
+
+  render: function (args) {
+    var decomp = decompartmentalizeCheck(args.state.biggId, args.state.type)
+    var biggButtonText = 'Open ' + decomp + ' in BiGG Models.'
+
+    return render(
+      // parent node
+      args.el,
+      // the new tooltip element
+      h('div',
+        // tooltip style
+        { style: containerStyle },
+        // id
+        h('span', { style: idStyle }, args.state.biggId),
+        h('br'),
+        // descriptive name
+        'name: ' + args.state.name,
+        h('br'),
+        // data
+        'data: ' + (args.state.data && args.state.data !== '(nd)' ?
+                    args.state.data : 'no data'),
+        h('br'),
+        // BiGG Models button
+        h('button',
+          { style: buttonStyle, onClick: args.methods.openBigg, },
+          biggButtonText),
+        // type label
+        h('div',
+          { style: typeLabelStyle },
+          capitalizeFirstLetter(args.state.type)))
+    )
+  },
+})
+
+module.exports = {
+  DefaultTooltip: DefaultTooltip,
+}
+
+},{"./utils":33,"tinier":39,"underscore":37}],23:[function(require,module,exports){
+var utils = require('./utils')
+var PlacedDiv = require('./PlacedDiv')
+var tinier = require('tinier')
+var _ = require('underscore')
+
+/**
+ * Manage the tooltip that lives in a PlacedDiv.
+ * @param selection
+ * @param map
+ * @param tooltip_component
+ * @param zoom_container
+ */
+var TooltipContainer = utils.make_class()
+// instance methods
+TooltipContainer.prototype = {
+  init: init,
+  setup_map_callbacks: setup_map_callbacks,
+  setup_zoom_callbacks: setup_zoom_callbacks,
+  is_visible: is_visible,
+  show: show,
+  hide: hide,
+  delay_hide: delay_hide,
+  cancel_hide_tooltip: cancel_hide_tooltip,
+}
+module.exports = TooltipContainer
+
+// definitions
+function init (selection, map, tooltip_component, zoom_container) {
+  var div = selection.append('div').attr('id', 'tooltip-container')
+  this.placed_div = PlacedDiv(div, map)
+  this.placed_div.hide()
+
+  div.on('mouseover', this.cancel_hide_tooltip.bind(this))
+  div.on('mouseleave', this.hide.bind(this))
+
+  this.map = map
+  this.setup_map_callbacks(map)
+  this.zoom_container = zoom_container
+  this.setup_zoom_callbacks(zoom_container)
+
+  // keep a reference to tinier tooltip
+  this.tooltip_component = tooltip_component
+  this.tinier_tooltip = tinier.run(tooltip_component, div.node())
+
+  this.delay_hide_timeout = null
+}
+
+function setup_map_callbacks (map) {
+  map.callback_manager.set('show_tooltip.tooltip_container', function (type, d) {
+    if (map.settings.get_option('enable_tooltips')) {
+      this.show(type, d)
+    }
+  }.bind(this))
+  map.callback_manager.set('hide_tooltip.tooltip_container',
+                           this.hide.bind(this))
+  map.callback_manager.set('delay_hide_tooltip.tooltip_container',
+                           this.delay_hide.bind(this))
+}
+
+function setup_zoom_callbacks (zoom_container) {
+  zoom_container.callback_manager.set('zoom.tooltip_container', function () {
+    if (this.is_visible()) {
+      this.hide()
+    }
+  }.bind(this))
+  zoom_container.callback_manager.set('go_to.tooltip_container', function () {
+    if (this.is_visible()) {
+      this.hide()
+    }
+  }.bind(this))
+}
+
+/**
+ * Return visibility of tooltip container.
+ * @return {Boolean} Whether tooltip is visible.
+ */
+function is_visible () {
+  return this.placed_div.is_visible()
+}
+
+/**
+ * Show and place the input.
+ * @param {String} type - 'reaction_label', 'node_label', or 'gene_label'
+ * @param {Object} d - D3 data for DOM element
+ * @param {Object} coords - Object with x and y coords. Cannot use coords from
+ *                          'd' because gene labels do not have them.
+ */
+function show (type, d) {
+  // get rid of a lingering delayed hide
+  this.cancel_hide_tooltip()
+
+  if (_.contains([ 'reaction_label', 'node_label', 'gene_label' ], type)) {
+    var coords = { x: d.label_x, y: d.label_y + 10 }
+    this.placed_div.place(coords)
+    this.tinier_tooltip.reducers.setContainerData({
+      biggId: d.bigg_id,
+      name: d.name,
+      loc: coords,
+      data: d.data_string,
+      type: type.replace('_label', '').replace('node', 'metabolite'),
+    })
+  } else {
+    throw new Error('Tooltip not supported for object type ' + type)
+  }
+}
+
+/**
+ * Hide the input.
+ */
+function hide () {
+  this.placed_div.hide()
+}
+
+/**
+ * Hide the input after a short delay, so that mousing onto the tooltip does not
+ * cause it to hide.
+ */
+function delay_hide () {
+  this.delay_hide_timeout = setTimeout(function () {
+    this.hide()
+  }.bind(this), 100)
+}
+
+function cancel_hide_tooltip () {
+  if (this.delay_hide_timeout !== null) {
+    clearTimeout(this.delay_hide_timeout)
+  }
+}
+
+},{"./PlacedDiv":13,"./utils":33,"tinier":39,"underscore":37}],24:[function(require,module,exports){
 /** UndoStack. A constructor that can be used to store undo info. */
 
 var utils = require('./utils');
@@ -8692,7 +8998,7 @@ function redo() {
     this.end_of_stack = false;
 }
 
-},{"./utils":31}],23:[function(require,module,exports){
+},{"./utils":33}],25:[function(require,module,exports){
 /** ZoomContainer
  *
  *
@@ -9150,7 +9456,7 @@ function translate_off_screen(coords) {
     }
 }
 
-},{"./CallbackManager":5,"./utils":31,"underscore":35}],24:[function(require,module,exports){
+},{"./CallbackManager":5,"./utils":33,"underscore":37}],26:[function(require,module,exports){
 /** build */
 
 var utils = require('./utils');
@@ -9701,7 +10007,7 @@ function new_beziers_for_reactions(reactions) {
     return beziers;
 }
 
-},{"./utils":31}],25:[function(require,module,exports){
+},{"./utils":33}],27:[function(require,module,exports){
 /**
  * @license
  *
@@ -10119,7 +10425,7 @@ module.exports = function(container, config) {
     return rs;
 };
 
-},{"./utils":31}],26:[function(require,module,exports){
+},{"./utils":33}],28:[function(require,module,exports){
 /** data_styles */
 
 /* global d3 */
@@ -10742,9 +11048,9 @@ function _parse_float_or_null(x) {
     return (isNaN(f) || parseFloat(x) != f) ? null : f;
 }
 
-},{"./utils":31,"underscore":35}],27:[function(require,module,exports){
-module.exports = {'version': '1.5.0', builder_embed: 'svg.escher-svg .gene-label,svg.escher-svg .label{text-rendering:optimizelegibility;cursor:default}svg.escher-svg #mouse-node{fill:none}svg.escher-svg #canvas{stroke:#ccc;stroke-width:7px;fill:#fff}svg.escher-svg .resize-rect{fill:#000;opacity:0;stroke:none}svg.escher-svg .label{font-family:sans-serif;font-style:italic;font-weight:700;font-size:8px;fill:#000;stroke:none}svg.escher-svg .reaction-label{font-size:30px;fill:#202078;text-rendering:optimizelegibility}svg.escher-svg .node-label{font-size:20px}svg.escher-svg .gene-label{font-size:18px;fill:#202078}svg.escher-svg .text-label .label,svg.escher-svg .text-label-input{font-size:50px}svg.escher-svg .node-circle{stroke-width:2px}svg.escher-svg .midmarker-circle,svg.escher-svg .multimarker-circle{fill:#fff;fill-opacity:.2;stroke:#323232}svg.escher-svg g.selected .node-circle{stroke-width:6px;stroke:#1471c7}svg.escher-svg g.selected .label{fill:#1471c7}svg.escher-svg .metabolite-circle{stroke:#a24510;fill:#e0865b}svg.escher-svg g.selected .metabolite-circle{stroke:#050200}svg.escher-svg .segment{stroke:#334E75;stroke-width:10px;fill:none}svg.escher-svg .arrowhead{fill:#334E75}svg.escher-svg .stoichiometry-label-rect{fill:#fff;opacity:.5}svg.escher-svg .stoichiometry-label{fill:#334E75;font-size:17px}svg.escher-svg .membrane{fill:none;stroke:#fb0}svg.escher-svg .brush .extent{fill-opacity:.1;fill:#000;stroke:#fff;shape-rendering:crispEdges}svg.escher-svg #brush-container .background{fill:none}svg.escher-svg .bezier-circle{fill:#fff}svg.escher-svg .bezier-circle.b1{stroke:red}svg.escher-svg .bezier-circle.b2{stroke:#00f}svg.escher-svg .connect-line{stroke:#c8c8c8}svg.escher-svg .direction-arrow{stroke:#000;stroke-width:1px;fill:#fff;opacity:.3}svg.escher-svg .start-reaction-cursor{cursor:pointer}svg.escher-svg .start-reaction-target{stroke:#646464;fill:none;opacity:.5}svg.escher-svg .rotation-center-line{stroke:red;stroke-width:5px}svg.escher-svg .highlight{fill:#D97000;text-decoration:underline}svg.escher-svg .cursor-grab{cursor:grab;cursor:-webkit-grab}svg.escher-svg .cursor-grabbing{cursor:grabbing;cursor:-webkit-grabbing}svg.escher-svg .edit-text-cursor{cursor:text}'};
-},{}],28:[function(require,module,exports){
+},{"./utils":33,"underscore":37}],29:[function(require,module,exports){
+module.exports = {'version': '1.6.0-beta.1', builder_embed: 'svg.escher-svg .gene-label,svg.escher-svg .label{text-rendering:optimizelegibility;cursor:default}svg.escher-svg #mouse-node{fill:none}svg.escher-svg #canvas{stroke:#ccc;stroke-width:7px;fill:#fff}svg.escher-svg .resize-rect{fill:#000;opacity:0;stroke:none}svg.escher-svg .label{font-family:sans-serif;font-style:italic;font-weight:700;font-size:8px;fill:#000;stroke:none}svg.escher-svg .reaction-label{font-size:30px;fill:#202078;text-rendering:optimizelegibility}svg.escher-svg .node-label{font-size:20px}svg.escher-svg .gene-label{font-size:18px;fill:#202078}svg.escher-svg .text-label .label,svg.escher-svg .text-label-input{font-size:50px}svg.escher-svg .node-circle{stroke-width:2px}svg.escher-svg .midmarker-circle,svg.escher-svg .multimarker-circle{fill:#fff;fill-opacity:.2;stroke:#323232}svg.escher-svg g.selected .node-circle{stroke-width:6px;stroke:#1471c7}svg.escher-svg g.selected .label{fill:#1471c7}svg.escher-svg .metabolite-circle{stroke:#a24510;fill:#e0865b}svg.escher-svg g.selected .metabolite-circle{stroke:#050200}svg.escher-svg .segment{stroke:#334E75;stroke-width:10px;fill:none}svg.escher-svg .arrowhead{fill:#334E75}svg.escher-svg .stoichiometry-label-rect{fill:#fff;opacity:.5}svg.escher-svg .stoichiometry-label{fill:#334E75;font-size:17px}svg.escher-svg .membrane{fill:none;stroke:#fb0}svg.escher-svg .brush .extent{fill-opacity:.1;fill:#000;stroke:#fff;shape-rendering:crispEdges}svg.escher-svg #brush-container .background{fill:none}svg.escher-svg .bezier-circle{fill:#fff}svg.escher-svg .bezier-circle.b1{stroke:red}svg.escher-svg .bezier-circle.b2{stroke:#00f}svg.escher-svg .connect-line{stroke:#c8c8c8}svg.escher-svg .direction-arrow{stroke:#000;stroke-width:1px;fill:#fff;opacity:.3}svg.escher-svg .start-reaction-cursor{cursor:pointer}svg.escher-svg .start-reaction-target{stroke:#646464;fill:none;opacity:.5}svg.escher-svg .rotation-center-line{stroke:red;stroke-width:5px}svg.escher-svg .highlight{fill:#D97000;text-decoration:underline}svg.escher-svg .cursor-grab{cursor:grab;cursor:-webkit-grab}svg.escher-svg .cursor-grabbing{cursor:grabbing;cursor:-webkit-grabbing}svg.escher-svg .edit-text-cursor{cursor:text}'};
+},{}],30:[function(require,module,exports){
 /**
 * @license
 *
@@ -10776,24 +11082,32 @@ module.exports = {'version': '1.5.0', builder_embed: 'svg.escher-svg .gene-label
 */
 
 module.exports = {
-    version: require('./inline').version,
-    Builder: require('./Builder'),
-    Map: require('./Map'),
-    Behavior: require('./Behavior'),
-    KeyManager: require('./KeyManager'),
-    DataMenu: require('./DataMenu'),
-    UndoStack: require('./UndoStack'),
-    CobraModel: require('./CobraModel'),
-    utils: require('./utils'),
-    SearchIndex: require('./SearchIndex'),
-    Settings: require('./Settings'),
-    data_styles: require('./data_styles'),
-    ui: require('./ui'),
-    static: require('./static'),
-    ZoomContainer: require('./ZoomContainer')
-};
+  version: require('./inline').version,
+  Builder: require('./Builder'),
+  Map: require('./Map'),
+  Behavior: require('./Behavior'),
+  KeyManager: require('./KeyManager'),
+  DataMenu: require('./DataMenu'),
+  UndoStack: require('./UndoStack'),
+  CobraModel: require('./CobraModel'),
+  utils: require('./utils'),
+  SearchIndex: require('./SearchIndex'),
+  Settings: require('./Settings'),
+  data_styles: require('./data_styles'),
+  ui: require('./ui'),
+  static: require('./static'),
+  ZoomContainer: require('./ZoomContainer'),
+  libs: {
+    '_': require('underscore'),
+    'underscore': require('underscore'),
+    'tinier': require('tinier'),
+    'baconjs': require('baconjs'),
+    'mousetrap': require('mousetrap'),
+    'vkbeautify': require('vkbeautify'),
+  },
+}
 
-},{"./Behavior":1,"./Builder":4,"./CobraModel":7,"./DataMenu":8,"./KeyManager":11,"./Map":12,"./SearchIndex":18,"./Settings":19,"./UndoStack":22,"./ZoomContainer":23,"./data_styles":26,"./inline":27,"./static":29,"./ui":30,"./utils":31}],29:[function(require,module,exports){
+},{"./Behavior":1,"./Builder":4,"./CobraModel":7,"./DataMenu":8,"./KeyManager":11,"./Map":12,"./SearchIndex":18,"./Settings":19,"./UndoStack":24,"./ZoomContainer":25,"./data_styles":28,"./inline":29,"./static":31,"./ui":32,"./utils":33,"baconjs":34,"mousetrap":36,"tinier":39,"underscore":37,"vkbeautify":38}],31:[function(require,module,exports){
 /** static */
 
 /* global d3 */
@@ -10854,7 +11168,7 @@ function _get_path(kind, name, index, url) {
             '/' + encodeURIComponent(match[0][kind+'_name'])) + '.json'
 }
 
-},{"./utils":31}],30:[function(require,module,exports){
+},{"./utils":33}],32:[function(require,module,exports){
 /** ui */
 
 /* global d3 */
@@ -11022,7 +11336,7 @@ function set_json_or_csv_input_button(b, s, pre_fn, post_fn, failure_fn) {
     return function() { input.node().click(); };
 }
 
-},{"./data_styles":26,"./utils":31}],31:[function(require,module,exports){
+},{"./data_styles":28,"./utils":33}],33:[function(require,module,exports){
 /* global d3, Blob, XMLSerializer */
 
 var vkbeautify = require('vkbeautify');
@@ -12081,7 +12395,7 @@ function check_browser(name) {
     }
 }
 
-},{"filesaverjs":33,"underscore":35,"vkbeautify":36}],32:[function(require,module,exports){
+},{"filesaverjs":35,"underscore":37,"vkbeautify":38}],34:[function(require,module,exports){
 (function (global){
 (function() {
 var _slice = Array.prototype.slice;
@@ -12091,7 +12405,7 @@ var Bacon = {
   }
 };
 
-Bacon.version = '0.7.83';
+Bacon.version = '0.7.88';
 
 var Exception = (typeof global !== "undefined" && global !== null ? global : this).Error;
 var nop = function () {};
@@ -12128,7 +12442,7 @@ var assertObservable = function (event) {
 var assertFunction = function (f) {
   return assert("not a function : " + f, _.isFunction(f));
 };
-var isArray = function (xs) {
+var isArray = Array.isArray || function (xs) {
   return xs instanceof Array;
 };
 var isObservable = function (x) {
@@ -13109,6 +13423,10 @@ extend(Observable.prototype, {
     }
   },
 
+  deps: function () {
+    return this.desc.deps();
+  },
+
   internalDeps: function () {
     return this.initialDesc.deps();
   }
@@ -13842,21 +14160,12 @@ var argumentsToObservablesAndFunction = function (args) {
 
 Bacon.combineAsArray = function () {
   var streams = argumentsToObservables(arguments);
-  for (var index = 0, stream; index < streams.length; index++) {
-    stream = streams[index];
-    if (!isObservable(stream)) {
-      streams[index] = Bacon.constant(stream);
-    }
-  }
   if (streams.length) {
-    var sources = (function () {
-      var result = [];
-      for (var i = 0, s; i < streams.length; i++) {
-        s = streams[i];
-        result.push(new Source(s, true));
-      }
-      return result;
-    })();
+    var sources = [];
+    for (var i = 0; i < streams.length; i++) {
+      var stream = isObservable(streams[i]) ? streams[i] : Bacon.constant(streams[i]);
+      sources.push(new Source(stream, true));
+    }
     return withDesc(new Bacon.Desc(Bacon, "combineAsArray", streams), Bacon.when(sources, function () {
       for (var _len9 = arguments.length, xs = Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
         xs[_key9] = arguments[_key9];
@@ -13870,11 +14179,7 @@ Bacon.combineAsArray = function () {
 };
 
 Bacon.onValues = function () {
-  for (var _len10 = arguments.length, streams = Array(_len10), _key10 = 0; _key10 < _len10; _key10++) {
-    streams[_key10] = arguments[_key10];
-  }
-
-  return Bacon.combineAsArray(streams.slice(0, streams.length - 1)).onValues(streams[streams.length - 1]);
+  return Bacon.combineAsArray(Array.prototype.slice.call(arguments, 0, arguments.length - 1)).onValues(arguments[arguments.length - 1]);
 };
 
 Bacon.combineWith = function () {
@@ -14074,8 +14379,8 @@ Bacon.EventStream.prototype.buffer = function (delay) {
 Bacon.Observable.prototype.filter = function (f) {
   assertObservableIsProperty(f);
 
-  for (var _len11 = arguments.length, args = Array(_len11 > 1 ? _len11 - 1 : 0), _key11 = 1; _key11 < _len11; _key11++) {
-    args[_key11 - 1] = arguments[_key11];
+  for (var _len10 = arguments.length, args = Array(_len10 > 1 ? _len10 - 1 : 0), _key10 = 1; _key10 < _len10; _key10++) {
+    args[_key10 - 1] = arguments[_key10];
   }
 
   return convertArgsToFunction(this, f, args, function (f) {
@@ -14214,8 +14519,8 @@ var flatMap_ = function (root, f, firstOnly, limit) {
 };
 
 Bacon.Observable.prototype.flatMapWithConcurrencyLimit = function (limit) {
-  for (var _len12 = arguments.length, args = Array(_len12 > 1 ? _len12 - 1 : 0), _key12 = 1; _key12 < _len12; _key12++) {
-    args[_key12 - 1] = arguments[_key12];
+  for (var _len11 = arguments.length, args = Array(_len11 > 1 ? _len11 - 1 : 0), _key11 = 1; _key11 < _len11; _key11++) {
+    args[_key11 - 1] = arguments[_key11];
   }
 
   var desc = new Bacon.Desc(this, "flatMapWithConcurrencyLimit", [limit].concat(args));
@@ -14369,8 +14674,8 @@ var liftCallback = function (desc, wrapped) {
       return f.apply(undefined, values.concat([callback]));
     }]);
 
-    for (var _len13 = arguments.length, args = Array(_len13 > 1 ? _len13 - 1 : 0), _key13 = 1; _key13 < _len13; _key13++) {
-      args[_key13 - 1] = arguments[_key13];
+    for (var _len12 = arguments.length, args = Array(_len12 > 1 ? _len12 - 1 : 0), _key12 = 1; _key12 < _len12; _key12++) {
+      args[_key12 - 1] = arguments[_key12];
     }
 
     return withDesc(new Bacon.Desc(Bacon, desc, [f].concat(args)), Bacon.combineAsArray(args).flatMap(stream));
@@ -14378,8 +14683,8 @@ var liftCallback = function (desc, wrapped) {
 };
 
 Bacon.fromCallback = liftCallback("fromCallback", function (f) {
-  for (var _len14 = arguments.length, args = Array(_len14 > 1 ? _len14 - 1 : 0), _key14 = 1; _key14 < _len14; _key14++) {
-    args[_key14 - 1] = arguments[_key14];
+  for (var _len13 = arguments.length, args = Array(_len13 > 1 ? _len13 - 1 : 0), _key13 = 1; _key13 < _len13; _key13++) {
+    args[_key13 - 1] = arguments[_key13];
   }
 
   return Bacon.fromBinder(function (handler) {
@@ -14391,8 +14696,8 @@ Bacon.fromCallback = liftCallback("fromCallback", function (f) {
 });
 
 Bacon.fromNodeCallback = liftCallback("fromNodeCallback", function (f) {
-  for (var _len15 = arguments.length, args = Array(_len15 > 1 ? _len15 - 1 : 0), _key15 = 1; _key15 < _len15; _key15++) {
-    args[_key15 - 1] = arguments[_key15];
+  for (var _len14 = arguments.length, args = Array(_len14 > 1 ? _len14 - 1 : 0), _key14 = 1; _key14 < _len14; _key14++) {
+    args[_key14 - 1] = arguments[_key14];
   }
 
   return Bacon.fromBinder(function (handler) {
@@ -14701,8 +15006,8 @@ Bacon.Observable.prototype.doError = function () {
 };
 
 Bacon.Observable.prototype.doLog = function () {
-  for (var _len16 = arguments.length, args = Array(_len16), _key16 = 0; _key16 < _len16; _key16++) {
-    args[_key16] = arguments[_key16];
+  for (var _len15 = arguments.length, args = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
+    args[_key15] = arguments[_key15];
   }
 
   return withDesc(new Bacon.Desc(this, "doLog", args), this.withHandler(function (event) {
@@ -14718,8 +15023,8 @@ Bacon.Observable.prototype.endOnError = function (f) {
     f = true;
   }
 
-  for (var _len17 = arguments.length, args = Array(_len17 > 1 ? _len17 - 1 : 0), _key17 = 1; _key17 < _len17; _key17++) {
-    args[_key17 - 1] = arguments[_key17];
+  for (var _len16 = arguments.length, args = Array(_len16 > 1 ? _len16 - 1 : 0), _key16 = 1; _key16 < _len16; _key16++) {
+    args[_key16 - 1] = arguments[_key16];
   }
 
   return convertArgsToFunction(this, f, args, function (f) {
@@ -14819,8 +15124,8 @@ Bacon.Observable.prototype.map = function (p) {
   if (p && p._isProperty) {
     return p.sampledBy(this, former);
   } else {
-    for (var _len18 = arguments.length, args = Array(_len18 > 1 ? _len18 - 1 : 0), _key18 = 1; _key18 < _len18; _key18++) {
-      args[_key18 - 1] = arguments[_key18];
+    for (var _len17 = arguments.length, args = Array(_len17 > 1 ? _len17 - 1 : 0), _key17 = 1; _key17 < _len17; _key17++) {
+      args[_key17 - 1] = arguments[_key17];
     }
 
     return convertArgsToFunction(this, p, args, function (f) {
@@ -14984,6 +15289,7 @@ Bacon.EventStream.prototype.holdWhen = function (valve) {
   var onHold = false;
   var bufferedValues = [];
   var src = this;
+  var srcIsEnded = false;
   return new EventStream(new Bacon.Desc(this, "holdWhen", [valve]), function (sink) {
     var composite = new CompositeUnsubscribe();
     var subscribed = false;
@@ -15008,6 +15314,10 @@ Bacon.EventStream.prototype.holdWhen = function (valve) {
                 value = toSend[i];
                 result.push(sink(nextEvent(value)));
               }
+              if (srcIsEnded) {
+                result.push(sink(endEvent()));
+                unsubMe();
+              }
               return result;
             })();
           }
@@ -15023,6 +15333,7 @@ Bacon.EventStream.prototype.holdWhen = function (valve) {
         if (onHold && event.hasValue()) {
           return bufferedValues.push(event.value());
         } else if (event.isEnd() && bufferedValues.length) {
+          srcIsEnded = true;
           return endIfBothEnded(unsubMe);
         } else {
           return sink(event);
@@ -15085,8 +15396,8 @@ Bacon.Observable.prototype.last = function () {
 };
 
 Bacon.Observable.prototype.log = function () {
-  for (var _len19 = arguments.length, args = Array(_len19), _key19 = 0; _key19 < _len19; _key19++) {
-    args[_key19] = arguments[_key19];
+  for (var _len18 = arguments.length, args = Array(_len18), _key18 = 0; _key18 < _len18; _key18++) {
+    args[_key18] = arguments[_key18];
   }
 
   this.subscribe(function (event) {
@@ -15187,7 +15498,7 @@ Bacon.retry = function (options) {
   }
   var source = options.source;
   var retries = options.retries || 0;
-  var maxRetries = options.maxRetries || retries;
+  var retriesDone = 0;
   var delay = options.delay || function () {
     return 0;
   };
@@ -15202,7 +15513,7 @@ Bacon.retry = function (options) {
       return source().endOnError().withHandler(function (event) {
         if (event.isError()) {
           error = event;
-          if (!(isRetryable(error.error) && retries > 0)) {
+          if (!(isRetryable(error.error) && (retries === 0 || retriesDone < retries))) {
             finished = true;
             return this.push(event);
           }
@@ -15221,10 +15532,10 @@ Bacon.retry = function (options) {
     } else if (error) {
       var context = {
         error: error.error,
-        retriesDone: maxRetries - retries
+        retriesDone: retriesDone
       };
       var pause = Bacon.later(delay(context)).filter(false);
-      retries = retries - 1;
+      retriesDone++;
       return pause.concat(Bacon.once().flatMap(valueStream));
     } else {
       return valueStream();
@@ -15268,8 +15579,8 @@ Bacon.EventStream.prototype.skipWhile = function (f) {
   assertObservableIsProperty(f);
   var ok = false;
 
-  for (var _len20 = arguments.length, args = Array(_len20 > 1 ? _len20 - 1 : 0), _key20 = 1; _key20 < _len20; _key20++) {
-    args[_key20 - 1] = arguments[_key20];
+  for (var _len19 = arguments.length, args = Array(_len19 > 1 ? _len19 - 1 : 0), _key19 = 1; _key19 < _len19; _key19++) {
+    args[_key19 - 1] = arguments[_key19];
   }
 
   return convertArgsToFunction(this, f, args, function (f) {
@@ -15329,8 +15640,8 @@ Bacon.EventStream.prototype.startWith = function (seed) {
 Bacon.Observable.prototype.takeWhile = function (f) {
   assertObservableIsProperty(f);
 
-  for (var _len21 = arguments.length, args = Array(_len21 > 1 ? _len21 - 1 : 0), _key21 = 1; _key21 < _len21; _key21++) {
-    args[_key21 - 1] = arguments[_key21];
+  for (var _len20 = arguments.length, args = Array(_len20 > 1 ? _len20 - 1 : 0), _key20 = 1; _key20 < _len20; _key20++) {
+    args[_key20 - 1] = arguments[_key20];
   }
 
   return convertArgsToFunction(this, f, args, function (f) {
@@ -15399,8 +15710,8 @@ Bacon["try"] = function (f) {
 Bacon.update = function (initial) {
   function lateBindFirst(f) {
     return function () {
-      for (var _len23 = arguments.length, args = Array(_len23), _key23 = 0; _key23 < _len23; _key23++) {
-        args[_key23] = arguments[_key23];
+      for (var _len22 = arguments.length, args = Array(_len22), _key22 = 0; _key22 < _len22; _key22++) {
+        args[_key22] = arguments[_key22];
       }
 
       return function (i) {
@@ -15409,8 +15720,8 @@ Bacon.update = function (initial) {
     };
   }
 
-  for (var _len22 = arguments.length, patterns = Array(_len22 > 1 ? _len22 - 1 : 0), _key22 = 1; _key22 < _len22; _key22++) {
-    patterns[_key22 - 1] = arguments[_key22];
+  for (var _len21 = arguments.length, patterns = Array(_len21 > 1 ? _len21 - 1 : 0), _key21 = 1; _key21 < _len21; _key21++) {
+    patterns[_key21 - 1] = arguments[_key21];
   }
 
   var i = patterns.length - 1;
@@ -15427,14 +15738,14 @@ Bacon.update = function (initial) {
 };
 
 Bacon.zipAsArray = function () {
-  for (var _len24 = arguments.length, args = Array(_len24), _key24 = 0; _key24 < _len24; _key24++) {
-    args[_key24] = arguments[_key24];
+  for (var _len23 = arguments.length, args = Array(_len23), _key23 = 0; _key23 < _len23; _key23++) {
+    args[_key23] = arguments[_key23];
   }
 
   var streams = argumentsToObservables(args);
   return withDesc(new Bacon.Desc(Bacon, "zipAsArray", streams), Bacon.zipWith(streams, function () {
-    for (var _len25 = arguments.length, xs = Array(_len25), _key25 = 0; _key25 < _len25; _key25++) {
-      xs[_key25] = arguments[_key25];
+    for (var _len24 = arguments.length, xs = Array(_len24), _key24 = 0; _key24 < _len24; _key24++) {
+      xs[_key24] = arguments[_key24];
     }
 
     return xs;
@@ -15442,8 +15753,8 @@ Bacon.zipAsArray = function () {
 };
 
 Bacon.zipWith = function () {
-  for (var _len26 = arguments.length, args = Array(_len26), _key26 = 0; _key26 < _len26; _key26++) {
-    args[_key26] = arguments[_key26];
+  for (var _len25 = arguments.length, args = Array(_len25), _key25 = 0; _key25 < _len25; _key25++) {
+    args[_key25] = arguments[_key25];
   }
 
   var observablesAndFunction = argumentsToObservablesAndFunction(args);
@@ -15477,13 +15788,13 @@ if (typeof define !== "undefined" && define !== null && define.amd != null) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{}],33:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /* FileSaver.js
  * A saveAs() FileSaver implementation.
- * 1.1.20151003
+ * 1.1.20160328
  *
  * By Eli Grey, http://eligrey.com
- * License: X11/MIT
+ * License: MIT
  *   See https://github.com/eligrey/FileSaver.js/blob/master/LICENSE.md
  */
 
@@ -15520,10 +15831,8 @@ var saveAs = saveAs || (function(view) {
 		}
 		, force_saveable_type = "application/octet-stream"
 		, fs_min_size = 0
-		// See https://code.google.com/p/chromium/issues/detail?id=375297#c7 and
-		// https://github.com/eligrey/FileSaver.js/commit/485930a#commitcomment-8768047
-		// for the reasoning behind the timeout and revocation flow
-		, arbitrary_revoke_timeout = 500 // in ms
+		// the Blob API is fundamentally broken as there is no "downloadfinished" event to subscribe to
+		, arbitrary_revoke_timeout = 1000 * 40 // in ms
 		, revoke = function(file) {
 			var revoker = function() {
 				if (typeof file === "string") { // file is an object URL
@@ -15532,11 +15841,23 @@ var saveAs = saveAs || (function(view) {
 					file.remove();
 				}
 			};
-			if (view.chrome) {
-				revoker();
-			} else {
-				setTimeout(revoker, arbitrary_revoke_timeout);
+			/* // Take note W3C:
+			var
+			  uri = typeof file === "string" ? file : file.toURL()
+			, revoker = function(evt) {
+				// idealy DownloadFinishedEvent.data would be the URL requested
+				if (evt.data === uri) {
+					if (typeof file === "string") { // file is an object URL
+						get_URL().revokeObjectURL(file);
+					} else { // file is a File
+						file.remove();
+					}
+				}
 			}
+			;
+			view.addEventListener("downloadfinished", revoker);
+			*/
+			setTimeout(revoker, arbitrary_revoke_timeout);
 		}
 		, dispatch = function(filesaver, event_types, event) {
 			event_types = [].concat(event_types);
@@ -15596,7 +15917,7 @@ var saveAs = saveAs || (function(view) {
 						target_view.location.href = object_url;
 					} else {
 						var new_tab = view.open(object_url, "_blank");
-						if (new_tab == undefined && is_safari) {
+						if (new_tab === undefined && is_safari) {
 							//Apple do not allow window.open, see http://bit.ly/1kZffRI
 							view.location.href = object_url
 						}
@@ -15621,9 +15942,9 @@ var saveAs = saveAs || (function(view) {
 			}
 			if (can_use_save_link) {
 				object_url = get_URL().createObjectURL(blob);
-				save_link.href = object_url;
-				save_link.download = name;
 				setTimeout(function() {
+					save_link.href = object_url;
+					save_link.download = name;
 					click(save_link);
 					dispatch_all();
 					revoke(object_url);
@@ -15743,16 +16064,16 @@ var saveAs = saveAs || (function(view) {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports.saveAs = saveAs;
-} else if ((typeof define !== "undefined" && define !== null) && (define.amd != null)) {
+} else if ((typeof define !== "undefined" && define !== null) && (define.amd !== null)) {
   define([], function() {
     return saveAs;
   });
 }
 
-},{}],34:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 /*global define:false */
 /**
- * Copyright 2015 Craig Campbell
+ * Copyright 2016 Craig Campbell
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15769,10 +16090,15 @@ if (typeof module !== "undefined" && module.exports) {
  * Mousetrap is a simple keyboard shortcut library for Javascript with
  * no external dependencies
  *
- * @version 1.5.3
+ * @version 1.6.0
  * @url craig.is/killing/mice
  */
 (function(window, document, undefined) {
+
+    // Check if mousetrap is used inside browser, if not, return
+    if (!window) {
+        return;
+    }
 
     /**
      * mapping of special keycodes to their corresponding keys
@@ -16736,6 +17062,18 @@ if (typeof module !== "undefined" && module.exports) {
     };
 
     /**
+     * allow custom key mappings
+     */
+    Mousetrap.addKeycodes = function(object) {
+        for (var key in object) {
+            if (object.hasOwnProperty(key)) {
+                _MAP[key] = object[key];
+            }
+        }
+        _REVERSE_MAP = null;
+    };
+
+    /**
      * Init the global mousetrap functions
      *
      * This method is needed to allow the global mousetrap functions to work
@@ -16770,9 +17108,9 @@ if (typeof module !== "undefined" && module.exports) {
             return Mousetrap;
         });
     }
-}) (window, document);
+}) (typeof window !== 'undefined' ? window : null, typeof  window !== 'undefined' ? document : null);
 
-},{}],35:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -18322,7 +18660,7 @@ if (typeof module !== "undefined" && module.exports) {
   }
 }.call(this));
 
-},{}],36:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /**
 * vkBeautify - javascript plugin to pretty-print or minify text in XML, JSON, CSS and SQL formats.
 *  
@@ -18677,6 +19015,1959 @@ vkbeautify.prototype.sqlmin = function(text) {
 module.exports = new vkbeautify();
 
 
-},{}]},{},[28])(28)
+},{}],39:[function(require,module,exports){
+'use strict';
+
+exports.__esModule = true;
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+exports.tail = tail;
+exports.head = head;
+exports.fromPairs = fromPairs;
+exports.get = get;
+exports.isUndefined = isUndefined;
+exports.isObject = isObject;
+exports.isArray = isArray;
+exports.isString = isString;
+exports.isNumber = isNumber;
+exports.isBoolean = isBoolean;
+exports.isFunction = isFunction;
+exports.notNull = notNull;
+exports.mapValues = mapValues;
+exports.reduceValues = reduceValues;
+exports.zipArrays = zipArrays;
+exports.zipObjects = zipObjects;
+exports.filterValues = filterValues;
+exports.any = any;
+exports.tagType = tagType;
+exports.checkType = checkType;
+exports.match = match;
+exports.hasChildren = hasChildren;
+exports.checkRenderResult = checkRenderResult;
+exports.updateEl = updateEl;
+exports.addressWith = addressWith;
+exports.addressEqual = addressEqual;
+exports.makeTree = makeTree;
+exports.checkState = checkState;
+exports.diffWithModelMin = diffWithModelMin;
+exports.makeSignal = makeSignal;
+exports.makeOneSignalAPI = makeOneSignalAPI;
+exports.makeChildSignalsAPI = makeChildSignalsAPI;
+exports.reduceChildren = reduceChildren;
+exports.mergeSignals = mergeSignals;
+exports.objectOf = objectOf;
+exports.arrayOf = arrayOf;
+exports.createComponent = createComponent;
+exports.patchMethods = patchMethods;
+exports.makeCallMethod = makeCallMethod;
+exports.makeCallReducer = makeCallReducer;
+exports.makeStateCallers = makeStateCallers;
+exports.run = run;
+exports.addressToObj = addressToObj;
+exports.objectForBindings = objectForBindings;
+exports.createElement = createElement;
+exports.bind = bind;
+exports.createDOMElement = createDOMElement;
+exports.getStyles = getStyles;
+exports.updateDOMElement = updateDOMElement;
+exports.render = render;
+/** @module tinier */
+
+// constants
+var ARRAY_OF = exports.ARRAY_OF = '@TINIER_ARRAY_OF';
+var OBJECT_OF = exports.OBJECT_OF = '@TINIER_OBJECT_OF';
+var COMPONENT = exports.COMPONENT = '@TINIER_COMPONENT';
+var ARRAY = exports.ARRAY = '@TINIER_ARRAY';
+var OBJECT = exports.OBJECT = '@TINIER_OBJECT';
+var NODE = exports.NODE = '@TINIER_NODE';
+var NULL = exports.NULL = '@TINIER_NULL';
+var STRING = exports.STRING = '@TINIER_STRING';
+var NUMBER = exports.NUMBER = '@TINIER_NUMBER';
+var BOOLEAN = exports.BOOLEAN = '@TINIER_BOOLEAN';
+var ANY = exports.ANY = '@TINIER_ANY';
+var NO_ARGUMENT = exports.NO_ARGUMENT = '@TINIER_NO_ARGUMENT';
+var TOP = exports.TOP = '@TINIER_TOP';
+var CREATE = exports.CREATE = '@TINIER_CREATE';
+var UPDATE = exports.UPDATE = '@TINIER_UPDATE';
+var DESTROY = exports.DESTROY = '@TINIER_DESTROY';
+
+// basic functions
+function noop() {}
+
+function constant(val) {
+  return function () {
+    return val;
+  };
+}
+
+function identity(val) {
+  return val;
+}
+
+function last(array) {
+  return array[array.length - 1];
+}
+
+function tail(array) {
+  return [array.slice(0, -1), last(array)];
+}
+
+function head(array) {
+  return [array[0], array.slice(1)];
+}
+
+function fromPairs(pairs) {
+  return pairs.reduce(function (accum, _ref) {
+    var _extends2;
+
+    var key = _ref[0],
+        val = _ref[1];
+
+    return _extends({}, accum, (_extends2 = {}, _extends2[key] = val, _extends2));
+  }, {});
+}
+
+/**
+ * Get the property of the object or index of the array, or return the default
+ * value.
+ * @param {Object|Array} object - An object or array.
+ * @param {String} property - An property of the object.
+ * @return {*} The value of the property or, if not present, the default value.
+ */
+function get(object, property) {
+  return object && typeof object !== 'string' && object.hasOwnProperty(property) ? object[property] : null;
+}
+
+function isUndefined(object) {
+  return typeof object === 'undefined';
+}
+
+/**
+ * Check if the value is an object with enumerable properties. Also returns true
+ * for arrays.
+ * @param {*} value - The value to test.
+ * @return {Boolean}
+ */
+function isObject(object) {
+  return object != null && (typeof object === 'undefined' ? 'undefined' : _typeof(object)) === 'object';
+}
+
+/**
+ * Check if the object is an array
+ * @param {*} object - The object to test.
+ * @return {Boolean}
+ */
+function isArray(object) {
+  return Array.isArray(object);
+}
+
+function isString(v) {
+  return typeof v === 'string';
+}
+
+function isNumber(v) {
+  return typeof v === 'number';
+}
+
+function isBoolean(v) {
+  return typeof v === 'boolean';
+}
+
+/**
+ * Check if the object is a function.
+ * @param {*} object - The object to test.
+ * @return {Boolean}
+ */
+function isFunction(object) {
+  return typeof object === 'function';
+}
+
+function notNull(val) {
+  return val !== null;
+}
+
+/**
+ * Iterate over the keys and values of an object. Uses Object.keys to find
+ * iterable keys.
+ * @param {Object} obj - The input object.
+ * @param {Function} fn - A function that takes the arguments (value, key).
+ * @return {Object} A transformed object with values returned by the function.
+ */
+function mapValues(obj, fn) {
+  var newObj = {};
+  for (var key in obj) {
+    newObj[key] = fn(obj[key], key);
+  }
+  return newObj;
+}
+
+function reduceValues(obj, fn, init) {
+  var accum = init;
+  for (var key in obj) {
+    accum = fn(accum, obj[key], key);
+  }
+  return accum;
+}
+
+function zipArrays(arrays) {
+  var lenLongest = Math.max.apply(null, arrays.filter(function (x) {
+    return x !== null;
+  }).map(function (a) {
+    return a.length;
+  }));
+  var res = [];
+
+  var _loop = function _loop(i) {
+    res.push(arrays.map(function (a) {
+      return a !== null && i < a.length ? a[i] : null;
+    }));
+  };
+
+  for (var i = 0; i < lenLongest; i++) {
+    _loop(i);
+  }
+  return res;
+}
+
+function zipObjects(objects) {
+  var len = objects.length;
+  // find all the keys
+  var allKeys = {};
+  for (var i = 0; i < len; i++) {
+    var object = objects[i];
+    if (object === null) {
+      continue;
+    }
+    for (var k in object) {
+      allKeys[k] = true;
+    }
+  }
+  // make new object
+  var res = {};
+  for (var key in allKeys) {
+    res[key] = Array(len);
+    for (var _i = 0; _i < len; _i++) {
+      var _object = objects[_i];
+      res[key][_i] = get(_object, key);
+    }
+  }
+  return res;
+}
+
+function filterValues(object, fn) {
+  var out = {};
+  for (var key in object) {
+    var value = object[key];
+    if (fn(value, key)) out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Lazy any function.
+ * @param {[Boolean]}
+ * @return {Boolean}
+ */
+function any(ar) {
+  for (var i = 0, l = ar.length; i < l; i++) {
+    var val = ar[i];
+    if (!isBoolean(val)) {
+      throw new Error('Not a boolean: ' + val);
+    }
+    if (val) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Defers calling fn until the current process finishes.
+ */
+function defer(fn) {
+  setTimeout(fn, 1);
+}
+
+/**
+ * Adds a tag to the object.
+ */
+function tagType(type, obj) {
+  if (!isString(type)) {
+    throw new Error('First argument must be a string');
+  }
+  if (!isObject(obj)) {
+    throw new Error('Second argument must be an object');
+  }
+  obj.type = type;
+  return obj;
+}
+
+function checkType(type, obj) {
+  if (obj === null) {
+    return type === NULL;
+  }
+  if (typeof type !== 'string') {
+    throw new Error('First argument must be a string');
+  }
+  if (isUndefined(obj)) {
+    throw new Error('Bad second argument');
+  }
+  return get(obj, 'type') === type;
+}
+
+/**
+ * Basic pattern matching.
+ * @param {Object|null} object - An object generated with tagType, an object, an
+ *                               array, or null.
+ * @param {Object} fns - An object with types for keys and functions for values.
+ *                       Also accepts keys tinier.OBJECT, tinier.ARRAY, and
+ *                       tinier.NULL. To avoid conflict, tinier.OBJECT has the
+ *                       lowest priority.
+ * @param {Function} defaultFn - A function to run if the object type is not
+ *                               found. Takes `object` as a single argument.
+ * @return {*} Return value from the called function.
+ */
+function match(object, fns) {
+  var defaultFn = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : throwUnrecognizedType;
+
+  for (var key in fns) {
+    if (key === NULL && object === null || key === ARRAY && isArray(object) || isObject(object) && checkType(key, object)) {
+      return fns[key](object);
+    }
+  }
+  if (OBJECT in fns && isObject(object)) {
+    return fns[OBJECT](object);
+  }
+  return defaultFn(object);
+}
+
+function throwUnrecognizedType(node) {
+  throw new Error('Unrecognized type in pattern matching: ' + node);
+}
+
+// -------------------------------------------------------------------
+// Update components
+// -------------------------------------------------------------------
+
+/**
+ * Determine whether the model has any child components.
+ */
+function hasChildren(node) {
+  var _match;
+
+  return match(node, (_match = {}, _match[ARRAY_OF] = function () {
+    return true;
+  }, _match[OBJECT_OF] = function () {
+    return true;
+  }, _match[COMPONENT] = function () {
+    return true;
+  }, _match[ARRAY] = function (node) {
+    return any(node.map(hasChildren));
+  }, _match[OBJECT] = function (node) {
+    return any(Object.keys(node).map(function (k) {
+      return hasChildren(node[k]);
+    }));
+  }, _match));
+}
+
+function checkRenderResultRecurse(userBindings, node, state) {
+  var _match2;
+
+  var updateRecurse = function updateRecurse(s, k) {
+    var u = k === null ? userBindings : get(userBindings, k);
+    if (userBindings !== null && u === null) {
+      throw new Error('Shape of the bindings object does not match the model.' + 'Model: ' + node + '  Bindings object: ' + userBindings);
+    }
+  };
+  var recurse = function recurse(n, k) {
+    checkRenderResultRecurse(get(userBindings, k), n, get(state, k));
+  };
+  match(node, (_match2 = {}, _match2[OBJECT_OF] = function (objOf) {
+    // check for extra attributes
+    if (userBindings !== null && any(Object.keys(userBindings).map(function (k) {
+      return !(k in state);
+    }))) {
+      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
+    } else {
+      mapValues(state, updateRecurse);
+    }
+  }, _match2[ARRAY_OF] = function (arOf) {
+    // check array lengths
+    if (userBindings !== null && state.length !== userBindings.length) {
+      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
+    } else {
+      state.map(updateRecurse);
+    }
+  }, _match2[COMPONENT] = function (component) {
+    return updateRecurse(state, null);
+  }, _match2[ARRAY] = function (ar) {
+    if (userBindings !== null && !isArray(userBindings)) {
+      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
+    } else {
+      ar.map(recurse);
+    }
+  }, _match2[OBJECT] = function (obj) {
+    if (userBindings !== null && isArray(userBindings)) {
+      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
+    } else {
+      mapValues(obj, recurse);
+    }
+  }, _match2));
+}
+
+/**
+ * Check the result of render against the model and state.
+ * @param {Object} node - A model node.
+ * @param {*} state - A state node.
+ * @param {Object} userBindings - The new bindings returned by render.
+ * @return {Object} The userBindings object.
+ */
+function checkRenderResult(userBindings, node, state) {
+  checkRenderResultRecurse(userBindings, node, state);
+  return userBindings;
+}
+
+/**
+ * Run lifecycle functions for the component.
+ * @param {Object} address -
+ * @param {Object} component -
+ * @param {Object} state -
+ * @param {Object} diffVal -
+ * @param {Object|null} lastRenderedEl - The element rendered in previously, if
+ *                                       there was one.
+ * @param {Object|null} el - The element to render in provided by
+ *                           component.render.
+ * @param {Object} stateCallers -
+ * @return {Object}
+ */
+function updateEl(address, component, state, diffVal, lastRenderedEl, el, stateCallers, opts) {
+  // the object passed to lifecycle functions
+  var reducers = patchReducersWithState(address, component, stateCallers.callReducer);
+  var signals = patchSignals(address, component, stateCallers.callSignal);
+  var methods = patchMethods(address, component, stateCallers.callMethod, reducers, signals);
+  var arg = { state: state, methods: methods, reducers: reducers, signals: signals, el: el, lastRenderedEl: lastRenderedEl };
+
+  // warn if the el is null
+  if (el === null && !(diffVal === DESTROY) && component.render !== noop) {
+    throw new Error('No binding provided for component ' + component.displayName + ' at [' + address.join(', ') + '].');
+  }
+
+  if (diffVal === DESTROY) {
+    // destroy
+    component.willUnmount(arg);
+    return { bindings: null, lastRenderedEl: lastRenderedEl };
+  } else {
+    // create or update
+    var shouldUpdate = diffVal === CREATE || diffVal === UPDATE || el !== lastRenderedEl;
+
+    if (diffVal === CREATE) component.willMount(arg);else if (shouldUpdate) component.willUpdate(arg);
+
+    if (opts.verbose && shouldUpdate) {
+      console.log('Rendering ' + component.displayName + ' at [' + address.join(', ') + '].');
+    }
+
+    // render
+    var bindings = shouldUpdate ? checkRenderResult(component.render(arg), component.model, state) : null;
+    // check result
+    if (shouldUpdate && bindings === null && hasChildren(component.model)) {
+      throw new Error('The render function of component ' + component.displayName + ' did not return new bindings');
+    }
+
+    // These need to be asynchronous.
+    if (diffVal === CREATE) {
+      defer(function () {
+        return component.didMount(arg);
+      });
+    } else if (shouldUpdate) {
+      defer(function () {
+        return component.didUpdate(arg);
+      });
+    }
+
+    // If the component rendered, then change lastEl.
+    return { bindings: bindings, lastRenderedEl: shouldUpdate ? el : lastRenderedEl };
+  }
+}
+
+/**
+ * For a tree, return everything down to the first set of NODES with data for
+ * leaves.
+ */
+function dropNodes(tree) {
+  var _match3;
+
+  return match(tree, (_match3 = {}, _match3[NODE] = function (node) {
+    return node.data;
+  }, _match3[OBJECT] = function (obj) {
+    return mapValues(obj, dropNodes);
+  }, _match3[ARRAY] = function (ar) {
+    return ar.map(dropNodes);
+  }, _match3[NULL] = function () {
+    return null;
+  }, _match3));
+}
+
+/**
+ * Run create, update, and destroy for component.
+ * @param {Array} address - The location of the component in the state.
+ * @param {Object} node - A model or a node within a model.
+ * @param {Object} diff - The diff object for this component.
+ * @param {Object|null} bindings -
+ * @param {Object|null} renderResult -
+ * @param {Object} stateCallers -
+ * @return {Object}
+ */
+function updateComponents(address, node, state, diff, bindings, renderResult, stateCallers, opts) {
+  var _match4;
+
+  var updateRecurse = function updateRecurse(_ref2, k) {
+    var d = _ref2[0],
+        s = _ref2[1];
+
+    // TODO in updateRecurse functions where k can be null, there must be a
+    // nicer way to organize things with fewer null checks
+    var component = k !== null ? node.component : node;
+    var newAddress = k !== null ? addressWith(address, k) : address;
+    var b = k !== null ? get(bindings, k) : bindings;
+    var r = k !== null ? get(renderResult, k) : renderResult;
+    // Update the component. If DESTROY, then there will not be a binding.
+    var res = updateEl(newAddress, component, s, d.data, get(b, 'data'), r, stateCallers, opts);
+    // Fall back on old bindings.
+    var nextRenderResult = res.bindings !== null ? res.bindings : dropNodes(b.children);
+    var data = res.lastRenderedEl;
+    // update children
+    var children = updateComponents(newAddress, component.model, s, d.children, get(b, 'children'), nextRenderResult, stateCallers, opts);
+    return tagType(NODE, { data: data, children: children });
+  };
+  var recurse = function recurse(n, k) {
+    return updateComponents(addressWith(address, k), n, get(state, k), diff[k], get(bindings, k), get(renderResult, k), stateCallers, opts);
+  };
+  return match(node, (_match4 = {}, _match4[OBJECT_OF] = function (objOf) {
+    return mapValues(zipObjects([diff, state]), updateRecurse);
+  }, _match4[ARRAY_OF] = function (arOf) {
+    return zipArrays([diff, state]).map(updateRecurse);
+  }, _match4[COMPONENT] = function (component) {
+    return updateRecurse([diff, state], null);
+  }, _match4[ARRAY] = function (ar) {
+    return ar.map(recurse);
+  }, _match4[OBJECT] = function (obj) {
+    return mapValues(obj, recurse);
+  }, _match4));
+}
+
+// -------------------------------------------------------------------
+// State
+// -------------------------------------------------------------------
+
+function addressWith(address, key) {
+  if (key === null) {
+    return address;
+  } else {
+    var newAddress = address.slice(0);
+    newAddress.push(key);
+    return newAddress;
+  }
+}
+
+function addressEqual(a1, a2) {
+  if (a1 === null || a2 === null || a1.length !== a2.length) return false;
+  return a1.reduce(function (accum, v, i) {
+    return accum && v === a2[i];
+  }, true);
+}
+
+/**
+ * Get the value in a tree.
+ * @param {Array} address -
+ * @param {Object} tree -
+ * @return {*} - The value at the given address.
+ */
+function treeGet(address, tree) {
+  return address.reduce(function (accum, val) {
+    return checkType(NODE, accum) ? accum.children[val] : accum[val];
+  }, tree);
+}
+
+/**
+ * Set the value in a tree; immutable.
+ * @param {Array} address -
+ * @param {Object} tree -
+ * @param {*} value - The new value to set at address.
+ * @return (*) The new tree.
+ */
+function treeSet(address, tree, value) {
+  if (address.length === 0) {
+    return value;
+  } else {
+    var _extends3;
+
+    var _head = head(address),
+        k = _head[0],
+        rest = _head[1];
+
+    return typeof k === 'string' ? _extends({}, tree, (_extends3 = {}, _extends3[k] = treeSet(rest, treeGet([k], tree), value), _extends3)) : [].concat(tree.slice(0, k), [treeSet(rest, treeGet([k], tree), value)], tree.slice(k + 1));
+  }
+}
+
+/**
+ * Set the value in a tree; mutable.
+ * @param {Array} address -
+ * @param {Object} tree -
+ * @param {*} value - The new value to set at address.
+ * @return (*) The tree.
+ */
+function treeSetMutable(address, tree, value) {
+  if (address.length === 0) {
+    return value;
+  } else {
+    var _tail = tail(address),
+        rest = _tail[0],
+        _last = _tail[1];
+
+    var parent = treeGet(rest, tree);
+    if (checkType(NODE, parent)) {
+      parent.children[_last] = value;
+    } else {
+      parent[_last] = value;
+    }
+    return tree;
+  }
+}
+
+function makeTree(init, mutable) {
+  var state = init;
+  return {
+    get: function get(address) {
+      return treeGet(address, state);
+    },
+    set: function set(address, value) {
+      state = mutable ? treeSetMutable(address, state, value) : treeSet(address, state, value);
+    }
+  };
+}
+
+/**
+ * Check that the new state is valid. If not, then throw an Error.
+ * @param {Object} modelNode - A model or a node of a model.
+ * @param {Object} newState - The new state corresponding to modelNode.
+ */
+function checkState(modelNode, newState) {
+  var _match5;
+
+  if (newState === null) {
+    return;
+  }
+  match(modelNode, (_match5 = {}, _match5[OBJECT_OF] = function (objOf) {
+    if (!isObject(newState) || isArray(newState)) {
+      throw new Error('Shape of the new state does not match the model. ' + 'Model: ' + objOf + '  State: ' + newState);
+    } else {
+      mapValues(newState, function (s) {
+        return checkState(modelNode.component.model, s);
+      });
+    }
+  }, _match5[ARRAY_OF] = function (arOf) {
+    if (!isArray(newState)) {
+      throw new Error('Shape of the new state does not match the model.' + 'Model: ' + arOf + '  State: ' + newState);
+    } else {
+      newState.map(function (s) {
+        return checkState(modelNode.component.model, s);
+      });
+    }
+  }, _match5[COMPONENT] = function (component) {
+    checkState(modelNode.model, newState);
+  }, _match5[ARRAY] = function (ar) {
+    if (!isArray(newState)) {
+      throw new Error('Shape of the new state does not match the model.' + 'Model: ' + ar + '  State: ' + newState);
+    } else {
+      ar.map(function (a, i) {
+        return checkState(a, get(newState, i));
+      });
+    }
+  }, _match5[OBJECT] = function (obj) {
+    if (!isObject(newState) || isArray(newState)) {
+      throw new Error('Shape of the new state does not match the model. ' + 'Model: ' + obj + '  State: ' + newState);
+    } else {
+      mapValues(obj, function (o, k) {
+        return checkState(o, get(newState, k));
+      });
+    }
+  }, _match5));
+}
+
+function computeDiffValue(state, lastState, key, isValidFn, shouldUpdate, address, triggeringAddress) {
+  var stateValid = isValidFn(state, key);
+  var lastStateValid = isValidFn(lastState, key);
+  if (stateValid && !lastStateValid) {
+    return CREATE;
+  } else if (stateValid && lastStateValid) {
+    var same = key === null ? state !== lastState : state[key] !== lastState[key];
+    var componentTriggeredUpdate = addressEqual(address, triggeringAddress);
+    if (same && shouldUpdate({ state: state, lastState: lastState, componentTriggeredUpdate: componentTriggeredUpdate })) {
+      return UPDATE;
+    } else {
+      return null;
+    }
+  } else if (!stateValid && lastStateValid) {
+    return DESTROY;
+  } else {
+    return null;
+  }
+}
+
+/**
+ * Compute the full diff tree for the model node. Calls shouldUpdate.
+ */
+function diffWithModel(modelNode, state, lastState, address, triggeringAddress) {
+  var _match6;
+
+  return match(modelNode, (_match6 = {}, _match6[OBJECT_OF] = function (objOf) {
+    var isValidFn = function isValidFn(obj, k) {
+      return isObject(obj) && k in obj && obj[k] !== null;
+    };
+    var l = Object.assign({}, state || {}, lastState || {});
+    return mapValues(l, function (_, k) {
+      var data = computeDiffValue(state, lastState, k, isValidFn, objOf.component.shouldUpdate, addressWith(address, k), triggeringAddress);
+      var children = diffWithModel(objOf.component.model, get(state, k), get(lastState, k), addressWith(address, k), triggeringAddress);
+      return tagType(NODE, { data: data, children: children });
+    });
+  }, _match6[ARRAY_OF] = function (arOf) {
+    var isValidFn = function isValidFn(obj, i) {
+      return isArray(obj) && i < obj.length && obj[i] !== null;
+    };
+    var longest = Math.max(isArray(state) ? state.length : 0, isArray(lastState) ? lastState.length : 0);
+    var l = Array.apply(null, { length: longest });
+    return l.map(function (_, i) {
+      var data = computeDiffValue(state, lastState, i, isValidFn, arOf.component.shouldUpdate, addressWith(address, i), triggeringAddress);
+      var children = diffWithModel(arOf.component.model, get(state, i), get(lastState, i), addressWith(address, i), triggeringAddress);
+      return tagType(NODE, { data: data, children: children });
+    });
+  }, _match6[COMPONENT] = function (component) {
+    var isValidFn = function isValidFn(obj, _) {
+      return obj !== null;
+    };
+    var data = computeDiffValue(state, lastState, null, isValidFn, component.shouldUpdate, address, triggeringAddress);
+    var children = diffWithModel(component.model, state || null, lastState || null, address, triggeringAddress);
+    return tagType(NODE, { data: data, children: children });
+  }, _match6[ARRAY] = function (ar) {
+    return ar.map(function (n, i) {
+      return diffWithModel(n, get(state, i), get(lastState, i), addressWith(address, i), triggeringAddress);
+    });
+  }, _match6[OBJECT] = function (obj) {
+    return mapValues(obj, function (n, k) {
+      return diffWithModel(n, get(state, k), get(lastState, k), addressWith(address, k), triggeringAddress);
+    });
+  }, _match6));
+}
+
+/**
+ * For an array of minSignals and minUpdate trees, return the minimal trees that
+ * represent the whole array.
+ */
+function singleOrAll(modelNode, address, minTreeAr) {
+  var getMin = function getMin(indices) {
+    if (indices.length === 0) {
+      // If all elements in the array are null, return null.
+      return null;
+    } else if (nonNullIndices.signals.length === 1) {
+      // If there is a single value, return that tree, with an updated address.
+      return {
+        minSignals: {
+          diff: minTreeAr.map(function (a) {
+            return a.minSignals.diff;
+          }),
+          address: address,
+          modelNode: modelNode
+        },
+        minUpdate: {
+          diff: minTreeAr.map(function (a) {
+            return a.minUpdate.diff;
+          }),
+          address: address,
+          modelNode: modelNode
+        }
+      };
+    } else {
+      // Otherwise, return full trees from this level.
+      return {
+        minSignals: {
+          diff: minTreeAr.map(function (a) {
+            return a.minSignals.diff;
+          }),
+          address: address,
+          modelNode: modelNode
+        },
+        minUpdate: {
+          diff: minTreeAr.map(function (a) {
+            return a.minUpdate.diff;
+          }),
+          address: address,
+          modelNode: modelNode
+        }
+      };
+    }
+  };
+  // Get the indices where the signal and update trees are not null.
+  var nonNullIndices = minTreeAr.reduce(function (accum, val, i) {
+    return {
+      signals: val.minSignals !== null ? [].concat(accum.signals, [i]) : accum.signals,
+      update: val.minUpdate !== null ? [].concat(accum.update, [i]) : accum.update
+    };
+  }, { signals: [], update: [] });
+  // For each set of indices, test the diffs with these tests to get a minimum
+  // tree.
+  var minSignals = getMin(nonNullIndices.signals);
+  var minUpdate = getMin(nonNullIndices.update);
+  return { minSignals: minSignals, minUpdate: minUpdate };
+}
+
+/**
+ * 1. Run shouldUpdate for every component in the tree.
+ * 2. Return the information about the minimal tree to update with
+ *    updateComponents (whenever shouldUpdate is true) as minUpdate.
+ * 3. Return the information about the minimal tree to update with
+ *    mergeSignals (whenever nodes are added or deleted) as minSignals.
+ *
+ * @param {Object} modelNode - A model or a node of a model.
+ * @param {Object} state - The new state corresponding to modelNode.
+ * @param {Object|null} lastState - The old state corresponding to modelNode.
+ * @param {Array} address -
+ * @param {Array} triggeringAddress -
+ * @returns {Object} An object with the attributes minSignals and
+ *                   minUpdate. Each represents a minimal tree necessary for the
+ *                   appropriate update function and has the attributes diff,
+ *                   modelNode, and address.
+ */
+function diffWithModelMin(modelNode, state, lastState, address, triggeringAddress) {
+  // 1. calculate whole diff tree
+  var diff = diffWithModel(modelNode, state, lastState, address, triggeringAddress);
+  // 2. trim the tree for the two needs
+  return {
+    minSignals: {
+      diff: diff,
+      address: address,
+      modelNode: modelNode
+    },
+    minUpdate: {
+      diff: diff,
+      address: address,
+      modelNode: modelNode
+    }
+  };
+}
+
+// -------------------------------------------------------------------
+// Signals
+// -------------------------------------------------------------------
+
+/**
+ * Make a signal.
+ * @return {Object} A signal with attributes `on` and `call`.
+ */
+function makeSignal() {
+  var res = { _onFns: [] };
+  res.on = function (fn) {
+    if (!isFunction(fn)) {
+      throw new Error('First argument to "on" must be a function');
+    }
+    res._onFns = [].concat(res._onFns, [fn]);
+  };
+  res.call = function () {
+    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    return res._onFns.map(function (fn) {
+      return fn.apply(undefined, args);
+    });
+  };
+  return res;
+}
+
+/**
+ * Create an object that with `on/onEach` and `call` attributes.
+ * @param {Boolean} isCollection -
+ * @return {Object}
+ */
+function makeOneSignalAPI(isCollection) {
+  // make a `_callFn` function that will be replaced later and is the target of
+  // `call`
+  var res = { _callFns: [] };
+  // call will run all functions in `_callFns`
+  res.call = function () {
+    for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      args[_key2] = arguments[_key2];
+    }
+
+    if (args.length > 1 || !isObject(args[0])) {
+      throw new Error('Call only accepts a single object as argument.');
+    }
+    res._callFns.map(function (_ref3) {
+      var fn = _ref3.fn;
+      return fn(args[0]);
+    });
+  };
+  // store callbacks passed with `on` or `onEach`
+  res._onFns = [];
+  var onName = isCollection ? 'onEach' : 'on';
+  res[onName] = function (fn) {
+    if (!isFunction(fn)) {
+      throw new Error('Argument to "' + onName + '" must be a function');
+    }
+    res._onFns.push(function (index) {
+      return function () {
+        if (arguments.length > 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
+          throw new Error('On function only accepts a single object as argument.');
+        }
+        var argObject = typeof index === 'string' ? _extends({ k: index }, arguments.length <= 0 ? undefined : arguments[0]) : typeof index === 'number' ? _extends({ i: index }, arguments.length <= 0 ? undefined : arguments[0]) : arguments.length <= 0 ? undefined : arguments[0];
+        fn(argObject);
+      };
+    });
+  };
+  return res;
+}
+
+/**
+ * Implement the signals API.
+ */
+function makeSignalsAPI(signalNames, isCollection) {
+  return fromPairs(signalNames.map(function (name) {
+    return [name, makeOneSignalAPI(isCollection)];
+  }));
+}
+
+/**
+ * Implement the childSignals API.
+ */
+function makeChildSignalsAPI(model) {
+  var _match7;
+
+  return match(model, (_match7 = {}, _match7[OBJECT_OF] = function (node) {
+    return makeSignalsAPI(node.component.signalNames, true);
+  }, _match7[ARRAY_OF] = function (node) {
+    return makeSignalsAPI(node.component.signalNames, true);
+  }, _match7[COMPONENT] = function (node) {
+    return makeSignalsAPI(node.signalNames, false);
+  }, _match7[ARRAY] = function (ar) {
+    return ar.map(makeChildSignalsAPI).filter(notNull);
+  }, _match7[OBJECT] = function (obj) {
+    return filterValues(mapValues(obj, makeChildSignalsAPI), notNull);
+  }, _match7), constant(null));
+}
+
+/**
+ * Reduce the direct children of the tree.
+ * @param {Object} node - A node in a tree.
+ * @param {Function} fn - Function with arguments (accum, object).
+ * @param {*} init - An initial value.
+ * @param {Array} address - The local address.
+ * @return {*}
+ */
+function reduceChildren(node, fn, init) {
+  var _match8;
+
+  var address = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+
+  return match(node, (_match8 = {}, _match8[NODE] = function (node) {
+    return fn(init, node.data, address);
+  }, _match8[ARRAY] = function (ar) {
+    return ar.reduce(function (accum, n, k) {
+      return reduceChildren(n, fn, accum, addressWith(address, k));
+    }, init);
+  }, _match8[OBJECT] = function (obj) {
+    return reduceValues(obj, function (accum, n, k) {
+      return reduceChildren(n, fn, accum, addressWith(address, k));
+    }, init);
+  }, _match8), constant(init));
+}
+
+/**
+ * Run signalSetup with the component.
+ * @param {Object} component -
+ * @param {Array} address -
+ * @param {Object} stateCallers -
+ * @return {Object} Object with keys signalsAPI and childSignalsAPI.
+ */
+function runSignalSetup(component, address, stateCallers) {
+  var signalsAPI = makeSignalsAPI(component.signalNames, false);
+  var childSignalsAPI = makeChildSignalsAPI(component.model);
+  var reducers = patchReducersWithState(address, component, stateCallers.callReducer);
+  var signals = patchSignals(address, component, stateCallers.callSignal);
+  var methods = patchMethods(address, component, stateCallers.callMethod, reducers, signals);
+  // cannot call signalSetup any earlier because it needs a reference to
+  // `methods`, which must know the address
+  component.signalSetup({
+    methods: methods,
+    reducers: reducers,
+    signals: signalsAPI,
+    childSignals: childSignalsAPI
+  });
+  return { signalsAPI: signalsAPI, childSignalsAPI: childSignalsAPI };
+}
+
+/**
+ * Merge a signals object with signal callbacks from signalSetup.
+ * @param {Object} node - A model node.
+ * @param {Array} address - The address.
+ * @param {Object} diffNode - A node in the diff tree.
+ * @param {Object|null} signalNode - A node in the existing signals tree.
+ * @param {Object} stateCallers - The object with 3 functions to modify global
+ *                                state.
+ * @param {Object|null} upChild - The childSignalsAPI object for the parent
+ *                                Component.
+ * @param {Array|null} upAddress - A local address specifying the location
+ *                                 relative to the parent Component.
+ * @return {Object} The new signals tree.
+ */
+function mergeSignals(node, address, diffNode, signalNode, stateCallers) {
+  var _match9;
+
+  var upChild = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : null;
+  var upAddress = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : null;
+
+  var updateRecurse = function updateRecurse(_ref4, k) {
+    var d = _ref4[0],
+        s = _ref4[1];
+
+    var component = k !== null ? node.component : node;
+    var newAddress = k !== null ? addressWith(address, k) : address;
+    var diffVal = d.data;
+    if (diffVal === CREATE) {
+      var _ret2 = function () {
+        // For create, apply the callbacks
+        var _runSignalSetup = runSignalSetup(component, newAddress, stateCallers),
+            signalsAPI = _runSignalSetup.signalsAPI,
+            childSignalsAPI = _runSignalSetup.childSignalsAPI;
+
+        var newUpAddress = upAddress === null ? null : addressWith(upAddress, k);
+        var signals = mapValues(zipObjects([signalsAPI, upChild]), function (_ref5, key) {
+          var callbackObj = _ref5[0],
+              upCallbackObj = _ref5[1];
+
+          var signal = makeSignal();
+
+          // For each callback, add each onFn to the signal,
+          // and set the callFn to the signal dispatch. Only
+          // on, not onEach, so execute the fn with no
+          // argument.
+          callbackObj._onFns.map(function (fn) {
+            return signal.on(fn());
+          });
+          callbackObj._callFns = [{ fn: signal.call, address: null }];
+
+          // For the childSignalCallbacks from the parent
+          if (upCallbackObj !== null) {
+            upCallbackObj._onFns.map(function (fn) {
+              return signal.on(fn(k));
+            });
+            upCallbackObj._callFns = [].concat(upCallbackObj._callFns, [{ fn: signal.call, address: newUpAddress }]);
+          }
+
+          return signal;
+        });
+        var data = { signals: signals, signalsAPI: signalsAPI, childSignalsAPI: childSignalsAPI };
+
+        // loop through the children of signals and node
+        var children = mergeSignals(component.model, newAddress, d.children, get(s, 'children'), stateCallers, childSignalsAPI, []);
+
+        return {
+          v: tagType(NODE, { data: data, children: children })
+        };
+      }();
+
+      if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+    } else if (diffVal === DESTROY) {
+      // In the case of destroy, this leaf in the signals object will be null.
+      return null;
+    } else {
+      // update
+      var _reduceChildren = reduceChildren(d.children, function (accum, diffVal, address) {
+        var hasCreated = accum.hasCreated || diffVal === CREATE;
+        var destroyed = diffVal === DESTROY ? [].concat(accum.destroyed, [address]) : accum.destroyed;
+        return { hasCreated: hasCreated, destroyed: destroyed };
+      }, { hasCreated: false, destroyed: [] }),
+          hasCreated = _reduceChildren.hasCreated,
+          destroyed = _reduceChildren.destroyed;
+
+      // if there are deleted children, delete references to them
+
+
+      destroyed.map(function (childAddress) {
+        // get the right child within childSignalsAPI
+        var childSignalsAPINode = childAddress.reduce(function (accum, k, i) {
+          if (k in accum) {
+            return accum[k];
+          } else if (i === childAddress.length - 1) {
+            return accum;
+          } else {
+            throw new Error('Bad address ' + childAddress + ' for object ' + s.data.childSignalsAPI);
+          }
+        }, s.data.childSignalsAPI);
+        mapValues(childSignalsAPINode, function (obj) {
+          // remove the matching callFns
+          obj._callFns = obj._callFns.filter(function (_ref6) {
+            var address = _ref6.address;
+
+            return !addressEqual(address, childAddress);
+          });
+        });
+      });
+
+      var newUpChild = hasCreated ? s.data.childSignalsAPI : null;
+      var _newUpAddress = hasCreated ? [] : null;
+      var _children = mergeSignals(component.model, newAddress, d.children, get(s, 'children'), stateCallers, newUpChild, _newUpAddress);
+      return tagType(NODE, { data: get(s, 'data'), children: _children });
+    }
+  };
+
+  var recurse = function recurse(_ref7, k) {
+    var n = _ref7[0],
+        d = _ref7[1],
+        s = _ref7[2],
+        u = _ref7[3];
+
+    var newAddress = addressWith(address, k);
+    var newUpAddress = upAddress === null ? null : addressWith(upAddress, k);
+    return mergeSignals(n, newAddress, d, s, stateCallers, u, newUpAddress);
+  };
+
+  return match(node, (_match9 = {}, _match9[OBJECT_OF] = function (objOf) {
+    return filterValues(mapValues(zipObjects([diffNode, signalNode]), updateRecurse), notNull);
+  }, _match9[ARRAY_OF] = function (arOf) {
+    return zipArrays([diffNode, signalNode]).map(updateRecurse).filter(notNull);
+  }, _match9[COMPONENT] = function (component) {
+    return updateRecurse([diffNode, signalNode], null);
+  }, _match9[ARRAY] = function (ar) {
+    return zipArrays([ar, diffNode, signalNode, upChild]).map(recurse);
+  }, _match9[OBJECT] = function (obj) {
+    return mapValues(zipObjects([obj, diffNode, signalNode, upChild]), recurse);
+  }, _match9), constant(null));
+}
+
+// -------------------------------------------------------------------
+// Component & run functions
+// -------------------------------------------------------------------
+
+/**
+ * Create an object representing many instances of this component, for use in a
+ * tinier model.
+ * @param {Object} component - Tinier component.
+ * @return {Object}
+ */
+function objectOf(component) {
+  return tagType(OBJECT_OF, { component: component });
+}
+
+/**
+ * Create an array representing many instances of this component, for use in a
+ * tinier model.
+ * @param {Object} component - Tinier component.
+ * @return {Object}
+ */
+function arrayOf(component) {
+  return tagType(ARRAY_OF, { component: component });
+}
+
+function defaultShouldUpdate(_ref8) {
+  var state = _ref8.state,
+      lastState = _ref8.lastState;
+
+  return state !== lastState;
+}
+
+function checkInputs(options, defaults) {
+  mapValues(options, function (_, k) {
+    if (!(k in defaults)) {
+      console.error('Unexpected argument ' + k);
+    }
+  });
+}
+
+function patchInitNoArg(init) {
+  return function () {
+    if (arguments.length === 0) {
+      return init({});
+    } else if (arguments.length > 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
+      throw new Error('Reducers can only take 1 or 0 arguments, and the ' + 'argument should be an object.');
+    } else {
+      return init(arguments.length <= 0 ? undefined : arguments[0]);
+    }
+  };
+}
+
+function patchReducersOneArg(reducers) {
+  return mapValues(reducers, function (reducer, name) {
+    return function () {
+      if (arguments.length !== 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
+        throw new Error('Reducers can only take 1 arguments, and the ' + 'argument should be an object.');
+      } else if (!('state' in (arguments.length <= 0 ? undefined : arguments[0]))) {
+        throw new Error('The argument to the reducer must have a "state" ' + 'attribute.');
+      } else {
+        return reducer(arguments.length <= 0 ? undefined : arguments[0]);
+      }
+    };
+  });
+}
+
+/**
+ * Create a tinier component.
+ * @param {Object} componentArgs - Functions defining the Tinier component.
+ * @param {str} componentArgs.displayName - A name for the component.
+ * @param {[str]} componentArgs.signals - An array of signal names.
+ * @param {Object} componentArgs.model - The model object.
+ * @param {Function} componentArgs.init - A function to initialize the state.
+ * @param {Object} componentArgs.reducers -
+ * @param {Object} componentArgs.methods -
+ * @param {Function} componentArgs.willMount -
+ * @param {Function} componentArgs.didMount -
+ * @param {Function} componentArgs.shouldUpdate - Return true if the component
+ *                                                should update, false if it
+ *                                                should not, or null to use to
+ *                                                default behavior (update when
+ *                                                state changes).
+ * @param {Function} componentArgs.willUpdate -
+ * @param {Function} componentArgs.didUpdate -
+ * @param {Function} componentArgs.willUnmount -
+ * @param {Function} componentArgs.render -
+ * @returns {Object} A tinier component.
+ */
+function createComponent() {
+  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+  // default attributes
+  var defaults = {
+    displayName: '',
+    signalNames: [],
+    signalSetup: noop,
+    model: {},
+    init: constant({}),
+    reducers: {},
+    methods: {},
+    willMount: noop,
+    didMount: noop,
+    shouldUpdate: defaultShouldUpdate,
+    willUpdate: noop,
+    didUpdate: noop,
+    willUnmount: noop,
+    render: noop
+  };
+  // check inputs
+  checkInputs(options, defaults);
+
+  if ('init' in options) {
+    options.init = patchInitNoArg(options.init);
+  }
+
+  if ('reducers' in options) {
+    options.reducersRaw = options.reducers;
+    options.reducers = patchReducersOneArg(options.reducers);
+  }
+
+  // check model
+  if (options.model && checkType(COMPONENT, options.model)) {
+    throw new Error('The model cannot be another Component. The top level of ' + 'the model should be an array or an object literal');
+  }
+  // set defaults & tag
+  return tagType(COMPONENT, _extends({}, defaults, options));
+}
+
+function patchReducersWithState(address, component, callReducer) {
+  return mapValues(component.reducersRaw, function (reducer, name) {
+    return function () {
+      if (arguments.length === 0) {
+        callReducer(address, component, reducer, {}, name);
+      } else if (arguments.length > 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
+        throw new Error('Reducers can only take 1 or 0 arguments, and the ' + 'argument should be an object.');
+      } else {
+        callReducer(address, component, reducer, arguments.length <= 0 ? undefined : arguments[0], name);
+      }
+    };
+  });
+}
+
+function patchSignals(address, component, callSignal) {
+  return fromPairs(component.signalNames.map(function (signalName) {
+    return [signalName, { call: function call(arg) {
+        return callSignal(address, signalName, arg);
+      } }];
+  }));
+}
+
+/**
+ * Return an object of functions that call the methods with component-specific
+ * arguments.
+ */
+function patchMethods(address, component, callMethod, reducers, signals) {
+  var methods = mapValues(component.methods, function (method) {
+    return function (arg) {
+      if (typeof Event !== 'undefined' && arg instanceof Event) {
+        callMethod(address, method, signals, methods, reducers, this, arg, {});
+      } else {
+        callMethod(address, method, signals, methods, reducers, null, null, arg);
+      }
+    };
+  });
+  return methods;
+}
+
+function makeCallMethod(stateTree, opts) {
+  /**
+   * Call a method on the local stateTree
+   * @param address
+   * @param method
+   * @param signals
+   * @param methods - Patched method functions.
+   * @param reducers - Patched reducer functions.
+   * @param target - The value of this in the called function.
+   * @param event - The event at the time of the function call.
+   * @param arg - An argument object.
+   */
+  return function (address, method, signals, methods, reducers, target, event, arg) {
+    // check for uninitialized stateTree
+    if (stateTree.get([]) === null) {
+      throw new Error('Cannot call method before the app is initialized (e.g. ' + 'in signalSetup).');
+    }
+    // get the local state
+    var localState = stateTree.get(address);
+    // run the method
+    method(_extends({ state: localState, signals: signals, methods: methods, reducers: reducers, target: target, event: event
+    }, arg));
+  };
+}
+
+/**
+ * Return a callSignal function.
+ */
+function makeCallSignal(signals, opts) {
+  return function (address, signalName, arg) {
+    if (opts.verbose) {
+      console.log('Called signal ' + signalName + ' at [' + address.join(', ') + '].');
+    }
+    signals.get(address).data.signals[signalName].call(arg);
+  };
+}
+
+/**
+ * Return a new callReducer function.
+ * @param {Object} topComponent - The top-level component.
+ * @param {Object} stateTree - The global stateTree.
+ * @param {Object} bindingTree - The global bindingTree.
+ * @param {Object} signalTree - The global signalTree.
+ * @param {Object} stateCallers - An object with functions callMethod,
+ *                                callSignal, and callReducer.
+ * @param {Object} opts - Options from `run`.
+ * @returns {Function} - Call a reducer on the local state
+ *   @param {Array} address - A location, as an array of keys (strings and
+ *                            integers).
+ *   @param {Object} triggeringComponent -
+ *   @param {Function} reducer - A reducer.
+ *   @param {Object} arg - An argument object.
+ *   @param {String} name - The name of the reducer (for logging).
+ */
+function makeCallReducer(topComponent, stateTree, bindingTree, signalTree, stateCallers, opts) {
+  return function (address, triggeringComponent, reducer, arg, name) {
+    if (!isFunction(reducer)) {
+      throw new Error('Reducer ' + name + ' is not a function');
+    }
+    // Run the reducer, and optionally log the result.
+    var localState = stateTree.get(address);
+    var newLocalState = reducer(_extends({}, arg, { state: localState }));
+    if (opts.verbose) {
+      console.log('Called reducer ' + name + ' for ' + triggeringComponent.displayName + ' at [' + address.join(', ') + '].');
+      console.log(localState);
+      console.log(newLocalState);
+    }
+
+    // Check that the new state is valid. If not, throw an Error, and the new
+    // state will be thrown out.
+    checkState(triggeringComponent.model, newLocalState);
+
+    // Set the state with immutable objects and arrays. A reference to oldState
+    // will used for diffing.
+    var lastState = stateTree.get([]);
+    stateTree.set(address, newLocalState);
+
+    // Run diffWithModelMin, which will do a few things:
+    // 1. Run shouldUpdate for every component in the tree.
+    // 2. Return the information about the minimal tree to update with
+    //    updateComponents (whenever shouldUpdate is true) as minUpdate.
+    // 3. Return the information about the minimal tree to update with
+    //    mergeSignals (whenever nodes are added or deleted) as minSignals.
+    // The output objects have the attributes diff, modelNode, and address.
+    // TODO might be best to go back to returning just one full diff here
+
+    var _diffWithModelMin = diffWithModelMin(topComponent, stateTree.get([]), lastState, [], address),
+        minSignals = _diffWithModelMin.minSignals,
+        minUpdate = _diffWithModelMin.minUpdate;
+
+    // Update the signals.
+
+
+    var localSignals = signalTree.get(minSignals.address);
+    var newSignals = mergeSignals(minSignals.modelNode, minSignals.address, minSignals.diff, localSignals, stateCallers);
+    signalTree.set(minSignals.address, newSignals);
+
+    // Update the components.
+    var minUpdateBindings = bindingTree.get(minUpdate.address);
+    var minUpdateEl = minUpdateBindings.data;
+    var minUpdateState = stateTree.get(minUpdate.address);
+    var newBindings = updateComponents(minUpdate.address, minUpdate.modelNode, minUpdateState, minUpdate.diff, minUpdateBindings, minUpdateEl, stateCallers, opts);
+    bindingTree.set(minUpdate.address, newBindings);
+  };
+}
+
+/**
+ * Return an object with functions callMethod, callSignal, and callReducer.
+ * @param {Object} component - The top-level component.
+ * @param {Object} stateTree - The global stateTree.
+ * @param {Object} bindingTree - The global bindings.
+ * @param {Object} signalTree - The global signalTree.
+ * @return {Object} An object with functions callMethod, callSignal, and
+ *                  callReducer.
+ */
+function makeStateCallers(component, stateTree, bindingTree, signalTree, opts) {
+  var stateCallers = {};
+  stateCallers.callMethod = makeCallMethod(stateTree, opts);
+  stateCallers.callSignal = makeCallSignal(signalTree, opts);
+  stateCallers.callReducer = makeCallReducer(component, stateTree, bindingTree, signalTree, stateCallers, opts);
+  return stateCallers;
+}
+
+/**
+ * Run a tinier component.
+ * @param {Object} component - A tinier component.
+ * @param {*} appEl - An element to pass to the component's create, update, and
+ *                    destroy methods.
+ * @param {Object|null} initialState - The initial state. If null, then init()
+ *                                     will be called to initialize the state.
+ * @return {Object} The API functions, incuding getState, signals, and methods.
+ */
+function run(component, appEl) {
+  var opts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+  // Create variables that will store the state for the whole lifetime of the
+  // application. Similar to the redux model.
+  var stateTree = makeTree(null, false);
+  var topBinding = tagType(NODE, { data: appEl, children: null });
+  var bindingTree = makeTree(topBinding, true);
+  var signalTree = makeTree(null, true);
+
+  // functions that access state, signals, and bindings
+  var stateCallers = makeStateCallers(component, stateTree, bindingTree, signalTree, opts);
+
+  // make sure initial state is valid
+  // TODO LEFT OFF ... does this work?
+  // Q: Does the state for a child component need to be defined? Are we checking
+  // all the way down the line?
+  var initialState = 'initialState' in opts ? opts.initialState : component.init();
+
+  // first draw
+  var setStateReducer = function setStateReducer(_ref9) {
+    var newState = _ref9.newState;
+    return newState;
+  };
+  var setState = function setState(newState) {
+    return stateCallers.callReducer([], component, setStateReducer, { newState: newState }, 'setState');
+  };
+  setState(initialState);
+
+  // return API
+  var getState = function getState() {
+    return stateTree.get([]);
+  };
+  // TODO check state
+  var setStateNoRender = function setStateNoRender(newState) {
+    return stateTree.set([], newState);
+  };
+  var reducers = patchReducersWithState([], component, stateCallers.callReducer);
+  var signalsCall = patchSignals([], component, stateCallers.callSignal);
+  var methods = patchMethods([], component, stateCallers.callMethod, reducers, signalsCall);
+  // if state is null, then data will be null
+  var signals = get(signalTree.get([]).data, 'signals');
+
+  return { setState: setState, setStateNoRender: setStateNoRender, getState: getState, reducers: reducers, methods: methods, signals: signals };
+}
+
+// -------------------------------------------------------------------
+// DOM
+// -------------------------------------------------------------------
+
+// constants
+var BINDING = exports.BINDING = '@TINIER_BINDING';
+var ELEMENT = exports.ELEMENT = '@TINIER_ELEMENT';
+var LISTENER_OBJECT = '@TINIER_LISTENERS';
+
+function reverseObject(obj) {
+  var newObj = {};
+  for (var k in obj) {
+    newObj[obj[k]] = k;
+  }
+  return newObj;
+}
+
+// some attribute renaming as seen in React
+var ATTRIBUTE_RENAME = {};
+var ATTRIBUTE_RENAME_REV = reverseObject(ATTRIBUTE_RENAME);
+var ATTRIBUTE_APPLY = {
+  checked: function checked(el, name) {
+    var val = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+    if (name !== 'input') {
+      throw new Error('"checked" attribute is only supported on input elements.');
+    }
+    el.checked = val;
+  },
+  value: function value(el, name) {
+    var val = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+    if (['input', 'textarea'].indexOf(name) === -1) {
+      throw new Error('"value" attribute is only supported on input and ' + 'textarea elements.');
+    }
+    el.value = val;
+  }
+};
+
+// namespace management inspired by of D3.js, Mike Bostock, BSD license
+var NAMESPACES = {
+  svg: 'http://www.w3.org/2000/svg',
+  xhtml: 'http://www.w3.org/1999/xhtml',
+  xlink: 'http://www.w3.org/1999/xlink',
+  xml: 'http://www.w3.org/XML/1998/namespace',
+  xmlns: 'http://www.w3.org/2000/xmlns/'
+};
+
+/**
+ * Turn an array of objects into a new object of objects where the keys are
+ * given by the value of `key` in each child object.
+ * @param {[Object]} arr - The array of objects.
+ * @param {String} key - The key to look for.
+ */
+function keyBy(arr, key) {
+  var obj = {};
+  arr.map(function (x) {
+    return obj[x[key]] = x;
+  });
+  return obj;
+}
+
+/**
+ *
+ */
+function addressToObj(address, val) {
+  // If address is []
+  if (isUndefined(address[0])) {
+    return val;
+  }
+  var f = address[0];
+  if (isString(f)) {
+    var _ref10;
+
+    return _ref10 = {}, _ref10[f] = addressToObj(address.slice(1), val), _ref10;
+  } else {
+    var ar = Array(f + 1);
+    ar[f] = addressToObj(address.slice(1), val);
+    return ar;
+  }
+}
+
+function objectForBindingsArray(bindings) {
+  // Check arrays and find longest internal array.
+  var longest = 0;
+  for (var j = 0, l = bindings.length; j < l; j++) {
+    var binding = bindings[j];
+    if (!isArray(binding)) {
+      throw Error('Incompatible bindings: mix of types');
+    }
+    var len = binding.length;
+    if (len > longest) {
+      longest = len;
+    }
+  }
+  var acc = [];
+  for (var i = 0; i < longest; i++) {
+    for (var _j = 0, _l = bindings.length; _j < _l; _j++) {
+      var _binding = bindings[_j];
+      if (_binding[i] != null) {
+        // not null or undefined
+        if (acc[i] != null) {
+          // not null or undefined
+          acc[i] = objectForBindings([_binding[i], acc[i]]);
+        } else {
+          acc[i] = _binding[i];
+        }
+      }
+    }
+  }
+  return acc;
+}
+
+function objectForBindingsObject(bindings) {
+  return bindings.reduce(function (acc, binding) {
+    if (isArray(binding)) throw Error('Incompatible bindings: mix of types');
+    for (var k in binding) {
+      if (binding[k]) {
+        if (acc[k]) {
+          acc[k] = objectForBindings([binding[k], acc[k]]);
+        } else {
+          acc[k] = binding[k];
+        }
+      }
+    }
+    return acc;
+  }, {});
+}
+
+function objectForBindings(bindings) {
+  return isArray(bindings[0]) ? objectForBindingsArray(bindings) : objectForBindingsObject(bindings);
+}
+
+// Make sure default is null so undefined type constant do not match
+var isTinierBinding = function isTinierBinding(obj) {
+  return checkType(BINDING, obj);
+};
+var isTinierElement = function isTinierElement(obj) {
+  return checkType(ELEMENT, obj);
+};
+var isElement = function isElement(v) {
+  return v instanceof Element;
+};
+
+/**
+ * Create a new TinierDOM element.
+ * @param {String} tagName - The name for the element.
+ * @param {Object|null} attributesIn - The attributes. Note that JSX will pass
+ *                                     null in when there are no attributes. In
+ *                                     the resulting object, this will be an
+ *                                     empty object {}.
+ * @param {Object[]|Object|String} ...children - A single binding or a mix of
+ *                                               elements and strings.
+ * @return {Object} A TinierDOM element.
+ */
+function createElement(tagName, attributesIn) {
+  for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
+    children[_key3 - 2] = arguments[_key3];
+  }
+
+  var attributes = attributesIn == null ? {} : attributesIn;
+  return tagType(ELEMENT, { tagName: tagName, attributes: attributes, children: children });
+}
+
+/**
+ * Create a new TinierDOM binding.
+ * @param {Array|String|Number} addressIn - An address array, or single key or
+ *                                          index.
+ * @return {Object} A TinierDOM binding.
+ */
+function bind(addressIn) {
+  var address = isArray(addressIn) ? addressIn : [addressIn];
+  return tagType(BINDING, { address: address });
+}
+
+function explicitNamespace(name) {
+  var i = name.indexOf(':');
+  if (i !== -1) {
+    var prefix = name.slice(0, i);
+    if (prefix in NAMESPACES) {
+      // for xmlns, treat the whole name (e.g. xmlns:xlink) as the name
+      var newName = prefix === 'xmlns' ? name : name.slice(i + 1);
+      return { name: newName, explicit: NAMESPACES[prefix] };
+    } else {
+      return { name: name, explicit: null };
+    }
+  } else {
+    return { name: name, explicit: null };
+  }
+}
+
+/**
+ * Create a DOM element, inheriting namespace or choosing one based on tag.
+ * @param {Object} tinierEl - A TinierDOM element.
+ * @param {Object} parent - The parent el.
+ * @return {Object} The DOM element.
+ */
+function createDOMElement(tinierEl, parent) {
+  var tag = tinierEl.tagName;
+
+  var _explicitNamespace = explicitNamespace(tag),
+      name = _explicitNamespace.name,
+      explicit = _explicitNamespace.explicit;
+
+  var ns = explicit !== null ? explicit : tag in NAMESPACES ? NAMESPACES[tag] : parent.namespaceURI;
+  var el = ns === NAMESPACES.xhtml ? document.createElement(name) : document.createElementNS(ns, name);
+  return updateDOMElement(el, tinierEl);
+}
+
+function getStyles(cssText) {
+  var reg = /([^:; ]+):/g;
+  var res = [];
+  var ar = void 0;
+  while ((ar = reg.exec(cssText)) !== null) {
+    res.push(ar[1]);
+  }
+  return res;
+}
+
+function toCamelCase(name) {
+  return name
+  // Uppercase the first character in each group immediately following a dash
+  .replace(/-(.)/g, function (m) {
+    return m.toUpperCase();
+  })
+  // Remove dashes
+  .replace(/-/g, '');
+}
+
+function stripOn(name) {
+  return name.slice(2).toLowerCase();
+}
+
+function setAttributeCheckBool(namespace, el, name, val) {
+  // set boolean appropriately
+  var valToSet = val === true ? name : val;
+  if (namespace === NAMESPACES.xhtml) {
+    el.setAttribute(name, valToSet);
+  } else {
+    el.setAttributeNS(namespace, name, valToSet);
+  }
+}
+
+/**
+ * Update the DOM element to match a TinierDOM element.
+ * @param {Element} el - An existing DOM element.
+ * @param {Object} tinierEl - A TinierDOM element.
+ */
+function updateDOMElement(el, tinierEl) {
+  var thenFn = null;
+  var parentNamespace = el.namespaceURI;
+
+  // remove event listeners first, because they cannot simply be replaced
+  if (el.hasOwnProperty(LISTENER_OBJECT)) {
+    mapValues(el[LISTENER_OBJECT], function (onFn, name) {
+      el.removeEventListener(name, onFn);
+    });
+    delete el[LISTENER_OBJECT];
+  }
+
+  // Update the attributes.
+  // TODO is it faster to check first, or set first?
+  mapValues(tinierEl.attributes, function (v, k) {
+    if (k === 'id') {
+      // ID is set directly
+      el.id = v;
+    } else if (k === 'style' && !isString(v)) {
+      // For a style object. For a style string, use setAttribute below.
+      mapValues(v, function (sv, sk) {
+        el.style.setProperty(sk, sv);
+      });
+    } else if (k.indexOf('on') === 0) {
+      // Special handling for listeners
+      if (!el.hasOwnProperty(LISTENER_OBJECT)) {
+        el[LISTENER_OBJECT] = {};
+      }
+      // allow null
+      if (v !== null) {
+        var name = stripOn(k);
+        if (!isFunction(v) && v !== null) {
+          throw new Error(v + ' is not a function.');
+        }
+        el[LISTENER_OBJECT][name] = v;
+        el.addEventListener(name, v);
+      }
+    } else if (k in ATTRIBUTE_RENAME) {
+      // By default, set the attribute.
+      var _explicitNamespace2 = explicitNamespace(k),
+          _name = _explicitNamespace2.name,
+          explicit = _explicitNamespace2.explicit;
+
+      setAttributeCheckBool(explicit !== null ? explicit : parentNamespace, el, ATTRIBUTE_RENAME[explicit], v);
+    } else if (k in ATTRIBUTE_APPLY) {
+      ATTRIBUTE_APPLY[k](el, tinierEl.tagName, v);
+    } else if (k === 'then') {
+      if (v !== null) {
+        if (!isFunction(v)) {
+          throw new Error(v + ' is not a function or null.');
+        }
+        thenFn = v;
+      }
+    } else {
+      // By default, set the attribute.
+      var _explicitNamespace3 = explicitNamespace(k),
+          _name2 = _explicitNamespace3.name,
+          _explicit = _explicitNamespace3.explicit;
+
+      setAttributeCheckBool(_explicit !== null ? _explicit : parentNamespace, el, _name2, v);
+    }
+  });
+  // Delete attributes if not provided. First, loop through this attributes
+  // object to get a nice array.
+  var attributeNames = [];
+  for (var i = 0, l = el.attributes.length; i < l; i++) {
+    attributeNames.push(el.attributes[i].name);
+  }
+  attributeNames.filter(function (k) {
+    return !(k in tinierEl.attributes) || tinierEl.attributes[k] === false;
+  }).map(function (k) {
+    if (k in ATTRIBUTE_RENAME_REV) {
+      el.removeAttribute(ATTRIBUTE_RENAME_REV[k]);
+    } else if (k in ATTRIBUTE_APPLY) {
+      ATTRIBUTE_APPLY[k](el, tinierEl.tagName);
+    } else {
+      el.removeAttribute(k);
+    }
+  });
+  // Delete styles if not provided.
+  var tStyle = tinierEl.attributes.style;
+  if (tStyle && !isString(tStyle)) {
+    getStyles(el.style.cssText).filter(function (a) {
+      return !(a in tStyle || toCamelCase(a) in tStyle);
+    }).map(function (a) {
+      return el.style.removeProperty(a);
+    });
+  }
+
+  // call the callback
+  if (thenFn) {
+    defer(function () {
+      return thenFn(el);
+    });
+  }
+
+  return el;
+}
+
+/**
+* flatten the elements array
+*/
+function flattenElementsAr(ar) {
+  return ar.reduce(function (acc, el) {
+    return isArray(el) ? [].concat(acc, el) : [].concat(acc, [el]);
+  }, []).filter(notNull); // null means ignore
+}
+
+function removeExtraNodes(container, length) {
+  for (var i = container.childNodes.length - 1; i >= length; i--) {
+    container.removeChild(container.childNodes[i]);
+  }
+}
+
+/**
+ * Render the given element tree into the container.
+ * @param {Element} container - A DOM element that will be the container for
+ *                              the renedered element tree.
+ * @param {...[Object|String]|Object|String} tinierElementsAr -
+ *   Any number of TinierDOM elements or strings that will be rendered.
+ * @return {Object} A nested data structure of bindings for use in Tinier.
+ */
+function render(container) {
+  // check arguments
+  if (!isElement(container)) {
+    throw new Error('First argument must be a DOM Element.');
+  }
+
+  for (var _len4 = arguments.length, tinierElementsAr = Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
+    tinierElementsAr[_key4 - 1] = arguments[_key4];
+  }
+
+  var tinierElements = flattenElementsAr(tinierElementsAr);
+
+  var first = get(tinierElements, 0);
+  if (isTinierBinding(first)) {
+    if (tinierElements.length !== 1) {
+      throw new Error('A binding cannot have siblings in TinierDOM. ' + 'At binding: [ ' + first.address.join(', ') + ' ].');
+    }
+    return objectForBindings([addressToObj(first.address, container)]);
+  }
+
+  // get the children with IDs
+  var childrenWithKeys = Array.from(container.children).filter(function (c) {
+    return c.id;
+  });
+  var elementsByID = keyBy(childrenWithKeys, 'id');
+
+  // render each element
+  var bindingsAr = tinierElements.map(function (tinierEl, i) {
+    // If an element if a binding, then there can only be one child.
+    if (isUndefined(tinierEl)) {
+      // cannot be undefined
+      throw new Error('Children in Tinier Elements cannot be undefined.');
+    } else if (isTinierElement(tinierEl)) {
+      // container.childNodes is a live collection, so get the current node at
+      // this index.
+      var el = container.childNodes[i];
+      // tinierEl is a TinierDOM element.
+      if (tinierEl.attributes.id in elementsByID) {
+        // el exist, then check for a matching node by ID
+        var movedEl = elementsByID[tinierEl.attributes.id];
+        if (el) {
+          // if match and existing el, then replace the element
+          container.replaceChild(movedEl, el);
+        } else {
+          // if match and el is undefined, then append the element
+          container.appendChild(movedEl);
+        }
+        // then render children
+        return render.apply(undefined, [movedEl].concat(tinierEl.children));
+      } else if (el) {
+        // both defined, check type and id
+        if (el.tagName && el.tagName.toLowerCase() === tinierEl.tagName.toLowerCase()) {
+          // matching tag, then update the node to match. Be aware that existing
+          // nodes with IDs might get moved, so we should clone them?
+          var elToUpdate = el.id ? el.cloneNode(true) : el;
+          updateDOMElement(elToUpdate, tinierEl);
+          if (el.id) container.replaceChild(elToUpdate, el);
+          return render.apply(undefined, [elToUpdate].concat(tinierEl.children));
+        } else {
+          // not a matching tag, then replace the element with a new one
+          var newEl = createDOMElement(tinierEl, container);
+          container.replaceChild(newEl, el);
+          return render.apply(undefined, [newEl].concat(tinierEl.children));
+        }
+      } else {
+        // no el and no ID match, then add a new Element or string node
+        var newEl2 = createDOMElement(tinierEl, container);
+        container.appendChild(newEl2);
+        return render.apply(undefined, [newEl2].concat(tinierEl.children));
+      }
+      // There should not be any bindings here
+    } else if (isTinierBinding(tinierEl)) {
+      throw new Error('A binding cannot have siblings in TinierDOM. ' + 'At binding: [ ' + tinierEl.address.join(', ') + ' ].');
+    } else {
+      var _el = container.childNodes[i];
+      var s = String(tinierEl);
+      // This should be a text node.
+      if (_el instanceof Text) {
+        // If already a text node, then set the text content.
+        _el.textContent = s;
+      } else if (_el) {
+        // If not a text node, then replace it.
+        container.replaceChild(document.createTextNode(s), _el);
+      } else {
+        // If no existing node, then add a new one.
+        container.appendChild(document.createTextNode(s));
+      }
+      // No binding here.
+      return null;
+    }
+  });
+
+  // remove extra nodes
+  // TODO This should not run if the child is a binding. Make a test for
+  // this. When else should it not run?
+  removeExtraNodes(container, tinierElements.length);
+
+  // bindings array to object
+  return objectForBindings(bindingsAr.filter(function (b) {
+    return b !== null;
+  }));
+}
+
+// export API
+exports.default = {
+  arrayOf: arrayOf, objectOf: objectOf, createComponent: createComponent, run: run, bind: bind, createElement: createElement, render: render
+};
+
+},{}]},{},[30])(30)
 });
 //# sourceMappingURL=escher.js.map
