@@ -1467,7 +1467,7 @@ function show_target(map, coords) {
     this.target_coords = coords;
 }
 
-},{"./CobraModel":7,"./DirectionArrow":9,"./PlacedDiv":13,"./complete.ly":27,"./utils":33,"underscore":37}],4:[function(require,module,exports){
+},{"./CobraModel":7,"./DirectionArrow":9,"./PlacedDiv":13,"./complete.ly":27,"./utils":33,"underscore":38}],4:[function(require,module,exports){
 /**
  * For documentation of this class, see docs/javascript_api.rst
  */
@@ -2879,7 +2879,7 @@ function _setup_confirm_before_exit() {
     }.bind(this);
 }
 
-},{"./Brush":2,"./BuildInput":3,"./CallbackManager":5,"./CobraModel":7,"./Map":12,"./QuickJump":14,"./SearchBar":17,"./Settings":19,"./SettingsMenu":20,"./TextEditInput":21,"./Tooltip":22,"./TooltipContainer":23,"./ZoomContainer":25,"./data_styles":28,"./inline":29,"./ui":32,"./utils":33,"underscore":37}],5:[function(require,module,exports){
+},{"./Brush":2,"./BuildInput":3,"./CallbackManager":5,"./CobraModel":7,"./Map":12,"./QuickJump":14,"./SearchBar":17,"./Settings":19,"./SettingsMenu":20,"./TextEditInput":21,"./Tooltip":22,"./TooltipContainer":23,"./ZoomContainer":25,"./data_styles":28,"./inline":29,"./ui":32,"./utils":33,"underscore":38}],5:[function(require,module,exports){
 /** CallbackManager */
 
 var utils = require('./utils');
@@ -2962,7 +2962,7 @@ function run(name, this_arg) {
     return this;
 }
 
-},{"./utils":33,"underscore":37}],6:[function(require,module,exports){
+},{"./utils":33,"underscore":38}],6:[function(require,module,exports){
 /** Canvas. Defines a canvas that accepts drag/zoom events and can be resized.
 
  Canvas(selection, x, y, width, height)
@@ -4579,7 +4579,7 @@ function add_key_listener(key_name, callback, one_time) {
     return unbind;
 }
 
-},{"./utils":33,"mousetrap":36,"underscore":37}],12:[function(require,module,exports){
+},{"./utils":33,"mousetrap":36,"underscore":38}],12:[function(require,module,exports){
 /** Map
 
  Defines the metabolic map data, and manages drawing and building.
@@ -6867,7 +6867,7 @@ function convert_map() {
     this.callback_manager.run('after_convert_map');
 }
 
-},{"./Behavior":1,"./CallbackManager":5,"./Canvas":6,"./Draw":10,"./KeyManager":11,"./Scale":15,"./SearchIndex":18,"./UndoStack":24,"./build":26,"./data_styles":28,"./utils":33,"baconjs":34,"underscore":37}],13:[function(require,module,exports){
+},{"./Behavior":1,"./CallbackManager":5,"./Canvas":6,"./Draw":10,"./KeyManager":11,"./Scale":15,"./SearchIndex":18,"./UndoStack":24,"./build":26,"./data_styles":28,"./utils":33,"baconjs":34,"underscore":38}],13:[function(require,module,exports){
 /**
  * PlacedDiv. A container to position an html div to match the coordinates of a
  * SVG element.
@@ -7801,7 +7801,7 @@ function previous() {
     this.update();
 }
 
-},{"./CallbackManager":5,"./utils":33,"underscore":37}],18:[function(require,module,exports){
+},{"./CallbackManager":5,"./utils":33,"underscore":38}],18:[function(require,module,exports){
 /** SearchIndex. Define an index for searching for reaction and metabolites in
  the map.
 
@@ -8780,7 +8780,7 @@ module.exports = {
   DefaultTooltip: DefaultTooltip,
 }
 
-},{"./utils":33,"tinier":39,"underscore":37}],23:[function(require,module,exports){
+},{"./utils":33,"tinier":37,"underscore":38}],23:[function(require,module,exports){
 var utils = require('./utils')
 var PlacedDiv = require('./PlacedDiv')
 var tinier = require('tinier')
@@ -8823,7 +8823,14 @@ function init (selection, map, tooltip_component, zoom_container) {
 
   // keep a reference to tinier tooltip
   this.tooltip_component = tooltip_component
-  this.tinier_tooltip = tinier.run(tooltip_component, div.node())
+  // if they pass in a function, then use that
+  this.tooltip_function = (_.isFunction(tooltip_component) ?
+                           function (state) { tooltip_component({ state: state, el: div.node() })} :
+                           null)
+  // if they pass in a tinier component, use that
+  this.tinier_tooltip = (tinier.checkType(tinier.COMPONENT, tooltip_component) ?
+                         tinier.run(tooltip_component, div.node()) :
+                         null)
 
   this.delay_hide_timeout = null
 }
@@ -8875,13 +8882,18 @@ function show (type, d) {
   if (_.contains([ 'reaction_label', 'node_label', 'gene_label' ], type)) {
     var coords = { x: d.label_x, y: d.label_y + 10 }
     this.placed_div.place(coords)
-    this.tinier_tooltip.reducers.setContainerData({
+    const data = {
       biggId: d.bigg_id,
       name: d.name,
       loc: coords,
       data: d.data_string,
       type: type.replace('_label', '').replace('node', 'metabolite'),
-    })
+    }
+    if (this.tooltip_function !== null) {
+      this.tooltip_function(data)
+    } else if (this.tinier_tooltip) {
+      this.tinier_tooltip.reducers.setContainerData(data)
+    }
   } else {
     throw new Error('Tooltip not supported for object type ' + type)
   }
@@ -8910,7 +8922,7 @@ function cancel_hide_tooltip () {
   }
 }
 
-},{"./PlacedDiv":13,"./utils":33,"tinier":39,"underscore":37}],24:[function(require,module,exports){
+},{"./PlacedDiv":13,"./utils":33,"tinier":37,"underscore":38}],24:[function(require,module,exports){
 /** UndoStack. A constructor that can be used to store undo info. */
 
 var utils = require('./utils');
@@ -8999,464 +9011,450 @@ function redo() {
 }
 
 },{"./utils":33}],25:[function(require,module,exports){
-/** ZoomContainer
- *
- *
+/**
+ * ZoomContainer
  */
 
 /* global d3 */
 
-var utils = require('./utils');
-var CallbackManager = require('./CallbackManager');
+var utils = require('./utils')
+var CallbackManager = require('./CallbackManager')
 
-var _ = require('underscore');
+var _ = require('underscore')
 
-
-var ZoomContainer = utils.make_class();
+var ZoomContainer = utils.make_class()
 ZoomContainer.prototype = {
-    init: init,
-    set_scroll_behavior: set_scroll_behavior,
-    set_use_3d_transform: set_use_3d_transform,
-    _update_scroll: _update_scroll,
-    toggle_pan_drag: toggle_pan_drag,
-    go_to: go_to,
-    _go_to_3d: _go_to_3d,
-    _clear_3d: _clear_3d,
-    _go_to_svg: _go_to_svg,
-    zoom_by: zoom_by,
-    zoom_in: zoom_in,
-    zoom_out: zoom_out,
-    get_size: get_size,
-    translate_off_screen: translate_off_screen
-};
-module.exports = ZoomContainer;
+  init: init,
+  set_scroll_behavior: set_scroll_behavior,
+  set_use_3d_transform: set_use_3d_transform,
+  _update_scroll: _update_scroll,
+  toggle_pan_drag: toggle_pan_drag,
+  go_to: go_to,
+  _go_to_3d: _go_to_3d,
+  _clear_3d: _clear_3d,
+  _go_to_svg: _go_to_svg,
+  zoom_by: zoom_by,
+  zoom_in: zoom_in,
+  zoom_out: zoom_out,
+  get_size: get_size,
+  translate_off_screen: translate_off_screen,
+}
+module.exports = ZoomContainer
 
+/**
+ * Make a container that will manage panning and zooming. Creates a new SVG
+ * element, with a parent div for CSS3 3D transforms.
+ *
+ * @param {D3 Selection} selection - A d3 selection of a HTML node to put the
+ * zoom container in. Should have a defined width and height.
+ *
+ * @param {String} scroll_behavior - Either 'zoom' or 'pan'.
+ *
+ * @param {Boolean} use_3d_transform - If true, then use CSS3 3D transform to
+ * speed up pan and zoom.
+ *
+ * @param {Boolean} fill_screen - If true, then apply styles to body and
+ * selection that fill the screen. The styled classes are 'fill-screen-body' and
+ * 'fill-screen-div'.
+ */
+function init (selection, scroll_behavior, use_3d_transform, fill_screen) {
+  // set the selection class
+  selection.classed('escher-container', true)
 
-// definitions
-function init(selection, scroll_behavior, use_3d_transform, fill_screen) {
-    /** Make a container that will manage panning and zooming. Creates a new
-     SVG element, with a parent div for CSS3 3D transforms.
+  // fill screen classes
+  if (fill_screen) {
+    d3.select('html').classed('fill-screen', true)
+    d3.select('body').classed('fill-screen', true)
+    selection.classed('fill-screen-div', true)
+  }
 
-     Arguments
-     ---------
+  // make the svg
+  var zoom_container = selection.append('div')
+        .attr('class', 'escher-zoom-container')
 
-     selection: A d3 selection of a HTML node to put the zoom container
-     in. Should have a defined width and height.
+  var css3_transform_container = zoom_container.append('div')
+        .attr('class', 'escher-3d-transform-container')
 
-     scroll_behavior: Either 'zoom' or 'pan'.
+  var svg = css3_transform_container.append('svg')
+        .attr('class', 'escher-svg')
+        .attr('xmlns', 'http://www.w3.org/2000/svg')
 
-     use_3d_transform: If true, then use CSS3 3D transform to speed up pan
-     and zoom.
+  // set up the zoom container
+  svg.select('.zoom-g').remove()
+  var zoomed_sel = svg.append('g').attr('class', 'zoom-g')
 
-     fill_screen: If true, then apply styles to body and selection that fill
-     the screen. The styled classes are "fill-screen-body" and
-     "fill-screen-div".
+  // attributes
+  this.selection = selection
+  this.zoom_container = zoom_container
+  this.css3_transform_container = css3_transform_container
+  this.svg = svg
+  this.zoomed_sel = zoomed_sel
+  this.window_translate = { x: 0, y: 0 }
+  this.window_scale = 1.0
 
-     */
+  this._scroll_behavior = scroll_behavior
+  this._use_3d_transform = use_3d_transform
+  this._pan_drag_on = true
+  this._zoom_behavior = null
+  this._zoom_timeout = null
+  this._svg_scale = this.window_scale
+  this._svg_translate = this.window_translate
+  // this._last_svg_ms = null
 
-    // set the selection class
-    selection.classed('escher-container', true);
+  // set up the callbacks
+  this.callback_manager = new CallbackManager()
 
-    // fill screen classes
-    if (fill_screen) {
-        d3.select('html').classed('fill-screen', true)
-        d3.select('body').classed('fill-screen', true)
-        selection.classed('fill-screen-div', true)
-    }
-
-    // make the svg
-    var zoom_container = selection.append('div')
-            .attr('class', 'escher-zoom-container');
-
-    var css3_transform_container = zoom_container.append('div')
-            .attr('class', 'escher-3d-transform-container');
-
-    var svg = css3_transform_container.append('svg')
-            .attr("class", "escher-svg")
-            .attr('xmlns', "http://www.w3.org/2000/svg");
-
-    // set up the zoom container
-    svg.select(".zoom-g").remove();
-    var zoomed_sel = svg.append("g")
-            .attr("class", "zoom-g");
-
-    // attributes
-    this.selection = selection;
-    this.zoom_container = zoom_container;
-    this.css3_transform_container = css3_transform_container;
-    this.svg = svg;
-    this.zoomed_sel = zoomed_sel;
-    this.window_translate = {x: 0, y: 0};
-    this.window_scale = 1.0;
-
-    this._scroll_behavior = scroll_behavior;
-    this._use_3d_transform = use_3d_transform;
-    this._pan_drag_on = true;
-    this._zoom_behavior = null;
-    this._zoom_timeout = null;
-    this._svg_scale = this.window_scale;
-    this._svg_translate = this.window_translate;
-    // this._last_svg_ms = null;
-
-    // set up the callbacks
-    this.callback_manager = new CallbackManager();
-
-    // update the scroll behavior
-    this._update_scroll();
+  // update the scroll behavior
+  this._update_scroll()
 }
 
-function set_scroll_behavior(scroll_behavior) {
-    /** Set up pan or zoom on scroll.
-     *
-     * Arguments
-     * ---------
-     *
-     * scroll_behavior: 'none', 'pan' or 'zoom'.
-     *
-     */
-
-    this._scroll_behavior = scroll_behavior;
-    this._update_scroll();
+/**
+ * Set up pan or zoom on scroll.
+ * @param {String} scroll_behavior - 'none', 'pan' or 'zoom'.
+ */
+function set_scroll_behavior (scroll_behavior) {
+  this._scroll_behavior = scroll_behavior
+  this._update_scroll()
 }
 
-function set_use_3d_transform(use_3d_transform) {
-    /** Set the option use_3d_transform */
-    this._use_3d_transform = use_3d_transform;
+/**
+ * Set the option use_3d_transform
+ */
+function set_use_3d_transform (use_3d_transform) {
+  this._use_3d_transform = use_3d_transform
 }
 
-function toggle_pan_drag(on_off) {
-    /** Toggle the zoom drag and the cursor UI for it. */
+/**
+ * Toggle the zoom drag and the cursor UI for it.
+ */
+function toggle_pan_drag (on_off) {
+  if (_.isUndefined(on_off)) {
+    this._pan_drag_on = !this._pan_drag_on
+  } else {
+    this._pan_drag_on = on_off
+  }
 
-    if (_.isUndefined(on_off)) {
-        this._pan_drag_on = !this._pan_drag_on;
-    } else {
-        this._pan_drag_on = on_off;
-    }
+  if (this._pan_drag_on) {
+    // turn on the hand
+    this.zoomed_sel
+      .classed('cursor-grab', true).classed('cursor-grabbing', false)
+    this.zoomed_sel
+      .on('mousedown.cursor', function (sel) {
+        sel.classed('cursor-grab', false).classed('cursor-grabbing', true)
+      }.bind(null, this.zoomed_sel))
+      .on('mouseup.cursor', function (sel) {
+        sel.classed('cursor-grab', true).classed('cursor-grabbing', false)
+      }.bind(null, this.zoomed_sel))
+  } else {
+    // turn off the hand
+    this.zoomed_sel.style('cursor', null)
+      .classed('cursor-grab', false)
+      .classed('cursor-grabbing', false)
+    this.zoomed_sel.on('mousedown.cursor', null)
+    this.zoomed_sel.on('mouseup.cursor', null)
+  }
 
-    if (this._pan_drag_on) {
-        // turn on the hand
-        this.zoomed_sel
-            .classed('cursor-grab', true).classed('cursor-grabbing', false);
-        this.zoomed_sel
-            .on('mousedown.cursor', function(sel) {
-                sel.classed('cursor-grab', false).classed('cursor-grabbing', true);
-            }.bind(null, this.zoomed_sel))
-            .on('mouseup.cursor', function(sel) {
-                sel.classed('cursor-grab', true).classed('cursor-grabbing', false);
-            }.bind(null, this.zoomed_sel));
-    } else {
-        // turn off the hand
-        this.zoomed_sel.style('cursor', null)
-            .classed('cursor-grab', false)
-            .classed('cursor-grabbing', false);
-        this.zoomed_sel.on('mousedown.cursor', null);
-        this.zoomed_sel.on('mouseup.cursor', null);
-    }
-
-    // update the behaviors
-    this._update_scroll();
+  // update the behaviors
+  this._update_scroll()
 }
 
-function _update_scroll() {
-    /** Update the pan and zoom behaviors. The behaviors are applied to the
-     * css3_transform_container node.
-     *
-     */
+/**
+ * Update the pan and zoom behaviors. The behaviors are applied to the
+ * css3_transform_container node.
+ */
+function _update_scroll () {
+  if (!_.contains(['zoom', 'pan', 'none'], this._scroll_behavior)) {
+    throw Error('Bad value for scroll_behavior: ' + this._scroll_behavior)
+  }
 
-    if (!_.contains(['zoom', 'pan', 'none'], this._scroll_behavior)) {
-        throw Error('Bad value for scroll_behavior: ' + this._scroll_behavior);
-    }
+  // clear all behaviors
+  this.zoom_container.on('mousewheel.zoom', null) // zoom scroll behaviors
+    .on('DOMMouseScroll.zoom', null) // disables older versions of Firefox
+    .on('wheel.zoom', null) // disables newer versions of Firefox
+    .on('dblclick.zoom', null)
+    .on('mousewheel.escher', null) // pan scroll behaviors
+    .on('DOMMouseScroll.escher', null)
+    .on('wheel.escher', null)
+    .on('mousedown.zoom', null) // drag behaviors
+    .on('touchstart.zoom', null)
+    .on('touchmove.zoom', null)
+    .on('touchend.zoom', null)
 
-    // clear all behaviors
-    this.zoom_container.on("mousewheel.zoom", null) // zoom scroll behaviors
-        .on("DOMMouseScroll.zoom", null) // disables older versions of Firefox
-        .on("wheel.zoom", null) // disables newer versions of Firefox
-        .on('dblclick.zoom', null)
-        .on('mousewheel.escher', null) // pan scroll behaviors
-        .on('DOMMouseScroll.escher', null)
-        .on('wheel.escher', null)
-        .on("mousedown.zoom", null) // drag behaviors
-        .on("touchstart.zoom", null)
-        .on("touchmove.zoom", null)
-        .on("touchend.zoom", null);
+  // This handles dragging to pan, and touch events (in any scroll mode). It
+  // also handles scrolling to zoom (only 'zoom' mode). It also raises an
+  // exception in node, so catch that during testing. This may be a bug with
+  // d3 related to d3 using the global this.document. TODO look into this.
+  try {
+    this._zoom_behavior = d3.behavior.zoom()
+      .on('zoomstart', function () {
+        // prevent default zoom behavior, specifically for mobile pinch
+        // zoom
+        d3.event.sourceEvent.stopPropagation()
+        d3.event.sourceEvent.preventDefault()
+      }.bind(this))
+      .on('zoom', function () {
+        this.go_to(d3.event.scale, {x: d3.event.translate[0], y: d3.event.translate[1]})
+      }.bind(this))
+  } catch (err) {
+    console.log('Not in a browser, so d3.behavior.zoom does not work.')
+    this._zoom_behavior = null
+    return
+  }
 
-    // This handles dragging to pan, and touch events (in any scroll mode). It
-    // also handles scrolling to zoom (only 'zoom' mode). It also raises an
-    // exception in node, so catch that during testing. This may be a bug with
-    // d3 related to d3 using the global this.document. TODO look into this.
-    try {
-        this._zoom_behavior = d3.behavior.zoom()
-            .on("zoom", function() {
-                this.go_to(d3.event.scale, {x: d3.event.translate[0], y: d3.event.translate[1]});
-            }.bind(this));
-    } catch (err) {
-        console.log('Not in a browser, so d3.behavior.zoom does not work.');
-        this._zoom_behavior = null;
-        return;
-    }
+  // set current location
+  this._zoom_behavior.scale(this.window_scale)
+  this._zoom_behavior.translate([ this.window_translate.x,
+                                  this.window_translate.y ])
 
-    // set current location
-    this._zoom_behavior.scale(this.window_scale);
-    this._zoom_behavior.translate([this.window_translate.x,
-                                   this.window_translate.y]);
+  // set it up
+  this.zoom_container.call(this._zoom_behavior)
 
-    // set it up
-    this.zoom_container.call(this._zoom_behavior);
+  // always turn off double-clicking to zoom
+  this.zoom_container.on('dblclick.zoom', null)
 
-    // always turn off double-clicking to zoom
-    this.zoom_container.on('dblclick.zoom', null);
+  // if panning is off, then turn off these listeners
+  if (!this._pan_drag_on) {
+    this.zoom_container.on('mousedown.zoom', null)
+      .on('touchstart.zoom', null)
+      .on('touchmove.zoom', null)
+      .on('touchend.zoom', null)
+  }
 
-    // if panning is off, then turn off these listeners
-    if (!this._pan_drag_on) {
-        this.zoom_container.on("mousedown.zoom", null)
-            .on("touchstart.zoom", null)
-            .on("touchmove.zoom", null)
-            .on("touchend.zoom", null);
-    }
+  // if scroll to zoom is off, then turn off these listeners
+  if (this._scroll_behavior !== 'zoom') {
+    this.zoom_container
+      .on('mousewheel.zoom', null) // zoom scroll behaviors
+      .on('DOMMouseScroll.zoom', null) // disables older versions of Firefox
+      .on('wheel.zoom', null); // disables newer versions of Firefox
+  }
 
-    // if scroll to zoom is off, then turn off these listeners
-    if (this._scroll_behavior !== 'zoom') {
-        this.zoom_container
-            .on("mousewheel.zoom", null) // zoom scroll behaviors
-            .on("DOMMouseScroll.zoom", null) // disables older versions of Firefox
-            .on("wheel.zoom", null); // disables newer versions of Firefox
-    }
+  // add listeners for scrolling to pan
+  if (this._scroll_behavior === 'pan') {
+    // Add the wheel listener
+    var wheel_fn = function () {
+      var ev = d3.event
+      var sensitivity = 0.5
+      // stop scroll in parent elements
+      ev.stopPropagation()
+      ev.preventDefault()
+      ev.returnValue = false
+      // change the location
+      var get_directional_disp = function (wheel_delta, delta) {
+        var the_delt = _.isUndefined(wheel_delta) ? delta : -wheel_delta / 1.5
+        return the_delt * sensitivity
+      }
+      var new_translate = {
+        x: this.window_translate.x - get_directional_disp(ev.wheelDeltaX, ev.deltaX),
+        y: this.window_translate.y - get_directional_disp(ev.wheelDeltaY, ev.deltaY),
+      }
+      this.go_to(this.window_scale, new_translate)
+    }.bind(this)
 
-    // add listeners for scrolling to pan
-    if (this._scroll_behavior === 'pan') {
-        // Add the wheel listener
-        var wheel_fn = function() {
-            var ev = d3.event,
-                sensitivity = 0.5;
-            // stop scroll in parent elements
-            ev.stopPropagation();
-            ev.preventDefault();
-            ev.returnValue = false;
-            // change the location
-            var get_directional_disp = function(wheel_delta, delta) {
-                var the_delt = _.isUndefined(wheel_delta) ? delta : -wheel_delta / 1.5;
-                return the_delt * sensitivity;
-            };
-            var new_translate = {
-                x: this.window_translate.x - get_directional_disp(ev.wheelDeltaX, ev.deltaX),
-                y: this.window_translate.y - get_directional_disp(ev.wheelDeltaY, ev.deltaY)
-            };
-            this.go_to(this.window_scale, new_translate);
-        }.bind(this);
-
-        // apply it
-        this.zoom_container.on('mousewheel.escher', wheel_fn);
-        this.zoom_container.on('DOMMouseScroll.escher', wheel_fn);
-        this.zoom_container.on('wheel.escher', wheel_fn);
-    }
+    // apply it
+    this.zoom_container.on('mousewheel.escher', wheel_fn)
+    this.zoom_container.on('DOMMouseScroll.escher', wheel_fn)
+    this.zoom_container.on('wheel.escher', wheel_fn)
+  }
 }
 
 // functions to scale and translate
-function go_to(scale, translate) {
-    /** Zoom the container to a specified location.
 
-     Arguments
-     ---------
+/**
+ * Zoom the container to a specified location.
+ *
+ * @param {Number} scale - The scale, between 0 and 1.
+ *
+ * @param {Object} translate - The location, of the form {x: 2.0, y: 3.0}.
+ */
+function go_to (scale, translate) {
+  utils.check_undefined(arguments, ['scale', 'translate'])
 
-     scale: The scale, between 0 and 1.
+  var use_3d_transform = this._use_3d_transform
 
-     translate: The location, of the form {x: 2.0, y: 3.0}.
+  // check inputs
+  if (!scale) throw new Error('Bad scale value')
+  if (!translate || !('x' in translate) || !('y' in translate) ||
+      isNaN(translate.x) || isNaN(translate.y))
+    return console.error('Bad translate value')
 
-     */
+  // save inputs
+  this.window_scale = scale
+  this.window_translate = translate
 
-    utils.check_undefined(arguments, ['scale', 'translate']);
+  // save to zoom behavior
+  if (!_.isNull(this._zoom_behavior)) {
+    this._zoom_behavior.scale(scale)
+    var translate_array = [translate.x, translate.y]
+    this._zoom_behavior.translate(translate_array)
+  }
 
-    var use_3d_transform = this._use_3d_transform;
+  if (use_3d_transform) { // 3d tranform
+    // cancel all timeouts
+    if (!_.isNull(this._zoom_timeout))
+      clearTimeout(this._zoom_timeout)
 
-    // check inputs
-    if (!scale) throw new Error('Bad scale value');
-    if (!translate || !('x' in translate) || !('y' in translate) ||
-        isNaN(translate.x) || isNaN(translate.y))
-        return console.error('Bad translate value');
+    // set the 3d transform
+    this._go_to_3d(scale, translate, this._svg_scale, this._svg_translate)
 
-    // save inputs
-    this.window_scale = scale;
-    this.window_translate = translate;
+    // if another go_to does not happen within the delay time, then
+    // redraw the svg
+    this._zoom_timeout = _.delay(function () {
+      // redraw the svg
+      this._go_to_svg(scale, translate)
+    }.bind(this), 100); // between 100 and 600 seems to be usable
 
-    // save to zoom behavior
-    if (!_.isNull(this._zoom_behavior)) {
-        this._zoom_behavior.scale(scale);
-        var translate_array = [translate.x, translate.y];
-        this._zoom_behavior.translate(translate_array);
-    }
+  } else { // no 3d transform
+    this._go_to_svg(scale, translate)
+  }
 
-    if (use_3d_transform) { // 3d tranform
-        // cancel all timeouts
-        if (!_.isNull(this._zoom_timeout))
-            clearTimeout(this._zoom_timeout);
-
-        // set the 3d transform
-        this._go_to_3d(scale, translate,
-                       this._svg_scale, this._svg_translate);
-
-        // if another go_to does not happen within the delay time, then
-        // redraw the svg
-        this._zoom_timeout = _.delay(function() {
-            // redraw the svg
-            this._go_to_svg(scale, translate);
-        }.bind(this), 100); // between 100 and 600 seems to be usable
-
-    } else { // no 3d transform
-        this._go_to_svg(scale, translate);
-    }
-
-    this.callback_manager.run('go_to');
+  this.callback_manager.run('go_to')
 }
 
-function _go_to_3d(scale, translate, svg_scale, svg_translate) {
-    /** Zoom & pan the CSS 3D transform container */
-    var n_scale = scale / svg_scale,
-        n_translate = utils.c_minus_c(
-            translate,
-            utils.c_times_scalar(svg_translate, n_scale)
-        ),
-        tranform = ('translate(' + n_translate.x + 'px,' + n_translate.y + 'px) ' +
-                    'scale(' + n_scale + ')');
-    this.css3_transform_container.style('transform', tranform);
-    this.css3_transform_container.style('-webkit-transform', tranform);
-    this.css3_transform_container.style('transform-origin', '0 0');
-    this.css3_transform_container.style('-webkit-transform-origin', '0 0');
+/** Zoom & pan the CSS 3D transform container */
+function _go_to_3d (scale, translate, svg_scale, svg_translate) {
+  var n_scale = scale / svg_scale
+  var n_translate = utils.c_minus_c(translate,
+                                    utils.c_times_scalar(svg_translate, n_scale))
+  var tranform = ('translate(' + n_translate.x + 'px,' + n_translate.y + 'px) ' +
+                  'scale(' + n_scale + ')')
+  this.css3_transform_container.style('transform', tranform)
+  this.css3_transform_container.style('-webkit-transform', tranform)
+  this.css3_transform_container.style('transform-origin', '0 0')
+  this.css3_transform_container.style('-webkit-transform-origin', '0 0')
 }
 
-function _clear_3d() {
-    this.css3_transform_container.style('transform', null);
-    this.css3_transform_container.style('-webkit-transform', null);
-    this.css3_transform_container.style('transform-origin', null);
-    this.css3_transform_container.style('-webkit-transform-origin', null);
+function _clear_3d () {
+  this.css3_transform_container.style('transform', null)
+  this.css3_transform_container.style('-webkit-transform', null)
+  this.css3_transform_container.style('transform-origin', null)
+  this.css3_transform_container.style('-webkit-transform-origin', null)
 }
 
-function _go_to_svg(scale, translate, callback) {
-    /** Zoom & pan the svg element.
+/**
+ * Zoom & pan the svg element. Also runs the svg_start and svg_finish callbacks.
+ * @param {Number} scale - The scale, between 0 and 1.
+ * @param {Object} translate - The location, of the form {x: 2.0, y: 3.0}.
+ * @param {Function} callback - (optional) A callback to run after scaling.
+ */
+function _go_to_svg (scale, translate, callback) {
+  this.callback_manager.run('svg_start')
 
-     Also runs the svg_start and svg_finish callbacks.
+  // defer to update callbacks
+  _.defer(function () {
 
-     Arguments
-     ---------
+    // start time
+    // var start = new Date().getTime()
 
-     scale: The scale, between 0 and 1.
+    // reset the 3d transform
+    this._clear_3d()
 
-     translate: The location, of the form {x: 2.0, y: 3.0}.
+    // redraw the svg
+    this.zoomed_sel
+      .attr('transform',
+            'translate(' + translate.x + ',' + translate.y + ') ' +
+            'scale(' + scale + ')')
+    // save svg location
+    this._svg_scale = this.window_scale
+    this._svg_translate = this.window_translate
 
-     callback: (optional) A callback to run after scaling.
+    _.defer(function () {
+      // defer for callback after draw
+      this.callback_manager.run('svg_finish')
 
-     */
+      if (!_.isUndefined(callback)) callback()
 
-    this.callback_manager.run('svg_start');
-
-    // defer to update callbacks
-    _.defer(function() {
-
-        // start time
-        // var start = new Date().getTime();
-
-        // reset the 3d transform
-        this._clear_3d();
-
-        // redraw the svg
-        this.zoomed_sel
-            .attr('transform',
-                  'translate(' + translate.x + ',' + translate.y + ') ' +
-                  'scale(' + scale + ')');
-        // save svg location
-        this._svg_scale = this.window_scale;
-        this._svg_translate = this.window_translate;
-
-        _.defer(function() {
-            // defer for callback after draw
-            this.callback_manager.run('svg_finish');
-
-            if (!_.isUndefined(callback)) callback();
-
-            // wait a few ms to get a reliable end time
-            // _.delay(function() {
-            //     // end time
-            //     var t = new Date().getTime() - start;
-            //     this._last_svg_ms = t;
-            // }.bind(this), 20);
-        }.bind(this));
-    }.bind(this));
+      // wait a few ms to get a reliable end time
+      // _.delay(function () {
+      //     // end time
+      //     var t = new Date().getTime() - start
+      //     this._last_svg_ms = t
+      // }.bind(this), 20)
+    }.bind(this))
+  }.bind(this))
 }
 
-function zoom_by(amount) {
-    /** Zoom by a specified multiplier.
-     *
-     * Arguments
-     * ---------
-     *
-     * amount: A multiplier for the zoom. Greater than 1 zooms in and less
-     * than 1 zooms out.
-     *
-     */
-    var size = this.get_size(),
-        shift = { x: size.width/2 - ((size.width/2 - this.window_translate.x) * amount +
-                                     this.window_translate.x),
-                  y: size.height/2 - ((size.height/2 - this.window_translate.y) * amount +
-                                      this.window_translate.y) };
-    this.go_to(this.window_scale * amount,
-               utils.c_plus_c(this.window_translate, shift));
+/**
+ * Zoom by a specified multiplier.
+ *
+ * @param {Number} amount - A multiplier for the zoom. Greater than 1 zooms in
+ * and less than 1 zooms out.
+ */
+function zoom_by (amount) {
+  var size = this.get_size()
+  var shift = {
+    x: size.width/2 - ((size.width/2 - this.window_translate.x) * amount +
+                       this.window_translate.x),
+    y: size.height/2 - ((size.height/2 - this.window_translate.y) * amount +
+                        this.window_translate.y),
+  }
+  this.go_to(this.window_scale * amount,
+             utils.c_plus_c(this.window_translate, shift))
 }
 
-function zoom_in() {
-    /** Zoom in by the default amount with the default options. */
-    this.zoom_by(1.5);
+/** Zoom in by the default amount with the default options. */
+function zoom_in () {
+  this.zoom_by(1.5)
 }
 
-function zoom_out() {
-    /** Zoom out by the default amount with the default options. */
-    this.zoom_by(0.667);
+/** Zoom out by the default amount with the default options. */
+function zoom_out () {
+  this.zoom_by(0.667)
 }
 
-function get_size() {
-    /** Return the size of the zoom container as coordinates.
-     *
-     * e.g. {x: 2, y: 3}
-     *
-     */
-    return { width: parseInt(this.selection.style('width'), 10),
-             height: parseInt(this.selection.style('height'), 10) };
+/**
+ * Return the size of the zoom container as coordinates, e.g. {x: 2, y: 3}
+ */
+function get_size () {
+  return {
+    width: parseInt(this.selection.style('width'), 10),
+    height: parseInt(this.selection.style('height'), 10),
+  }
 }
 
-function translate_off_screen(coords) {
-    /** Shift window if new reaction will draw off the screen */
+/**
+ * Shift window if new reacion will draw off the screen
+ */
+function translate_off_screen (coords) {
+  // TODO BUG not accounting for scale correctly
 
-    // TODO BUG not accounting for scale correctly
+  var margin = 120 // pixels
+  var size = this.get_size()
+  var current = {
+    x: {
+      min: - this.window_translate.x / this.window_scale +
+        margin / this.window_scale,
+      max: - this.window_translate.x / this.window_scale +
+        (size.width-margin) / this.window_scale,
+    },
+    y: {
+      min: - this.window_translate.y / this.window_scale +
+        margin / this.window_scale,
+      max: - this.window_translate.y / this.window_scale +
+        (size.height-margin) / this.window_scale,
+    },
+  }
 
-    var margin = 120, // pixels
-        size = this.get_size(),
-        current = {'x': {'min': - this.window_translate.x / this.window_scale +
-                         margin / this.window_scale,
-                         'max': - this.window_translate.x / this.window_scale +
-                         (size.width-margin) / this.window_scale },
-                   'y': {'min': - this.window_translate.y / this.window_scale +
-                         margin / this.window_scale,
-                         'max': - this.window_translate.y / this.window_scale +
-                         (size.height-margin) / this.window_scale } };
-    if (coords.x < current.x.min) {
-        this.window_translate.x = this.window_translate.x -
-            (coords.x - current.x.min) * this.window_scale;
-        this.go_to(this.window_scale, this.window_translate);
-    } else if (coords.x > current.x.max) {
-        this.window_translate.x = this.window_translate.x -
-            (coords.x - current.x.max) * this.window_scale;
-        this.go_to(this.window_scale, this.window_translate);
-    }
-    if (coords.y < current.y.min) {
-        this.window_translate.y = this.window_translate.y -
-            (coords.y - current.y.min) * this.window_scale;
-        this.go_to(this.window_scale, this.window_translate);
-    } else if (coords.y > current.y.max) {
-        this.window_translate.y = this.window_translate.y -
-            (coords.y - current.y.max) * this.window_scale;
-        this.go_to(this.window_scale, this.window_translate);
-    }
+  if (coords.x < current.x.min) {
+    this.window_translate.x = this.window_translate.x -
+      (coords.x - current.x.min) * this.window_scale
+    this.go_to(this.window_scale, this.window_translate)
+  } else if (coords.x > current.x.max) {
+    this.window_translate.x = this.window_translate.x -
+      (coords.x - current.x.max) * this.window_scale
+    this.go_to(this.window_scale, this.window_translate)
+  }
+  if (coords.y < current.y.min) {
+    this.window_translate.y = this.window_translate.y -
+      (coords.y - current.y.min) * this.window_scale
+    this.go_to(this.window_scale, this.window_translate)
+  } else if (coords.y > current.y.max) {
+    this.window_translate.y = this.window_translate.y -
+      (coords.y - current.y.max) * this.window_scale
+    this.go_to(this.window_scale, this.window_translate)
+  }
 }
 
-},{"./CallbackManager":5,"./utils":33,"underscore":37}],26:[function(require,module,exports){
+},{"./CallbackManager":5,"./utils":33,"underscore":38}],26:[function(require,module,exports){
 /** build */
 
 var utils = require('./utils');
@@ -11048,8 +11046,8 @@ function _parse_float_or_null(x) {
     return (isNaN(f) || parseFloat(x) != f) ? null : f;
 }
 
-},{"./utils":33,"underscore":37}],29:[function(require,module,exports){
-module.exports = {'version': '1.6.0-beta.1', builder_embed: 'svg.escher-svg .gene-label,svg.escher-svg .label{text-rendering:optimizelegibility;cursor:default}svg.escher-svg #mouse-node{fill:none}svg.escher-svg #canvas{stroke:#ccc;stroke-width:7px;fill:#fff}svg.escher-svg .resize-rect{fill:#000;opacity:0;stroke:none}svg.escher-svg .label{font-family:sans-serif;font-style:italic;font-weight:700;font-size:8px;fill:#000;stroke:none}svg.escher-svg .reaction-label{font-size:30px;fill:#202078;text-rendering:optimizelegibility}svg.escher-svg .node-label{font-size:20px}svg.escher-svg .gene-label{font-size:18px;fill:#202078}svg.escher-svg .text-label .label,svg.escher-svg .text-label-input{font-size:50px}svg.escher-svg .node-circle{stroke-width:2px}svg.escher-svg .midmarker-circle,svg.escher-svg .multimarker-circle{fill:#fff;fill-opacity:.2;stroke:#323232}svg.escher-svg g.selected .node-circle{stroke-width:6px;stroke:#1471c7}svg.escher-svg g.selected .label{fill:#1471c7}svg.escher-svg .metabolite-circle{stroke:#a24510;fill:#e0865b}svg.escher-svg g.selected .metabolite-circle{stroke:#050200}svg.escher-svg .segment{stroke:#334E75;stroke-width:10px;fill:none}svg.escher-svg .arrowhead{fill:#334E75}svg.escher-svg .stoichiometry-label-rect{fill:#fff;opacity:.5}svg.escher-svg .stoichiometry-label{fill:#334E75;font-size:17px}svg.escher-svg .membrane{fill:none;stroke:#fb0}svg.escher-svg .brush .extent{fill-opacity:.1;fill:#000;stroke:#fff;shape-rendering:crispEdges}svg.escher-svg #brush-container .background{fill:none}svg.escher-svg .bezier-circle{fill:#fff}svg.escher-svg .bezier-circle.b1{stroke:red}svg.escher-svg .bezier-circle.b2{stroke:#00f}svg.escher-svg .connect-line{stroke:#c8c8c8}svg.escher-svg .direction-arrow{stroke:#000;stroke-width:1px;fill:#fff;opacity:.3}svg.escher-svg .start-reaction-cursor{cursor:pointer}svg.escher-svg .start-reaction-target{stroke:#646464;fill:none;opacity:.5}svg.escher-svg .rotation-center-line{stroke:red;stroke-width:5px}svg.escher-svg .highlight{fill:#D97000;text-decoration:underline}svg.escher-svg .cursor-grab{cursor:grab;cursor:-webkit-grab}svg.escher-svg .cursor-grabbing{cursor:grabbing;cursor:-webkit-grabbing}svg.escher-svg .edit-text-cursor{cursor:text}'};
+},{"./utils":33,"underscore":38}],29:[function(require,module,exports){
+module.exports = {'version': '1.6.0-beta.3', builder_embed: 'svg.escher-svg .gene-label,svg.escher-svg .label{text-rendering:optimizelegibility;cursor:default}svg.escher-svg #mouse-node{fill:none}svg.escher-svg #canvas{stroke:#ccc;stroke-width:7px;fill:#fff}svg.escher-svg .resize-rect{fill:#000;opacity:0;stroke:none}svg.escher-svg .label{font-family:sans-serif;font-style:italic;font-weight:700;font-size:8px;fill:#000;stroke:none}svg.escher-svg .reaction-label{font-size:30px;fill:#202078;text-rendering:optimizelegibility}svg.escher-svg .node-label{font-size:20px}svg.escher-svg .gene-label{font-size:18px;fill:#202078}svg.escher-svg .text-label .label,svg.escher-svg .text-label-input{font-size:50px}svg.escher-svg .node-circle{stroke-width:2px}svg.escher-svg .midmarker-circle,svg.escher-svg .multimarker-circle{fill:#fff;fill-opacity:.2;stroke:#323232}svg.escher-svg g.selected .node-circle{stroke-width:6px;stroke:#1471c7}svg.escher-svg g.selected .label{fill:#1471c7}svg.escher-svg .metabolite-circle{stroke:#a24510;fill:#e0865b}svg.escher-svg g.selected .metabolite-circle{stroke:#050200}svg.escher-svg .segment{stroke:#334E75;stroke-width:10px;fill:none}svg.escher-svg .arrowhead{fill:#334E75}svg.escher-svg .stoichiometry-label-rect{fill:#fff;opacity:.5}svg.escher-svg .stoichiometry-label{fill:#334E75;font-size:17px}svg.escher-svg .membrane{fill:none;stroke:#fb0}svg.escher-svg .brush .extent{fill-opacity:.1;fill:#000;stroke:#fff;shape-rendering:crispEdges}svg.escher-svg #brush-container .background{fill:none}svg.escher-svg .bezier-circle{fill:#fff}svg.escher-svg .bezier-circle.b1{stroke:red}svg.escher-svg .bezier-circle.b2{stroke:#00f}svg.escher-svg .connect-line{stroke:#c8c8c8}svg.escher-svg .direction-arrow{stroke:#000;stroke-width:1px;fill:#fff;opacity:.3}svg.escher-svg .start-reaction-cursor{cursor:pointer}svg.escher-svg .start-reaction-target{stroke:#646464;fill:none;opacity:.5}svg.escher-svg .rotation-center-line{stroke:red;stroke-width:5px}svg.escher-svg .highlight{fill:#D97000;text-decoration:underline}svg.escher-svg .cursor-grab{cursor:grab;cursor:-webkit-grab}svg.escher-svg .cursor-grabbing{cursor:grabbing;cursor:-webkit-grabbing}svg.escher-svg .edit-text-cursor{cursor:text}'};
 },{}],30:[function(require,module,exports){
 /**
 * @license
@@ -11107,7 +11105,7 @@ module.exports = {
   },
 }
 
-},{"./Behavior":1,"./Builder":4,"./CobraModel":7,"./DataMenu":8,"./KeyManager":11,"./Map":12,"./SearchIndex":18,"./Settings":19,"./UndoStack":24,"./ZoomContainer":25,"./data_styles":28,"./inline":29,"./static":31,"./ui":32,"./utils":33,"baconjs":34,"mousetrap":36,"tinier":39,"underscore":37,"vkbeautify":38}],31:[function(require,module,exports){
+},{"./Behavior":1,"./Builder":4,"./CobraModel":7,"./DataMenu":8,"./KeyManager":11,"./Map":12,"./SearchIndex":18,"./Settings":19,"./UndoStack":24,"./ZoomContainer":25,"./data_styles":28,"./inline":29,"./static":31,"./ui":32,"./utils":33,"baconjs":34,"mousetrap":36,"tinier":37,"underscore":38,"vkbeautify":39}],31:[function(require,module,exports){
 /** static */
 
 /* global d3 */
@@ -12395,7 +12393,7 @@ function check_browser(name) {
     }
 }
 
-},{"filesaverjs":35,"underscore":37,"vkbeautify":38}],34:[function(require,module,exports){
+},{"filesaverjs":35,"underscore":38,"vkbeautify":39}],34:[function(require,module,exports){
 (function (global){
 (function() {
 var _slice = Array.prototype.slice;
@@ -12405,7 +12403,7 @@ var Bacon = {
   }
 };
 
-Bacon.version = '0.7.88';
+Bacon.version = '0.7.89';
 
 var Exception = (typeof global !== "undefined" && global !== null ? global : this).Error;
 var nop = function () {};
@@ -14415,7 +14413,7 @@ Bacon.EventStream.prototype.concat = function (right) {
       }
     });
     return function () {
-      return (unsubLeft(), unsubRight());
+      return unsubLeft(), unsubRight();
     };
   });
 };
@@ -14897,6 +14895,12 @@ Bacon.EventStream.prototype.debounceImmediate = function (delay) {
   return withDesc(new Bacon.Desc(this, "debounceImmediate", [delay]), this.flatMapFirst(function (value) {
     return Bacon.once(value).concat(Bacon.later(delay).filter(false));
   }));
+};
+
+Bacon.Property.prototype.debounceImmediate = function (delay) {
+  return this.delayChanges(new Bacon.Desc(this, "debounceImmediate", [delay]), function (changes) {
+    return changes.debounceImmediate(delay);
+  });
 };
 
 Bacon.Observable.prototype.decode = function (cases) {
@@ -17111,6 +17115,1953 @@ if (typeof module !== "undefined" && module.exports) {
 }) (typeof window !== 'undefined' ? window : null, typeof  window !== 'undefined' ? document : null);
 
 },{}],37:[function(require,module,exports){
+'use strict';
+
+exports.__esModule = true;
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+exports.tail = tail;
+exports.head = head;
+exports.fromPairs = fromPairs;
+exports.get = get;
+exports.isUndefined = isUndefined;
+exports.isObject = isObject;
+exports.isArray = isArray;
+exports.isString = isString;
+exports.isNumber = isNumber;
+exports.isBoolean = isBoolean;
+exports.isFunction = isFunction;
+exports.notNull = notNull;
+exports.mapValues = mapValues;
+exports.reduceValues = reduceValues;
+exports.zipArrays = zipArrays;
+exports.zipObjects = zipObjects;
+exports.filterValues = filterValues;
+exports.any = any;
+exports.tagType = tagType;
+exports.checkType = checkType;
+exports.match = match;
+exports.hasChildren = hasChildren;
+exports.checkRenderResult = checkRenderResult;
+exports.updateEl = updateEl;
+exports.addressWith = addressWith;
+exports.addressEqual = addressEqual;
+exports.makeTree = makeTree;
+exports.checkState = checkState;
+exports.diffWithModelMin = diffWithModelMin;
+exports.makeSignal = makeSignal;
+exports.makeOneSignalAPI = makeOneSignalAPI;
+exports.makeChildSignalsAPI = makeChildSignalsAPI;
+exports.reduceChildren = reduceChildren;
+exports.mergeSignals = mergeSignals;
+exports.objectOf = objectOf;
+exports.arrayOf = arrayOf;
+exports.createComponent = createComponent;
+exports.patchMethods = patchMethods;
+exports.makeCallMethod = makeCallMethod;
+exports.makeCallReducer = makeCallReducer;
+exports.makeStateCallers = makeStateCallers;
+exports.run = run;
+exports.addressToObj = addressToObj;
+exports.objectForBindings = objectForBindings;
+exports.createElement = createElement;
+exports.bind = bind;
+exports.createDOMElement = createDOMElement;
+exports.getStyles = getStyles;
+exports.updateDOMElement = updateDOMElement;
+exports.render = render;
+/** @module tinier */
+
+// constants
+var ARRAY_OF = exports.ARRAY_OF = '@TINIER_ARRAY_OF';
+var OBJECT_OF = exports.OBJECT_OF = '@TINIER_OBJECT_OF';
+var COMPONENT = exports.COMPONENT = '@TINIER_COMPONENT';
+var ARRAY = exports.ARRAY = '@TINIER_ARRAY';
+var OBJECT = exports.OBJECT = '@TINIER_OBJECT';
+var NODE = exports.NODE = '@TINIER_NODE';
+var NULL = exports.NULL = '@TINIER_NULL';
+var STRING = exports.STRING = '@TINIER_STRING';
+var NUMBER = exports.NUMBER = '@TINIER_NUMBER';
+var BOOLEAN = exports.BOOLEAN = '@TINIER_BOOLEAN';
+var ANY = exports.ANY = '@TINIER_ANY';
+var NO_ARGUMENT = exports.NO_ARGUMENT = '@TINIER_NO_ARGUMENT';
+var TOP = exports.TOP = '@TINIER_TOP';
+var CREATE = exports.CREATE = '@TINIER_CREATE';
+var UPDATE = exports.UPDATE = '@TINIER_UPDATE';
+var DESTROY = exports.DESTROY = '@TINIER_DESTROY';
+
+// basic functions
+function noop() {}
+
+function constant(val) {
+  return function () {
+    return val;
+  };
+}
+
+function identity(val) {
+  return val;
+}
+
+function last(array) {
+  return array[array.length - 1];
+}
+
+function tail(array) {
+  return [array.slice(0, -1), last(array)];
+}
+
+function head(array) {
+  return [array[0], array.slice(1)];
+}
+
+function fromPairs(pairs) {
+  return pairs.reduce(function (accum, _ref) {
+    var _extends2;
+
+    var key = _ref[0],
+        val = _ref[1];
+
+    return _extends({}, accum, (_extends2 = {}, _extends2[key] = val, _extends2));
+  }, {});
+}
+
+/**
+ * Get the property of the object or index of the array, or return the default
+ * value.
+ * @param {Object|Array} object - An object or array.
+ * @param {String} property - An property of the object.
+ * @return {*} The value of the property or, if not present, the default value.
+ */
+function get(object, property) {
+  return object && typeof object !== 'string' && object.hasOwnProperty(property) ? object[property] : null;
+}
+
+function isUndefined(object) {
+  return typeof object === 'undefined';
+}
+
+/**
+ * Check if the value is an object with enumerable properties. Also returns true
+ * for arrays.
+ * @param {*} value - The value to test.
+ * @return {Boolean}
+ */
+function isObject(object) {
+  return object != null && (typeof object === 'undefined' ? 'undefined' : _typeof(object)) === 'object';
+}
+
+/**
+ * Check if the object is an array
+ * @param {*} object - The object to test.
+ * @return {Boolean}
+ */
+function isArray(object) {
+  return Array.isArray(object);
+}
+
+function isString(v) {
+  return typeof v === 'string';
+}
+
+function isNumber(v) {
+  return typeof v === 'number';
+}
+
+function isBoolean(v) {
+  return typeof v === 'boolean';
+}
+
+/**
+ * Check if the object is a function.
+ * @param {*} object - The object to test.
+ * @return {Boolean}
+ */
+function isFunction(object) {
+  return typeof object === 'function';
+}
+
+function notNull(val) {
+  return val !== null;
+}
+
+/**
+ * Iterate over the keys and values of an object. Uses Object.keys to find
+ * iterable keys.
+ * @param {Object} obj - The input object.
+ * @param {Function} fn - A function that takes the arguments (value, key).
+ * @return {Object} A transformed object with values returned by the function.
+ */
+function mapValues(obj, fn) {
+  var newObj = {};
+  for (var key in obj) {
+    newObj[key] = fn(obj[key], key);
+  }
+  return newObj;
+}
+
+function reduceValues(obj, fn, init) {
+  var accum = init;
+  for (var key in obj) {
+    accum = fn(accum, obj[key], key);
+  }
+  return accum;
+}
+
+function zipArrays(arrays) {
+  var lenLongest = Math.max.apply(null, arrays.filter(function (x) {
+    return x !== null;
+  }).map(function (a) {
+    return a.length;
+  }));
+  var res = [];
+
+  var _loop = function _loop(i) {
+    res.push(arrays.map(function (a) {
+      return a !== null && i < a.length ? a[i] : null;
+    }));
+  };
+
+  for (var i = 0; i < lenLongest; i++) {
+    _loop(i);
+  }
+  return res;
+}
+
+function zipObjects(objects) {
+  var len = objects.length;
+  // find all the keys
+  var allKeys = {};
+  for (var i = 0; i < len; i++) {
+    var object = objects[i];
+    if (object === null) {
+      continue;
+    }
+    for (var k in object) {
+      allKeys[k] = true;
+    }
+  }
+  // make new object
+  var res = {};
+  for (var key in allKeys) {
+    res[key] = Array(len);
+    for (var _i = 0; _i < len; _i++) {
+      var _object = objects[_i];
+      res[key][_i] = get(_object, key);
+    }
+  }
+  return res;
+}
+
+function filterValues(object, fn) {
+  var out = {};
+  for (var key in object) {
+    var value = object[key];
+    if (fn(value, key)) out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Lazy any function.
+ * @param {[Boolean]}
+ * @return {Boolean}
+ */
+function any(ar) {
+  for (var i = 0, l = ar.length; i < l; i++) {
+    var val = ar[i];
+    if (!isBoolean(val)) {
+      throw new Error('Not a boolean: ' + val);
+    }
+    if (val) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Defers calling fn until the current process finishes.
+ */
+function defer(fn) {
+  setTimeout(fn, 1);
+}
+
+/**
+ * Adds a tag to the object.
+ */
+function tagType(type, obj) {
+  if (!isString(type)) {
+    throw new Error('First argument must be a string');
+  }
+  if (!isObject(obj)) {
+    throw new Error('Second argument must be an object');
+  }
+  obj.type = type;
+  return obj;
+}
+
+function checkType(type, obj) {
+  if (obj === null) {
+    return type === NULL;
+  }
+  if (typeof type !== 'string') {
+    throw new Error('First argument must be a string');
+  }
+  if (isUndefined(obj)) {
+    throw new Error('Bad second argument');
+  }
+  return get(obj, 'type') === type;
+}
+
+/**
+ * Basic pattern matching.
+ * @param {Object|null} object - An object generated with tagType, an object, an
+ *                               array, or null.
+ * @param {Object} fns - An object with types for keys and functions for values.
+ *                       Also accepts keys tinier.OBJECT, tinier.ARRAY, and
+ *                       tinier.NULL. To avoid conflict, tinier.OBJECT has the
+ *                       lowest priority.
+ * @param {Function} defaultFn - A function to run if the object type is not
+ *                               found. Takes `object` as a single argument.
+ * @return {*} Return value from the called function.
+ */
+function match(object, fns) {
+  var defaultFn = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : throwUnrecognizedType;
+
+  for (var key in fns) {
+    if (key === NULL && object === null || key === ARRAY && isArray(object) || isObject(object) && checkType(key, object)) {
+      return fns[key](object);
+    }
+  }
+  if (OBJECT in fns && isObject(object)) {
+    return fns[OBJECT](object);
+  }
+  return defaultFn(object);
+}
+
+function throwUnrecognizedType(node) {
+  throw new Error('Unrecognized type in pattern matching: ' + node);
+}
+
+// -------------------------------------------------------------------
+// Update components
+// -------------------------------------------------------------------
+
+/**
+ * Determine whether the model has any child components.
+ */
+function hasChildren(node) {
+  var _match;
+
+  return match(node, (_match = {}, _match[ARRAY_OF] = function () {
+    return true;
+  }, _match[OBJECT_OF] = function () {
+    return true;
+  }, _match[COMPONENT] = function () {
+    return true;
+  }, _match[ARRAY] = function (node) {
+    return any(node.map(hasChildren));
+  }, _match[OBJECT] = function (node) {
+    return any(Object.keys(node).map(function (k) {
+      return hasChildren(node[k]);
+    }));
+  }, _match));
+}
+
+function checkRenderResultRecurse(userBindings, node, state) {
+  var _match2;
+
+  var updateRecurse = function updateRecurse(s, k) {
+    var u = k === null ? userBindings : get(userBindings, k);
+    if (userBindings !== null && u === null) {
+      throw new Error('Shape of the bindings object does not match the model.' + 'Model: ' + node + '  Bindings object: ' + userBindings);
+    }
+  };
+  var recurse = function recurse(n, k) {
+    checkRenderResultRecurse(get(userBindings, k), n, get(state, k));
+  };
+  match(node, (_match2 = {}, _match2[OBJECT_OF] = function (objOf) {
+    // check for extra attributes
+    if (userBindings !== null && any(Object.keys(userBindings).map(function (k) {
+      return !(k in state);
+    }))) {
+      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
+    } else {
+      mapValues(state, updateRecurse);
+    }
+  }, _match2[ARRAY_OF] = function (arOf) {
+    // check array lengths
+    if (userBindings !== null && state.length !== userBindings.length) {
+      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
+    } else {
+      state.map(updateRecurse);
+    }
+  }, _match2[COMPONENT] = function (component) {
+    return updateRecurse(state, null);
+  }, _match2[ARRAY] = function (ar) {
+    if (userBindings !== null && !isArray(userBindings)) {
+      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
+    } else {
+      ar.map(recurse);
+    }
+  }, _match2[OBJECT] = function (obj) {
+    if (userBindings !== null && isArray(userBindings)) {
+      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
+    } else {
+      mapValues(obj, recurse);
+    }
+  }, _match2));
+}
+
+/**
+ * Check the result of render against the model and state.
+ * @param {Object} node - A model node.
+ * @param {*} state - A state node.
+ * @param {Object} userBindings - The new bindings returned by render.
+ * @return {Object} The userBindings object.
+ */
+function checkRenderResult(userBindings, node, state) {
+  checkRenderResultRecurse(userBindings, node, state);
+  return userBindings;
+}
+
+/**
+ * Run lifecycle functions for the component.
+ * @param {Object} address -
+ * @param {Object} component -
+ * @param {Object} state -
+ * @param {Object} diffVal -
+ * @param {Object|null} lastRenderedEl - The element rendered in previously, if
+ *                                       there was one.
+ * @param {Object|null} el - The element to render in provided by
+ *                           component.render.
+ * @param {Object} stateCallers -
+ * @return {Object}
+ */
+function updateEl(address, component, state, diffVal, lastRenderedEl, el, stateCallers, opts) {
+  // the object passed to lifecycle functions
+  var reducers = patchReducersWithState(address, component, stateCallers.callReducer);
+  var signals = patchSignals(address, component, stateCallers.callSignal);
+  var methods = patchMethods(address, component, stateCallers.callMethod, reducers, signals);
+  var arg = { state: state, methods: methods, reducers: reducers, signals: signals, el: el, lastRenderedEl: lastRenderedEl };
+
+  // warn if the el is null
+  if (el === null && !(diffVal === DESTROY) && component.render !== noop) {
+    throw new Error('No binding provided for component ' + component.displayName + ' at [' + address.join(', ') + '].');
+  }
+
+  if (diffVal === DESTROY) {
+    // destroy
+    component.willUnmount(arg);
+    return { bindings: null, lastRenderedEl: lastRenderedEl };
+  } else {
+    // create or update
+    var shouldUpdate = diffVal === CREATE || diffVal === UPDATE || el !== lastRenderedEl;
+
+    if (diffVal === CREATE) component.willMount(arg);else if (shouldUpdate) component.willUpdate(arg);
+
+    if (opts.verbose && shouldUpdate) {
+      console.log('Rendering ' + component.displayName + ' at [' + address.join(', ') + '].');
+    }
+
+    // render
+    var bindings = shouldUpdate ? checkRenderResult(component.render(arg), component.model, state) : null;
+    // check result
+    if (shouldUpdate && bindings === null && hasChildren(component.model)) {
+      throw new Error('The render function of component ' + component.displayName + ' did not return new bindings');
+    }
+
+    // These need to be asynchronous.
+    if (diffVal === CREATE) defer(function () {
+      return component.didMount(arg);
+    });else if (shouldUpdate) defer(function () {
+      return component.didUpdate(arg);
+    });
+
+    // If the component rendered, then change lastEl.
+    return { bindings: bindings, lastRenderedEl: shouldUpdate ? el : lastRenderedEl };
+  }
+}
+
+/**
+ * For a tree, return everything down to the first set of NODES with data for
+ * leaves.
+ */
+function dropNodes(tree) {
+  var _match3;
+
+  return match(tree, (_match3 = {}, _match3[NODE] = function (node) {
+    return node.data;
+  }, _match3[OBJECT] = function (obj) {
+    return mapValues(obj, dropNodes);
+  }, _match3[ARRAY] = function (ar) {
+    return ar.map(dropNodes);
+  }, _match3[NULL] = function () {
+    return null;
+  }, _match3));
+}
+
+/**
+ * Run create, update, and destroy for component.
+ * @param {Array} address - The location of the component in the state.
+ * @param {Object} node - A model or a node within a model.
+ * @param {Object} diff - The diff object for this component.
+ * @param {Object|null} bindings -
+ * @param {Object|null} renderResult -
+ * @param {Object} stateCallers -
+ * @return {Object}
+ */
+function updateComponents(address, node, state, diff, bindings, renderResult, stateCallers, opts) {
+  var _match4;
+
+  var updateRecurse = function updateRecurse(_ref2, k) {
+    var d = _ref2[0],
+        s = _ref2[1];
+
+    // TODO in updateRecurse functions where k can be null, there must be a
+    // nicer way to organize things with fewer null checks
+    var component = k !== null ? node.component : node;
+    var newAddress = k !== null ? addressWith(address, k) : address;
+    var b = k !== null ? get(bindings, k) : bindings;
+    var r = k !== null ? get(renderResult, k) : renderResult;
+    // Update the component. If DESTROY, then there will not be a binding.
+    var res = updateEl(newAddress, component, s, d.data, get(b, 'data'), r, stateCallers, opts);
+    // Fall back on old bindings.
+    var nextRenderResult = res.bindings !== null ? res.bindings : dropNodes(b.children);
+    var data = res.lastRenderedEl;
+    // update children
+    var children = updateComponents(newAddress, component.model, s, d.children, get(b, 'children'), nextRenderResult, stateCallers, opts);
+    return tagType(NODE, { data: data, children: children });
+  };
+  var recurse = function recurse(n, k) {
+    return updateComponents(addressWith(address, k), n, get(state, k), diff[k], get(bindings, k), get(renderResult, k), stateCallers, opts);
+  };
+  return match(node, (_match4 = {}, _match4[OBJECT_OF] = function (objOf) {
+    return mapValues(zipObjects([diff, state]), updateRecurse);
+  }, _match4[ARRAY_OF] = function (arOf) {
+    return zipArrays([diff, state]).map(updateRecurse);
+  }, _match4[COMPONENT] = function (component) {
+    return updateRecurse([diff, state], null);
+  }, _match4[ARRAY] = function (ar) {
+    return ar.map(recurse);
+  }, _match4[OBJECT] = function (obj) {
+    return mapValues(obj, recurse);
+  }, _match4));
+}
+
+// -------------------------------------------------------------------
+// State
+// -------------------------------------------------------------------
+
+function addressWith(address, key) {
+  if (key === null) {
+    return address;
+  } else {
+    var newAddress = address.slice(0);
+    newAddress.push(key);
+    return newAddress;
+  }
+}
+
+function addressEqual(a1, a2) {
+  if (a1 === null || a2 === null || a1.length !== a2.length) return false;
+  return a1.reduce(function (accum, v, i) {
+    return accum && v === a2[i];
+  }, true);
+}
+
+/**
+ * Get the value in a tree.
+ * @param {Array} address -
+ * @param {Object} tree -
+ * @return {*} - The value at the given address.
+ */
+function treeGet(address, tree) {
+  return address.reduce(function (accum, val) {
+    return checkType(NODE, accum) ? accum.children[val] : accum[val];
+  }, tree);
+}
+
+/**
+ * Set the value in a tree; immutable.
+ * @param {Array} address -
+ * @param {Object} tree -
+ * @param {*} value - The new value to set at address.
+ * @return (*) The new tree.
+ */
+function treeSet(address, tree, value) {
+  if (address.length === 0) {
+    return value;
+  } else {
+    var _extends3;
+
+    var _head = head(address),
+        k = _head[0],
+        rest = _head[1];
+
+    return typeof k === 'string' ? _extends({}, tree, (_extends3 = {}, _extends3[k] = treeSet(rest, treeGet([k], tree), value), _extends3)) : [].concat(tree.slice(0, k), [treeSet(rest, treeGet([k], tree), value)], tree.slice(k + 1));
+  }
+}
+
+/**
+ * Set the value in a tree; mutable.
+ * @param {Array} address -
+ * @param {Object} tree -
+ * @param {*} value - The new value to set at address.
+ * @return (*) The tree.
+ */
+function treeSetMutable(address, tree, value) {
+  if (address.length === 0) {
+    return value;
+  } else {
+    var _tail = tail(address),
+        rest = _tail[0],
+        _last = _tail[1];
+
+    var parent = treeGet(rest, tree);
+    if (checkType(NODE, parent)) {
+      parent.children[_last] = value;
+    } else {
+      parent[_last] = value;
+    }
+    return tree;
+  }
+}
+
+function makeTree(init, mutable) {
+  var state = init;
+  return {
+    get: function get(address) {
+      return treeGet(address, state);
+    },
+    set: function set(address, value) {
+      state = mutable ? treeSetMutable(address, state, value) : treeSet(address, state, value);
+    }
+  };
+}
+
+/**
+ * Check that the new state is valid. If not, then throw an Error.
+ * @param {Object} modelNode - A model or a node of a model.
+ * @param {Object} newState - The new state corresponding to modelNode.
+ */
+function checkState(modelNode, newState) {
+  var _match5;
+
+  if (newState === null) {
+    return;
+  }
+  match(modelNode, (_match5 = {}, _match5[OBJECT_OF] = function (objOf) {
+    if (!isObject(newState) || isArray(newState)) {
+      throw new Error('Shape of the new state does not match the model. ' + 'Model: ' + objOf + '  State: ' + newState);
+    } else {
+      mapValues(newState, function (s) {
+        return checkState(modelNode.component.model, s);
+      });
+    }
+  }, _match5[ARRAY_OF] = function (arOf) {
+    if (!isArray(newState)) {
+      throw new Error('Shape of the new state does not match the model.' + 'Model: ' + arOf + '  State: ' + newState);
+    } else {
+      newState.map(function (s) {
+        return checkState(modelNode.component.model, s);
+      });
+    }
+  }, _match5[COMPONENT] = function (component) {
+    checkState(modelNode.model, newState);
+  }, _match5[ARRAY] = function (ar) {
+    if (!isArray(newState)) {
+      throw new Error('Shape of the new state does not match the model.' + 'Model: ' + ar + '  State: ' + newState);
+    } else {
+      ar.map(function (a, i) {
+        return checkState(a, get(newState, i));
+      });
+    }
+  }, _match5[OBJECT] = function (obj) {
+    if (!isObject(newState) || isArray(newState)) {
+      throw new Error('Shape of the new state does not match the model. ' + 'Model: ' + obj + '  State: ' + newState);
+    } else {
+      mapValues(obj, function (o, k) {
+        return checkState(o, get(newState, k));
+      });
+    }
+  }, _match5));
+}
+
+function computeDiffValue(state, lastState, key, isValidFn, shouldUpdate, address, triggeringAddress) {
+  var stateValid = isValidFn(state, key);
+  var lastStateValid = isValidFn(lastState, key);
+  if (stateValid && !lastStateValid) {
+    return CREATE;
+  } else if (stateValid && lastStateValid) {
+    var same = key === null ? state !== lastState : state[key] !== lastState[key];
+    var componentTriggeredUpdate = addressEqual(address, triggeringAddress);
+    if (same && shouldUpdate({ state: state, lastState: lastState, componentTriggeredUpdate: componentTriggeredUpdate })) {
+      return UPDATE;
+    } else {
+      return null;
+    }
+  } else if (!stateValid && lastStateValid) {
+    return DESTROY;
+  } else {
+    return null;
+  }
+}
+
+/**
+ * Compute the full diff tree for the model node. Calls shouldUpdate.
+ */
+function diffWithModel(modelNode, state, lastState, address, triggeringAddress) {
+  var _match6;
+
+  return match(modelNode, (_match6 = {}, _match6[OBJECT_OF] = function (objOf) {
+    var isValidFn = function isValidFn(obj, k) {
+      return isObject(obj) && k in obj && obj[k] !== null;
+    };
+    var l = Object.assign({}, state || {}, lastState || {});
+    return mapValues(l, function (_, k) {
+      var data = computeDiffValue(state, lastState, k, isValidFn, objOf.component.shouldUpdate, addressWith(address, k), triggeringAddress);
+      var children = diffWithModel(objOf.component.model, get(state, k), get(lastState, k), addressWith(address, k), triggeringAddress);
+      return tagType(NODE, { data: data, children: children });
+    });
+  }, _match6[ARRAY_OF] = function (arOf) {
+    var isValidFn = function isValidFn(obj, i) {
+      return isArray(obj) && i < obj.length && obj[i] !== null;
+    };
+    var longest = Math.max(isArray(state) ? state.length : 0, isArray(lastState) ? lastState.length : 0);
+    var l = Array.apply(null, { length: longest });
+    return l.map(function (_, i) {
+      var data = computeDiffValue(state, lastState, i, isValidFn, arOf.component.shouldUpdate, addressWith(address, i), triggeringAddress);
+      var children = diffWithModel(arOf.component.model, get(state, i), get(lastState, i), addressWith(address, i), triggeringAddress);
+      return tagType(NODE, { data: data, children: children });
+    });
+  }, _match6[COMPONENT] = function (component) {
+    var isValidFn = function isValidFn(obj, _) {
+      return obj !== null;
+    };
+    var data = computeDiffValue(state, lastState, null, isValidFn, component.shouldUpdate, address, triggeringAddress);
+    var children = diffWithModel(component.model, state || null, lastState || null, address, triggeringAddress);
+    return tagType(NODE, { data: data, children: children });
+  }, _match6[ARRAY] = function (ar) {
+    return ar.map(function (n, i) {
+      return diffWithModel(n, get(state, i), get(lastState, i), addressWith(address, i), triggeringAddress);
+    });
+  }, _match6[OBJECT] = function (obj) {
+    return mapValues(obj, function (n, k) {
+      return diffWithModel(n, get(state, k), get(lastState, k), addressWith(address, k), triggeringAddress);
+    });
+  }, _match6));
+}
+
+/**
+ * For an array of minSignals and minUpdate trees, return the minimal trees that
+ * represent the whole array.
+ */
+function singleOrAll(modelNode, address, minTreeAr) {
+  var getMin = function getMin(indices) {
+    if (indices.length === 0) {
+      // If all elements in the array are null, return null.
+      return null;
+    } else if (nonNullIndices.signals.length === 1) {
+      // If there is a single value, return that tree, with an updated address.
+      return {
+        minSignals: {
+          diff: minTreeAr.map(function (a) {
+            return a.minSignals.diff;
+          }),
+          address: address,
+          modelNode: modelNode
+        },
+        minUpdate: {
+          diff: minTreeAr.map(function (a) {
+            return a.minUpdate.diff;
+          }),
+          address: address,
+          modelNode: modelNode
+        }
+      };
+    } else {
+      // Otherwise, return full trees from this level.
+      return {
+        minSignals: {
+          diff: minTreeAr.map(function (a) {
+            return a.minSignals.diff;
+          }),
+          address: address,
+          modelNode: modelNode
+        },
+        minUpdate: {
+          diff: minTreeAr.map(function (a) {
+            return a.minUpdate.diff;
+          }),
+          address: address,
+          modelNode: modelNode
+        }
+      };
+    }
+  };
+  // Get the indices where the signal and update trees are not null.
+  var nonNullIndices = minTreeAr.reduce(function (accum, val, i) {
+    return {
+      signals: val.minSignals !== null ? [].concat(accum.signals, [i]) : accum.signals,
+      update: val.minUpdate !== null ? [].concat(accum.update, [i]) : accum.update
+    };
+  }, { signals: [], update: [] });
+  // For each set of indices, test the diffs with these tests to get a minimum
+  // tree.
+  var minSignals = getMin(nonNullIndices.signals);
+  var minUpdate = getMin(nonNullIndices.update);
+  return { minSignals: minSignals, minUpdate: minUpdate };
+}
+
+/**
+ * 1. Run shouldUpdate for every component in the tree.
+ * 2. Return the information about the minimal tree to update with
+ *    updateComponents (whenever shouldUpdate is true) as minUpdate.
+ * 3. Return the information about the minimal tree to update with
+ *    mergeSignals (whenever nodes are added or deleted) as minSignals.
+ *
+ * @param {Object} modelNode - A model or a node of a model.
+ * @param {Object} state - The new state corresponding to modelNode.
+ * @param {Object|null} lastState - The old state corresponding to modelNode.
+ * @param {Array} address -
+ * @param {Array} triggeringAddress -
+ * @returns {Object} An object with the attributes minSignals and
+ *                   minUpdate. Each represents a minimal tree necessary for the
+ *                   appropriate update function and has the attributes diff,
+ *                   modelNode, and address.
+ */
+function diffWithModelMin(modelNode, state, lastState, address, triggeringAddress) {
+  // 1. calculate whole diff tree
+  var diff = diffWithModel(modelNode, state, lastState, address, triggeringAddress);
+  // 2. trim the tree for the two needs
+  return {
+    minSignals: {
+      diff: diff,
+      address: address,
+      modelNode: modelNode
+    },
+    minUpdate: {
+      diff: diff,
+      address: address,
+      modelNode: modelNode
+    }
+  };
+}
+
+// -------------------------------------------------------------------
+// Signals
+// -------------------------------------------------------------------
+
+/**
+ * Make a signal.
+ * @return {Object} A signal with attributes `on` and `call`.
+ */
+function makeSignal() {
+  var res = { _onFns: [] };
+  res.on = function (fn) {
+    if (!isFunction(fn)) {
+      throw new Error('First argument to "on" must be a function');
+    }
+    res._onFns = [].concat(res._onFns, [fn]);
+  };
+  res.call = function () {
+    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    return res._onFns.map(function (fn) {
+      return fn.apply(undefined, args);
+    });
+  };
+  return res;
+}
+
+/**
+ * Create an object that with `on/onEach` and `call` attributes.
+ * @param {Boolean} isCollection -
+ * @return {Object}
+ */
+function makeOneSignalAPI(isCollection) {
+  // make a `_callFn` function that will be replaced later and is the target of
+  // `call`
+  var res = { _callFns: [] };
+  // call will run all functions in `_callFns`
+  res.call = function () {
+    for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      args[_key2] = arguments[_key2];
+    }
+
+    if (args.length > 1 || !isObject(args[0])) {
+      throw new Error('Call only accepts a single object as argument.');
+    }
+    res._callFns.map(function (_ref3) {
+      var fn = _ref3.fn;
+      return fn(args[0]);
+    });
+  };
+  // store callbacks passed with `on` or `onEach`
+  res._onFns = [];
+  var onName = isCollection ? 'onEach' : 'on';
+  res[onName] = function (fn) {
+    if (!isFunction(fn)) {
+      throw new Error('Argument to "' + onName + '" must be a function');
+    }
+    res._onFns.push(function (index) {
+      return function () {
+        if (arguments.length > 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
+          throw new Error('On function only accepts a single object as argument.');
+        }
+        var argObject = typeof index === 'string' ? _extends({ k: index }, arguments.length <= 0 ? undefined : arguments[0]) : typeof index === 'number' ? _extends({ i: index }, arguments.length <= 0 ? undefined : arguments[0]) : arguments.length <= 0 ? undefined : arguments[0];
+        fn(argObject);
+      };
+    });
+  };
+  return res;
+}
+
+/**
+ * Implement the signals API.
+ */
+function makeSignalsAPI(signalNames, isCollection) {
+  return fromPairs(signalNames.map(function (name) {
+    return [name, makeOneSignalAPI(isCollection)];
+  }));
+}
+
+/**
+ * Implement the childSignals API.
+ */
+function makeChildSignalsAPI(model) {
+  var _match7;
+
+  return match(model, (_match7 = {}, _match7[OBJECT_OF] = function (node) {
+    return makeSignalsAPI(node.component.signalNames, true);
+  }, _match7[ARRAY_OF] = function (node) {
+    return makeSignalsAPI(node.component.signalNames, true);
+  }, _match7[COMPONENT] = function (node) {
+    return makeSignalsAPI(node.signalNames, false);
+  }, _match7[ARRAY] = function (ar) {
+    return ar.map(makeChildSignalsAPI).filter(notNull);
+  }, _match7[OBJECT] = function (obj) {
+    return filterValues(mapValues(obj, makeChildSignalsAPI), notNull);
+  }, _match7), constant(null));
+}
+
+/**
+ * Reduce the direct children of the tree.
+ * @param {Object} node - A node in a tree.
+ * @param {Function} fn - Function with arguments (accum, object).
+ * @param {*} init - An initial value.
+ * @param {Array} address - The local address.
+ * @return {*}
+ */
+function reduceChildren(node, fn, init) {
+  var _match8;
+
+  var address = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+
+  return match(node, (_match8 = {}, _match8[NODE] = function (node) {
+    return fn(init, node.data, address);
+  }, _match8[ARRAY] = function (ar) {
+    return ar.reduce(function (accum, n, k) {
+      return reduceChildren(n, fn, accum, addressWith(address, k));
+    }, init);
+  }, _match8[OBJECT] = function (obj) {
+    return reduceValues(obj, function (accum, n, k) {
+      return reduceChildren(n, fn, accum, addressWith(address, k));
+    }, init);
+  }, _match8), constant(init));
+}
+
+/**
+ * Run signalSetup with the component.
+ * @param {Object} component -
+ * @param {Array} address -
+ * @param {Object} stateCallers -
+ * @return {Object} Object with keys signalsAPI and childSignalsAPI.
+ */
+function runSignalSetup(component, address, stateCallers) {
+  var signalsAPI = makeSignalsAPI(component.signalNames, false);
+  var childSignalsAPI = makeChildSignalsAPI(component.model);
+  var reducers = patchReducersWithState(address, component, stateCallers.callReducer);
+  var signals = patchSignals(address, component, stateCallers.callSignal);
+  var methods = patchMethods(address, component, stateCallers.callMethod, reducers, signals);
+  // cannot call signalSetup any earlier because it needs a reference to
+  // `methods`, which must know the address
+  component.signalSetup({
+    methods: methods,
+    reducers: reducers,
+    signals: signalsAPI,
+    childSignals: childSignalsAPI
+  });
+  return { signalsAPI: signalsAPI, childSignalsAPI: childSignalsAPI };
+}
+
+/**
+ * Merge a signals object with signal callbacks from signalSetup.
+ * @param {Object} node - A model node.
+ * @param {Array} address - The address.
+ * @param {Object} diffNode - A node in the diff tree.
+ * @param {Object|null} signalNode - A node in the existing signals tree.
+ * @param {Object} stateCallers - The object with 3 functions to modify global
+ *                                state.
+ * @param {Object|null} upChild - The childSignalsAPI object for the parent
+ *                                Component.
+ * @param {Array|null} upAddress - A local address specifying the location
+ *                                 relative to the parent Component.
+ * @return {Object} The new signals tree.
+ */
+function mergeSignals(node, address, diffNode, signalNode, stateCallers) {
+  var _match9;
+
+  var upChild = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : null;
+  var upAddress = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : null;
+
+  var updateRecurse = function updateRecurse(_ref4, k) {
+    var d = _ref4[0],
+        s = _ref4[1];
+
+    var component = k !== null ? node.component : node;
+    var newAddress = k !== null ? addressWith(address, k) : address;
+    var diffVal = d.data;
+    if (diffVal === CREATE) {
+      var _ret2 = function () {
+        // For create, apply the callbacks
+        var _runSignalSetup = runSignalSetup(component, newAddress, stateCallers),
+            signalsAPI = _runSignalSetup.signalsAPI,
+            childSignalsAPI = _runSignalSetup.childSignalsAPI;
+
+        var newUpAddress = upAddress === null ? null : addressWith(upAddress, k);
+        var signals = mapValues(zipObjects([signalsAPI, upChild]), function (_ref5, key) {
+          var callbackObj = _ref5[0],
+              upCallbackObj = _ref5[1];
+
+          var signal = makeSignal();
+
+          // For each callback, add each onFn to the signal,
+          // and set the callFn to the signal dispatch. Only
+          // on, not onEach, so execute the fn with no
+          // argument.
+          callbackObj._onFns.map(function (fn) {
+            return signal.on(fn());
+          });
+          callbackObj._callFns = [{ fn: signal.call, address: null }];
+
+          // For the childSignalCallbacks from the parent
+          if (upCallbackObj !== null) {
+            upCallbackObj._onFns.map(function (fn) {
+              return signal.on(fn(k));
+            });
+            upCallbackObj._callFns = [].concat(upCallbackObj._callFns, [{ fn: signal.call, address: newUpAddress }]);
+          }
+
+          return signal;
+        });
+        var data = { signals: signals, signalsAPI: signalsAPI, childSignalsAPI: childSignalsAPI };
+
+        // loop through the children of signals and node
+        var children = mergeSignals(component.model, newAddress, d.children, get(s, 'children'), stateCallers, childSignalsAPI, []);
+
+        return {
+          v: tagType(NODE, { data: data, children: children })
+        };
+      }();
+
+      if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+    } else if (diffVal === DESTROY) {
+      // In the case of destroy, this leaf in the signals object will be null.
+      return null;
+    } else {
+      // update
+      var _reduceChildren = reduceChildren(d.children, function (accum, diffVal, address) {
+        var hasCreated = accum.hasCreated || diffVal === CREATE;
+        var destroyed = diffVal === DESTROY ? [].concat(accum.destroyed, [address]) : accum.destroyed;
+        return { hasCreated: hasCreated, destroyed: destroyed };
+      }, { hasCreated: false, destroyed: [] }),
+          hasCreated = _reduceChildren.hasCreated,
+          destroyed = _reduceChildren.destroyed;
+
+      // if there are deleted children, delete references to them
+
+
+      destroyed.map(function (childAddress) {
+        // get the right child within childSignalsAPI
+        var childSignalsAPINode = childAddress.reduce(function (accum, k, i) {
+          if (k in accum) {
+            return accum[k];
+          } else if (i === childAddress.length - 1) {
+            return accum;
+          } else {
+            throw new Error('Bad address ' + childAddress + ' for object ' + s.data.childSignalsAPI);
+          }
+        }, s.data.childSignalsAPI);
+        mapValues(childSignalsAPINode, function (obj) {
+          // remove the matching callFns
+          obj._callFns = obj._callFns.filter(function (_ref6) {
+            var address = _ref6.address;
+
+            return !addressEqual(address, childAddress);
+          });
+        });
+      });
+
+      var newUpChild = hasCreated ? s.data.childSignalsAPI : null;
+      var _newUpAddress = hasCreated ? [] : null;
+      var _children = mergeSignals(component.model, newAddress, d.children, get(s, 'children'), stateCallers, newUpChild, _newUpAddress);
+      return tagType(NODE, { data: get(s, 'data'), children: _children });
+    }
+  };
+
+  var recurse = function recurse(_ref7, k) {
+    var n = _ref7[0],
+        d = _ref7[1],
+        s = _ref7[2],
+        u = _ref7[3];
+
+    var newAddress = addressWith(address, k);
+    var newUpAddress = upAddress === null ? null : addressWith(upAddress, k);
+    return mergeSignals(n, newAddress, d, s, stateCallers, u, newUpAddress);
+  };
+
+  return match(node, (_match9 = {}, _match9[OBJECT_OF] = function (objOf) {
+    return filterValues(mapValues(zipObjects([diffNode, signalNode]), updateRecurse), notNull);
+  }, _match9[ARRAY_OF] = function (arOf) {
+    return zipArrays([diffNode, signalNode]).map(updateRecurse).filter(notNull);
+  }, _match9[COMPONENT] = function (component) {
+    return updateRecurse([diffNode, signalNode], null);
+  }, _match9[ARRAY] = function (ar) {
+    return zipArrays([ar, diffNode, signalNode, upChild]).map(recurse);
+  }, _match9[OBJECT] = function (obj) {
+    return mapValues(zipObjects([obj, diffNode, signalNode, upChild]), recurse);
+  }, _match9), constant(null));
+}
+
+// -------------------------------------------------------------------
+// Component & run functions
+// -------------------------------------------------------------------
+
+/**
+ * Create an object representing many instances of this component, for use in a
+ * tinier model.
+ * @param {Object} component - Tinier component.
+ * @return {Object}
+ */
+function objectOf(component) {
+  return tagType(OBJECT_OF, { component: component });
+}
+
+/**
+ * Create an array representing many instances of this component, for use in a
+ * tinier model.
+ * @param {Object} component - Tinier component.
+ * @return {Object}
+ */
+function arrayOf(component) {
+  return tagType(ARRAY_OF, { component: component });
+}
+
+function defaultShouldUpdate(_ref8) {
+  var state = _ref8.state,
+      lastState = _ref8.lastState;
+
+  return state !== lastState;
+}
+
+function checkInputs(options, defaults) {
+  mapValues(options, function (_, k) {
+    if (!(k in defaults)) {
+      console.error('Unexpected argument ' + k);
+    }
+  });
+}
+
+function patchInitNoArg(init) {
+  return function () {
+    if (arguments.length === 0) {
+      return init({});
+    } else if (arguments.length > 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
+      throw new Error('Reducers can only take 1 or 0 arguments, and the ' + 'argument should be an object.');
+    } else {
+      return init(arguments.length <= 0 ? undefined : arguments[0]);
+    }
+  };
+}
+
+function patchReducersOneArg(reducers) {
+  return mapValues(reducers, function (reducer, name) {
+    return function () {
+      if (arguments.length !== 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
+        throw new Error('Reducers can only take 1 arguments, and the ' + 'argument should be an object.');
+      } else if (!('state' in (arguments.length <= 0 ? undefined : arguments[0]))) {
+        throw new Error('The argument to the reducer must have a "state" ' + 'attribute.');
+      } else {
+        return reducer(arguments.length <= 0 ? undefined : arguments[0]);
+      }
+    };
+  });
+}
+
+/**
+ * Create a tinier component.
+ * @param {Object} componentArgs - Functions defining the Tinier component.
+ * @param {str} componentArgs.displayName - A name for the component.
+ * @param {[str]} componentArgs.signals - An array of signal names.
+ * @param {Object} componentArgs.model - The model object.
+ * @param {Function} componentArgs.init - A function to initialize the state.
+ * @param {Object} componentArgs.reducers -
+ * @param {Object} componentArgs.methods -
+ * @param {Function} componentArgs.willMount -
+ * @param {Function} componentArgs.didMount -
+ * @param {Function} componentArgs.shouldUpdate - Return true if the component
+ *                                                should update, false if it
+ *                                                should not, or null to use to
+ *                                                default behavior (update when
+ *                                                state changes).
+ * @param {Function} componentArgs.willUpdate -
+ * @param {Function} componentArgs.didUpdate -
+ * @param {Function} componentArgs.willUnmount -
+ * @param {Function} componentArgs.render -
+ * @returns {Object} A tinier component.
+ */
+function createComponent() {
+  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+  // default attributes
+  var defaults = {
+    displayName: '',
+    signalNames: [],
+    signalSetup: noop,
+    model: {},
+    init: constant({}),
+    reducers: {},
+    methods: {},
+    willMount: noop,
+    didMount: noop,
+    shouldUpdate: defaultShouldUpdate,
+    willUpdate: noop,
+    didUpdate: noop,
+    willUnmount: noop,
+    render: noop
+  };
+  // check inputs
+  checkInputs(options, defaults);
+
+  if ('init' in options) {
+    options.init = patchInitNoArg(options.init);
+  }
+
+  if ('reducers' in options) {
+    options.reducersRaw = options.reducers;
+    options.reducers = patchReducersOneArg(options.reducers);
+  }
+
+  // check model
+  if (options.model && checkType(COMPONENT, options.model)) {
+    throw new Error('The model cannot be another Component. The top level of ' + 'the model should be an array or an object literal');
+  }
+  // set defaults & tag
+  return tagType(COMPONENT, _extends({}, defaults, options));
+}
+
+function patchReducersWithState(address, component, callReducer) {
+  return mapValues(component.reducersRaw, function (reducer, name) {
+    return function () {
+      if (arguments.length === 0) {
+        callReducer(address, component, reducer, {}, name);
+      } else if (arguments.length > 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
+        throw new Error('Reducers can only take 1 or 0 arguments, and the ' + 'argument should be an object.');
+      } else {
+        callReducer(address, component, reducer, arguments.length <= 0 ? undefined : arguments[0], name);
+      }
+    };
+  });
+}
+
+function patchSignals(address, component, callSignal) {
+  return fromPairs(component.signalNames.map(function (signalName) {
+    return [signalName, { call: function call(arg) {
+        return callSignal(address, signalName, arg);
+      } }];
+  }));
+}
+
+/**
+ * Return an object of functions that call the methods with component-specific
+ * arguments.
+ */
+function patchMethods(address, component, callMethod, reducers, signals) {
+  var methods = mapValues(component.methods, function (method) {
+    return function (arg) {
+      if (typeof Event !== 'undefined' && arg instanceof Event) {
+        callMethod(address, method, signals, methods, reducers, this, arg, {});
+      } else {
+        callMethod(address, method, signals, methods, reducers, null, null, arg);
+      }
+    };
+  });
+  return methods;
+}
+
+function makeCallMethod(stateTree, opts) {
+  /**
+   * Call a method on the local stateTree
+   * @param address
+   * @param method
+   * @param signals
+   * @param methods - Patched method functions.
+   * @param reducers - Patched reducer functions.
+   * @param target - The value of this in the called function.
+   * @param event - The event at the time of the function call.
+   * @param arg - An argument object.
+   */
+  return function (address, method, signals, methods, reducers, target, event, arg) {
+    // check for uninitialized stateTree
+    if (stateTree.get([]) === null) {
+      throw new Error('Cannot call method before the app is initialized (e.g. ' + 'in signalSetup).');
+    }
+    // get the local state
+    var localState = stateTree.get(address);
+    // run the method
+    method(_extends({ state: localState, signals: signals, methods: methods, reducers: reducers, target: target, event: event
+    }, arg));
+  };
+}
+
+/**
+ * Return a callSignal function.
+ */
+function makeCallSignal(signals, opts) {
+  return function (address, signalName, arg) {
+    if (opts.verbose) {
+      console.log('Called signal ' + signalName + ' at [' + address.join(', ') + '].');
+    }
+    signals.get(address).data.signals[signalName].call(arg);
+  };
+}
+
+/**
+ * Return a new callReducer function.
+ * @param {Object} topComponent - The top-level component.
+ * @param {Object} stateTree - The global stateTree.
+ * @param {Object} bindingTree - The global bindingTree.
+ * @param {Object} signalTree - The global signalTree.
+ * @param {Object} stateCallers - An object with functions callMethod,
+ *                                callSignal, and callReducer.
+ * @param {Object} opts - Options from `run`.
+ * @returns {Function} - Call a reducer on the local state
+ *   @param {Array} address - A location, as an array of keys (strings and
+ *                            integers).
+ *   @param {Object} triggeringComponent -
+ *   @param {Function} reducer - A reducer.
+ *   @param {Object} arg - An argument object.
+ *   @param {String} name - The name of the reducer (for logging).
+ */
+function makeCallReducer(topComponent, stateTree, bindingTree, signalTree, stateCallers, opts) {
+  return function (address, triggeringComponent, reducer, arg, name) {
+    if (!isFunction(reducer)) {
+      throw new Error('Reducer ' + name + ' is not a function');
+    }
+    // Run the reducer, and optionally log the result.
+    var localState = stateTree.get(address);
+    var newLocalState = reducer(_extends({}, arg, { state: localState }));
+    if (opts.verbose) {
+      console.log('Called reducer ' + name + ' for ' + triggeringComponent.displayName + ' at [' + address.join(', ') + '].');
+      console.log(localState);
+      console.log(newLocalState);
+    }
+
+    // Check that the new state is valid. If not, throw an Error, and the new
+    // state will be thrown out.
+    checkState(triggeringComponent.model, newLocalState);
+
+    // Set the state with immutable objects and arrays. A reference to oldState
+    // will used for diffing.
+    var lastState = stateTree.get([]);
+    stateTree.set(address, newLocalState);
+
+    // Run diffWithModelMin, which will do a few things:
+    // 1. Run shouldUpdate for every component in the tree.
+    // 2. Return the information about the minimal tree to update with
+    //    updateComponents (whenever shouldUpdate is true) as minUpdate.
+    // 3. Return the information about the minimal tree to update with
+    //    mergeSignals (whenever nodes are added or deleted) as minSignals.
+    // The output objects have the attributes diff, modelNode, and address.
+    // TODO might be best to go back to returning just one full diff here
+
+    var _diffWithModelMin = diffWithModelMin(topComponent, stateTree.get([]), lastState, [], address),
+        minSignals = _diffWithModelMin.minSignals,
+        minUpdate = _diffWithModelMin.minUpdate;
+
+    // Update the signals.
+
+
+    var localSignals = signalTree.get(minSignals.address);
+    var newSignals = mergeSignals(minSignals.modelNode, minSignals.address, minSignals.diff, localSignals, stateCallers);
+    signalTree.set(minSignals.address, newSignals);
+
+    // Update the components.
+    var minUpdateBindings = bindingTree.get(minUpdate.address);
+    var minUpdateEl = minUpdateBindings.data;
+    var minUpdateState = stateTree.get(minUpdate.address);
+    var newBindings = updateComponents(minUpdate.address, minUpdate.modelNode, minUpdateState, minUpdate.diff, minUpdateBindings, minUpdateEl, stateCallers, opts);
+    bindingTree.set(minUpdate.address, newBindings);
+  };
+}
+
+/**
+ * Return an object with functions callMethod, callSignal, and callReducer.
+ * @param {Object} component - The top-level component.
+ * @param {Object} stateTree - The global stateTree.
+ * @param {Object} bindingTree - The global bindings.
+ * @param {Object} signalTree - The global signalTree.
+ * @return {Object} An object with functions callMethod, callSignal, and
+ *                  callReducer.
+ */
+function makeStateCallers(component, stateTree, bindingTree, signalTree, opts) {
+  var stateCallers = {};
+  stateCallers.callMethod = makeCallMethod(stateTree, opts);
+  stateCallers.callSignal = makeCallSignal(signalTree, opts);
+  stateCallers.callReducer = makeCallReducer(component, stateTree, bindingTree, signalTree, stateCallers, opts);
+  return stateCallers;
+}
+
+/**
+ * Run a tinier component.
+ * @param {Object} component - A tinier component.
+ * @param {*} appEl - An element to pass to the component's create, update, and
+ *                    destroy methods.
+ * @param {Object|null} initialState - The initial state. If null, then init()
+ *                                     will be called to initialize the state.
+ * @return {Object} The API functions, incuding getState, signals, and methods.
+ */
+function run(component, appEl) {
+  var opts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+  // Create variables that will store the state for the whole lifetime of the
+  // application. Similar to the redux model.
+  var stateTree = makeTree(null, false);
+  var topBinding = tagType(NODE, { data: appEl, children: null });
+  var bindingTree = makeTree(topBinding, true);
+  var signalTree = makeTree(null, true);
+
+  // functions that access state, signals, and bindings
+  var stateCallers = makeStateCallers(component, stateTree, bindingTree, signalTree, opts);
+
+  // make sure initial state is valid
+  // TODO LEFT OFF ... does this work?
+  // Q: Does the state for a child component need to be defined? Are we checking
+  // all the way down the line?
+  var initialState = 'initialState' in opts ? opts.initialState : component.init();
+
+  // first draw
+  var setStateReducer = function setStateReducer(_ref9) {
+    var newState = _ref9.newState;
+    return newState;
+  };
+  var setState = function setState(newState) {
+    return stateCallers.callReducer([], component, setStateReducer, { newState: newState }, 'setState');
+  };
+  setState(initialState);
+
+  // return API
+  var getState = function getState() {
+    return stateTree.get([]);
+  };
+  // TODO check state
+  var setStateNoRender = function setStateNoRender(newState) {
+    return stateTree.set([], newState);
+  };
+  var reducers = patchReducersWithState([], component, stateCallers.callReducer);
+  var signalsCall = patchSignals([], component, stateCallers.callSignal);
+  var methods = patchMethods([], component, stateCallers.callMethod, reducers, signalsCall);
+  // if state is null, then data will be null
+  var signals = get(signalTree.get([]).data, 'signals');
+
+  return { setState: setState, setStateNoRender: setStateNoRender, getState: getState, reducers: reducers, methods: methods, signals: signals };
+}
+
+// -------------------------------------------------------------------
+// DOM
+// -------------------------------------------------------------------
+
+// constants
+var BINDING = exports.BINDING = '@TINIER_BINDING';
+var ELEMENT = exports.ELEMENT = '@TINIER_ELEMENT';
+var LISTENER_OBJECT = '@TINIER_LISTENERS';
+
+function reverseObject(obj) {
+  var newObj = {};
+  for (var k in obj) {
+    newObj[obj[k]] = k;
+  }
+  return newObj;
+}
+
+// some attribute renaming as seen in React
+var ATTRIBUTE_RENAME = {};
+var ATTRIBUTE_RENAME_REV = reverseObject(ATTRIBUTE_RENAME);
+var ATTRIBUTE_APPLY = {
+  checked: function checked(el, name) {
+    var val = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+    if (name !== 'input') {
+      throw new Error('"checked" attribute is only supported on input elements.');
+    }
+    el.checked = val;
+  },
+  value: function value(el, name) {
+    var val = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+    if (['input', 'textarea'].indexOf(name) === -1) {
+      throw new Error('"value" attribute is only supported on input and ' + 'textarea elements.');
+    }
+    el.value = val;
+  }
+};
+
+// namespace management inspired by of D3.js, Mike Bostock, BSD license
+var NAMESPACES = {
+  svg: 'http://www.w3.org/2000/svg',
+  xhtml: 'http://www.w3.org/1999/xhtml',
+  xlink: 'http://www.w3.org/1999/xlink',
+  xml: 'http://www.w3.org/XML/1998/namespace',
+  xmlns: 'http://www.w3.org/2000/xmlns/'
+};
+
+/**
+ * Turn an array of objects into a new object of objects where the keys are
+ * given by the value of `key` in each child object.
+ * @param {[Object]} arr - The array of objects.
+ * @param {String} key - The key to look for.
+ */
+function keyBy(arr, key) {
+  var obj = {};
+  arr.map(function (x) {
+    return obj[x[key]] = x;
+  });
+  return obj;
+}
+
+/**
+ *
+ */
+function addressToObj(address, val) {
+  // If address is []
+  if (isUndefined(address[0])) {
+    return val;
+  }
+  var f = address[0];
+  if (isString(f)) {
+    var _ref10;
+
+    return _ref10 = {}, _ref10[f] = addressToObj(address.slice(1), val), _ref10;
+  } else {
+    var ar = Array(f + 1);
+    ar[f] = addressToObj(address.slice(1), val);
+    return ar;
+  }
+}
+
+function objectForBindingsArray(bindings) {
+  // Check arrays and find longest internal array.
+  var longest = 0;
+  for (var j = 0, l = bindings.length; j < l; j++) {
+    var binding = bindings[j];
+    if (!isArray(binding)) {
+      throw Error('Incompatible bindings: mix of types');
+    }
+    var len = binding.length;
+    if (len > longest) {
+      longest = len;
+    }
+  }
+  var acc = [];
+  for (var i = 0; i < longest; i++) {
+    for (var _j = 0, _l = bindings.length; _j < _l; _j++) {
+      var _binding = bindings[_j];
+      if (_binding[i] != null) {
+        // not null or undefined
+        if (acc[i] != null) {
+          // not null or undefined
+          acc[i] = objectForBindings([_binding[i], acc[i]]);
+        } else {
+          acc[i] = _binding[i];
+        }
+      }
+    }
+  }
+  return acc;
+}
+
+function objectForBindingsObject(bindings) {
+  return bindings.reduce(function (acc, binding) {
+    if (isArray(binding)) throw Error('Incompatible bindings: mix of types');
+    for (var k in binding) {
+      if (binding[k]) {
+        if (acc[k]) {
+          acc[k] = objectForBindings([binding[k], acc[k]]);
+        } else {
+          acc[k] = binding[k];
+        }
+      }
+    }
+    return acc;
+  }, {});
+}
+
+function objectForBindings(bindings) {
+  return isArray(bindings[0]) ? objectForBindingsArray(bindings) : objectForBindingsObject(bindings);
+}
+
+// Make sure default is null so undefined type constant do not match
+var isTinierBinding = function isTinierBinding(obj) {
+  return checkType(BINDING, obj);
+};
+var isTinierElement = function isTinierElement(obj) {
+  return checkType(ELEMENT, obj);
+};
+var isElement = function isElement(v) {
+  return v instanceof Element;
+};
+
+/**
+ * Create a new TinierDOM element.
+ * @param {String} tagName - The name for the element.
+ * @param {Object|null} attributesIn - The attributes. Note that JSX will pass
+ *                                     null in when there are no attributes. In
+ *                                     the resulting object, this will be an
+ *                                     empty object {}.
+ * @param {Object[]|Object|String} ...children - A single binding or a mix of
+ *                                               elements and strings.
+ * @return {Object} A TinierDOM element.
+ */
+function createElement(tagName, attributesIn) {
+  for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
+    children[_key3 - 2] = arguments[_key3];
+  }
+
+  var attributes = attributesIn == null ? {} : attributesIn;
+  return tagType(ELEMENT, { tagName: tagName, attributes: attributes, children: children });
+}
+
+/**
+ * Create a new TinierDOM binding.
+ * @param {Array|String|Number} addressIn - An address array, or single key or
+ *                                          index.
+ * @return {Object} A TinierDOM binding.
+ */
+function bind(addressIn) {
+  var address = isArray(addressIn) ? addressIn : [addressIn];
+  return tagType(BINDING, { address: address });
+}
+
+function explicitNamespace(name) {
+  var i = name.indexOf(':');
+  if (i !== -1) {
+    var prefix = name.slice(0, i);
+    if (prefix in NAMESPACES) {
+      // for xmlns, treat the whole name (e.g. xmlns:xlink) as the name
+      var newName = prefix === 'xmlns' ? name : name.slice(i + 1);
+      return { name: newName, explicit: NAMESPACES[prefix] };
+    } else {
+      return { name: name, explicit: null };
+    }
+  } else {
+    return { name: name, explicit: null };
+  }
+}
+
+/**
+ * Create a DOM element, inheriting namespace or choosing one based on tag.
+ * @param {Object} tinierEl - A TinierDOM element.
+ * @param {Object} parent - The parent el.
+ * @return {Object} The DOM element.
+ */
+function createDOMElement(tinierEl, parent) {
+  var tag = tinierEl.tagName;
+
+  var _explicitNamespace = explicitNamespace(tag),
+      name = _explicitNamespace.name,
+      explicit = _explicitNamespace.explicit;
+
+  var ns = explicit !== null ? explicit : tag in NAMESPACES ? NAMESPACES[tag] : parent.namespaceURI;
+  var el = ns === NAMESPACES.xhtml ? document.createElement(name) : document.createElementNS(ns, name);
+  return updateDOMElement(el, tinierEl);
+}
+
+function getStyles(cssText) {
+  var reg = /([^:; ]+):/g;
+  var res = [];
+  var ar = void 0;
+  while ((ar = reg.exec(cssText)) !== null) {
+    res.push(ar[1]);
+  }
+  return res;
+}
+
+function toCamelCase(name) {
+  return name
+  // Uppercase the first character in each group immediately following a dash
+  .replace(/-(.)/g, function (m) {
+    return m.toUpperCase();
+  })
+  // Remove dashes
+  .replace(/-/g, '');
+}
+
+function stripOn(name) {
+  return name.slice(2).toLowerCase();
+}
+
+function setAttributeCheckBool(namespace, el, name, val) {
+  // set boolean appropriately
+  var valToSet = val === true ? name : val;
+  if (namespace === NAMESPACES.xhtml) {
+    el.setAttribute(name, valToSet);
+  } else {
+    el.setAttributeNS(namespace, name, valToSet);
+  }
+}
+
+/**
+ * Update the DOM element to match a TinierDOM element.
+ * @param {Element} el - An existing DOM element.
+ * @param {Object} tinierEl - A TinierDOM element.
+ */
+function updateDOMElement(el, tinierEl) {
+  var thenFn = null;
+  var parentNamespace = el.namespaceURI;
+
+  // remove event listeners first, because they cannot simply be replaced
+  if (el.hasOwnProperty(LISTENER_OBJECT)) {
+    mapValues(el[LISTENER_OBJECT], function (onFn, name) {
+      el.removeEventListener(name, onFn);
+    });
+    delete el[LISTENER_OBJECT];
+  }
+
+  // Update the attributes.
+  // TODO is it faster to check first, or set first?
+  mapValues(tinierEl.attributes, function (v, k) {
+    if (k === 'id') {
+      // ID is set directly
+      el.id = v;
+    } else if (k === 'style' && !isString(v)) {
+      // For a style object. For a style string, use setAttribute below.
+      mapValues(v, function (sv, sk) {
+        el.style.setProperty(sk, sv);
+      });
+    } else if (k.indexOf('on') === 0) {
+      // Special handling for listeners
+      if (!el.hasOwnProperty(LISTENER_OBJECT)) {
+        el[LISTENER_OBJECT] = {};
+      }
+      // allow null
+      if (v !== null) {
+        var name = stripOn(k);
+        if (!isFunction(v) && v !== null) {
+          throw new Error(v + ' is not a function.');
+        }
+        el[LISTENER_OBJECT][name] = v;
+        el.addEventListener(name, v);
+      }
+    } else if (k in ATTRIBUTE_RENAME) {
+      // By default, set the attribute.
+      var _explicitNamespace2 = explicitNamespace(k),
+          _name = _explicitNamespace2.name,
+          explicit = _explicitNamespace2.explicit;
+
+      setAttributeCheckBool(explicit !== null ? explicit : parentNamespace, el, ATTRIBUTE_RENAME[explicit], v);
+    } else if (k in ATTRIBUTE_APPLY) {
+      ATTRIBUTE_APPLY[k](el, tinierEl.tagName, v);
+    } else if (k === 'then') {
+      if (v !== null) {
+        if (!isFunction(v)) {
+          throw new Error(v + ' is not a function or null.');
+        }
+        thenFn = v;
+      }
+    } else {
+      // By default, set the attribute.
+      var _explicitNamespace3 = explicitNamespace(k),
+          _name2 = _explicitNamespace3.name,
+          _explicit = _explicitNamespace3.explicit;
+
+      setAttributeCheckBool(_explicit !== null ? _explicit : parentNamespace, el, _name2, v);
+    }
+  });
+  // Delete attributes if not provided. First, loop through this attributes
+  // object to get a nice array.
+  var attributeNames = [];
+  for (var i = 0, l = el.attributes.length; i < l; i++) {
+    attributeNames.push(el.attributes[i].name);
+  }
+  attributeNames.filter(function (k) {
+    return !(k in tinierEl.attributes) || tinierEl.attributes[k] === false;
+  }).map(function (k) {
+    if (k in ATTRIBUTE_RENAME_REV) {
+      el.removeAttribute(ATTRIBUTE_RENAME_REV[k]);
+    } else if (k in ATTRIBUTE_APPLY) {
+      ATTRIBUTE_APPLY[k](el, tinierEl.tagName);
+    } else {
+      el.removeAttribute(k);
+    }
+  });
+  // Delete styles if not provided.
+  var tStyle = tinierEl.attributes.style;
+  if (tStyle && !isString(tStyle)) {
+    getStyles(el.style.cssText).filter(function (a) {
+      return !(a in tStyle || toCamelCase(a) in tStyle);
+    }).map(function (a) {
+      return el.style.removeProperty(a);
+    });
+  }
+
+  // call the callback
+  if (thenFn) {
+    thenFn(el);
+  }
+
+  return el;
+}
+
+/**
+* flatten the elements array
+*/
+function flattenElementsAr(ar) {
+  return ar.reduce(function (acc, el) {
+    return isArray(el) ? [].concat(acc, el) : [].concat(acc, [el]);
+  }, []).filter(notNull); // null means ignore
+}
+
+function removeExtraNodes(container, length) {
+  for (var i = container.childNodes.length - 1; i >= length; i--) {
+    container.removeChild(container.childNodes[i]);
+  }
+}
+
+/**
+ * Render the given element tree into the container.
+ * @param {Element} container - A DOM element that will be the container for
+ *                              the renedered element tree.
+ * @param {...[Object|String]|Object|String} tinierElementsAr -
+ *   Any number of TinierDOM elements or strings that will be rendered.
+ * @return {Object} A nested data structure of bindings for use in Tinier.
+ */
+function render(container) {
+  // check arguments
+  if (!isElement(container)) {
+    throw new Error('First argument must be a DOM Element.');
+  }
+
+  for (var _len4 = arguments.length, tinierElementsAr = Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
+    tinierElementsAr[_key4 - 1] = arguments[_key4];
+  }
+
+  var tinierElements = flattenElementsAr(tinierElementsAr);
+
+  var first = get(tinierElements, 0);
+  if (isTinierBinding(first)) {
+    if (tinierElements.length !== 1) {
+      throw new Error('A binding cannot have siblings in TinierDOM. ' + 'At binding: [ ' + first.address.join(', ') + ' ].');
+    }
+    return objectForBindings([addressToObj(first.address, container)]);
+  }
+
+  // get the children with IDs
+  var childrenWithKeys = Array.from(container.children).filter(function (c) {
+    return c.id;
+  });
+  var elementsByID = keyBy(childrenWithKeys, 'id');
+
+  // render each element
+  var bindingsAr = tinierElements.map(function (tinierEl, i) {
+    // If an element if a binding, then there can only be one child.
+    if (isUndefined(tinierEl)) {
+      // cannot be undefined
+      throw new Error('Children in Tinier Elements cannot be undefined.');
+    } else if (isTinierElement(tinierEl)) {
+      // container.childNodes is a live collection, so get the current node at
+      // this index.
+      var el = container.childNodes[i];
+      // tinierEl is a TinierDOM element.
+      if (tinierEl.attributes.id in elementsByID) {
+        // el exist, then check for a matching node by ID
+        var movedEl = elementsByID[tinierEl.attributes.id];
+        if (el) {
+          // if match and existing el, then replace the element
+          container.replaceChild(movedEl, el);
+        } else {
+          // if match and el is undefined, then append the element
+          container.appendChild(movedEl);
+        }
+        // then render children
+        return render.apply(undefined, [movedEl].concat(tinierEl.children));
+      } else if (el) {
+        // both defined, check type and id
+        if (el.tagName && el.tagName.toLowerCase() === tinierEl.tagName.toLowerCase()) {
+          // matching tag, then update the node to match. Be aware that existing
+          // nodes with IDs might get moved, so we should clone them?
+          var elToUpdate = el.id ? el.cloneNode(true) : el;
+          updateDOMElement(elToUpdate, tinierEl);
+          if (el.id) container.replaceChild(elToUpdate, el);
+          return render.apply(undefined, [elToUpdate].concat(tinierEl.children));
+        } else {
+          // not a matching tag, then replace the element with a new one
+          var newEl = createDOMElement(tinierEl, container);
+          container.replaceChild(newEl, el);
+          return render.apply(undefined, [newEl].concat(tinierEl.children));
+        }
+      } else {
+        // no el and no ID match, then add a new Element or string node
+        var newEl2 = createDOMElement(tinierEl, container);
+        container.appendChild(newEl2);
+        return render.apply(undefined, [newEl2].concat(tinierEl.children));
+      }
+      // There should not be any bindings here
+    } else if (isTinierBinding(tinierEl)) {
+      throw new Error('A binding cannot have siblings in TinierDOM. ' + 'At binding: [ ' + tinierEl.address.join(', ') + ' ].');
+    } else {
+      var _el = container.childNodes[i];
+      var s = String(tinierEl);
+      // This should be a text node.
+      if (_el instanceof Text) {
+        // If already a text node, then set the text content.
+        _el.textContent = s;
+      } else if (_el) {
+        // If not a text node, then replace it.
+        container.replaceChild(document.createTextNode(s), _el);
+      } else {
+        // If no existing node, then add a new one.
+        container.appendChild(document.createTextNode(s));
+      }
+      // No binding here.
+      return null;
+    }
+  });
+
+  // remove extra nodes
+  // TODO This should not run if the child is a binding. Make a test for
+  // this. When else should it not run?
+  removeExtraNodes(container, tinierElements.length);
+
+  // bindings array to object
+  return objectForBindings(bindingsAr.filter(function (b) {
+    return b !== null;
+  }));
+}
+
+// export API
+exports.default = {
+  arrayOf: arrayOf, objectOf: objectOf, createComponent: createComponent, run: run, bind: bind, createElement: createElement, render: render
+};
+
+},{}],38:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -18660,7 +20611,7 @@ if (typeof module !== "undefined" && module.exports) {
   }
 }.call(this));
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 /**
 * vkBeautify - javascript plugin to pretty-print or minify text in XML, JSON, CSS and SQL formats.
 *  
@@ -19014,1959 +20965,6 @@ vkbeautify.prototype.sqlmin = function(text) {
 
 module.exports = new vkbeautify();
 
-
-},{}],39:[function(require,module,exports){
-'use strict';
-
-exports.__esModule = true;
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-exports.tail = tail;
-exports.head = head;
-exports.fromPairs = fromPairs;
-exports.get = get;
-exports.isUndefined = isUndefined;
-exports.isObject = isObject;
-exports.isArray = isArray;
-exports.isString = isString;
-exports.isNumber = isNumber;
-exports.isBoolean = isBoolean;
-exports.isFunction = isFunction;
-exports.notNull = notNull;
-exports.mapValues = mapValues;
-exports.reduceValues = reduceValues;
-exports.zipArrays = zipArrays;
-exports.zipObjects = zipObjects;
-exports.filterValues = filterValues;
-exports.any = any;
-exports.tagType = tagType;
-exports.checkType = checkType;
-exports.match = match;
-exports.hasChildren = hasChildren;
-exports.checkRenderResult = checkRenderResult;
-exports.updateEl = updateEl;
-exports.addressWith = addressWith;
-exports.addressEqual = addressEqual;
-exports.makeTree = makeTree;
-exports.checkState = checkState;
-exports.diffWithModelMin = diffWithModelMin;
-exports.makeSignal = makeSignal;
-exports.makeOneSignalAPI = makeOneSignalAPI;
-exports.makeChildSignalsAPI = makeChildSignalsAPI;
-exports.reduceChildren = reduceChildren;
-exports.mergeSignals = mergeSignals;
-exports.objectOf = objectOf;
-exports.arrayOf = arrayOf;
-exports.createComponent = createComponent;
-exports.patchMethods = patchMethods;
-exports.makeCallMethod = makeCallMethod;
-exports.makeCallReducer = makeCallReducer;
-exports.makeStateCallers = makeStateCallers;
-exports.run = run;
-exports.addressToObj = addressToObj;
-exports.objectForBindings = objectForBindings;
-exports.createElement = createElement;
-exports.bind = bind;
-exports.createDOMElement = createDOMElement;
-exports.getStyles = getStyles;
-exports.updateDOMElement = updateDOMElement;
-exports.render = render;
-/** @module tinier */
-
-// constants
-var ARRAY_OF = exports.ARRAY_OF = '@TINIER_ARRAY_OF';
-var OBJECT_OF = exports.OBJECT_OF = '@TINIER_OBJECT_OF';
-var COMPONENT = exports.COMPONENT = '@TINIER_COMPONENT';
-var ARRAY = exports.ARRAY = '@TINIER_ARRAY';
-var OBJECT = exports.OBJECT = '@TINIER_OBJECT';
-var NODE = exports.NODE = '@TINIER_NODE';
-var NULL = exports.NULL = '@TINIER_NULL';
-var STRING = exports.STRING = '@TINIER_STRING';
-var NUMBER = exports.NUMBER = '@TINIER_NUMBER';
-var BOOLEAN = exports.BOOLEAN = '@TINIER_BOOLEAN';
-var ANY = exports.ANY = '@TINIER_ANY';
-var NO_ARGUMENT = exports.NO_ARGUMENT = '@TINIER_NO_ARGUMENT';
-var TOP = exports.TOP = '@TINIER_TOP';
-var CREATE = exports.CREATE = '@TINIER_CREATE';
-var UPDATE = exports.UPDATE = '@TINIER_UPDATE';
-var DESTROY = exports.DESTROY = '@TINIER_DESTROY';
-
-// basic functions
-function noop() {}
-
-function constant(val) {
-  return function () {
-    return val;
-  };
-}
-
-function identity(val) {
-  return val;
-}
-
-function last(array) {
-  return array[array.length - 1];
-}
-
-function tail(array) {
-  return [array.slice(0, -1), last(array)];
-}
-
-function head(array) {
-  return [array[0], array.slice(1)];
-}
-
-function fromPairs(pairs) {
-  return pairs.reduce(function (accum, _ref) {
-    var _extends2;
-
-    var key = _ref[0],
-        val = _ref[1];
-
-    return _extends({}, accum, (_extends2 = {}, _extends2[key] = val, _extends2));
-  }, {});
-}
-
-/**
- * Get the property of the object or index of the array, or return the default
- * value.
- * @param {Object|Array} object - An object or array.
- * @param {String} property - An property of the object.
- * @return {*} The value of the property or, if not present, the default value.
- */
-function get(object, property) {
-  return object && typeof object !== 'string' && object.hasOwnProperty(property) ? object[property] : null;
-}
-
-function isUndefined(object) {
-  return typeof object === 'undefined';
-}
-
-/**
- * Check if the value is an object with enumerable properties. Also returns true
- * for arrays.
- * @param {*} value - The value to test.
- * @return {Boolean}
- */
-function isObject(object) {
-  return object != null && (typeof object === 'undefined' ? 'undefined' : _typeof(object)) === 'object';
-}
-
-/**
- * Check if the object is an array
- * @param {*} object - The object to test.
- * @return {Boolean}
- */
-function isArray(object) {
-  return Array.isArray(object);
-}
-
-function isString(v) {
-  return typeof v === 'string';
-}
-
-function isNumber(v) {
-  return typeof v === 'number';
-}
-
-function isBoolean(v) {
-  return typeof v === 'boolean';
-}
-
-/**
- * Check if the object is a function.
- * @param {*} object - The object to test.
- * @return {Boolean}
- */
-function isFunction(object) {
-  return typeof object === 'function';
-}
-
-function notNull(val) {
-  return val !== null;
-}
-
-/**
- * Iterate over the keys and values of an object. Uses Object.keys to find
- * iterable keys.
- * @param {Object} obj - The input object.
- * @param {Function} fn - A function that takes the arguments (value, key).
- * @return {Object} A transformed object with values returned by the function.
- */
-function mapValues(obj, fn) {
-  var newObj = {};
-  for (var key in obj) {
-    newObj[key] = fn(obj[key], key);
-  }
-  return newObj;
-}
-
-function reduceValues(obj, fn, init) {
-  var accum = init;
-  for (var key in obj) {
-    accum = fn(accum, obj[key], key);
-  }
-  return accum;
-}
-
-function zipArrays(arrays) {
-  var lenLongest = Math.max.apply(null, arrays.filter(function (x) {
-    return x !== null;
-  }).map(function (a) {
-    return a.length;
-  }));
-  var res = [];
-
-  var _loop = function _loop(i) {
-    res.push(arrays.map(function (a) {
-      return a !== null && i < a.length ? a[i] : null;
-    }));
-  };
-
-  for (var i = 0; i < lenLongest; i++) {
-    _loop(i);
-  }
-  return res;
-}
-
-function zipObjects(objects) {
-  var len = objects.length;
-  // find all the keys
-  var allKeys = {};
-  for (var i = 0; i < len; i++) {
-    var object = objects[i];
-    if (object === null) {
-      continue;
-    }
-    for (var k in object) {
-      allKeys[k] = true;
-    }
-  }
-  // make new object
-  var res = {};
-  for (var key in allKeys) {
-    res[key] = Array(len);
-    for (var _i = 0; _i < len; _i++) {
-      var _object = objects[_i];
-      res[key][_i] = get(_object, key);
-    }
-  }
-  return res;
-}
-
-function filterValues(object, fn) {
-  var out = {};
-  for (var key in object) {
-    var value = object[key];
-    if (fn(value, key)) out[key] = value;
-  }
-  return out;
-}
-
-/**
- * Lazy any function.
- * @param {[Boolean]}
- * @return {Boolean}
- */
-function any(ar) {
-  for (var i = 0, l = ar.length; i < l; i++) {
-    var val = ar[i];
-    if (!isBoolean(val)) {
-      throw new Error('Not a boolean: ' + val);
-    }
-    if (val) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * Defers calling fn until the current process finishes.
- */
-function defer(fn) {
-  setTimeout(fn, 1);
-}
-
-/**
- * Adds a tag to the object.
- */
-function tagType(type, obj) {
-  if (!isString(type)) {
-    throw new Error('First argument must be a string');
-  }
-  if (!isObject(obj)) {
-    throw new Error('Second argument must be an object');
-  }
-  obj.type = type;
-  return obj;
-}
-
-function checkType(type, obj) {
-  if (obj === null) {
-    return type === NULL;
-  }
-  if (typeof type !== 'string') {
-    throw new Error('First argument must be a string');
-  }
-  if (isUndefined(obj)) {
-    throw new Error('Bad second argument');
-  }
-  return get(obj, 'type') === type;
-}
-
-/**
- * Basic pattern matching.
- * @param {Object|null} object - An object generated with tagType, an object, an
- *                               array, or null.
- * @param {Object} fns - An object with types for keys and functions for values.
- *                       Also accepts keys tinier.OBJECT, tinier.ARRAY, and
- *                       tinier.NULL. To avoid conflict, tinier.OBJECT has the
- *                       lowest priority.
- * @param {Function} defaultFn - A function to run if the object type is not
- *                               found. Takes `object` as a single argument.
- * @return {*} Return value from the called function.
- */
-function match(object, fns) {
-  var defaultFn = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : throwUnrecognizedType;
-
-  for (var key in fns) {
-    if (key === NULL && object === null || key === ARRAY && isArray(object) || isObject(object) && checkType(key, object)) {
-      return fns[key](object);
-    }
-  }
-  if (OBJECT in fns && isObject(object)) {
-    return fns[OBJECT](object);
-  }
-  return defaultFn(object);
-}
-
-function throwUnrecognizedType(node) {
-  throw new Error('Unrecognized type in pattern matching: ' + node);
-}
-
-// -------------------------------------------------------------------
-// Update components
-// -------------------------------------------------------------------
-
-/**
- * Determine whether the model has any child components.
- */
-function hasChildren(node) {
-  var _match;
-
-  return match(node, (_match = {}, _match[ARRAY_OF] = function () {
-    return true;
-  }, _match[OBJECT_OF] = function () {
-    return true;
-  }, _match[COMPONENT] = function () {
-    return true;
-  }, _match[ARRAY] = function (node) {
-    return any(node.map(hasChildren));
-  }, _match[OBJECT] = function (node) {
-    return any(Object.keys(node).map(function (k) {
-      return hasChildren(node[k]);
-    }));
-  }, _match));
-}
-
-function checkRenderResultRecurse(userBindings, node, state) {
-  var _match2;
-
-  var updateRecurse = function updateRecurse(s, k) {
-    var u = k === null ? userBindings : get(userBindings, k);
-    if (userBindings !== null && u === null) {
-      throw new Error('Shape of the bindings object does not match the model.' + 'Model: ' + node + '  Bindings object: ' + userBindings);
-    }
-  };
-  var recurse = function recurse(n, k) {
-    checkRenderResultRecurse(get(userBindings, k), n, get(state, k));
-  };
-  match(node, (_match2 = {}, _match2[OBJECT_OF] = function (objOf) {
-    // check for extra attributes
-    if (userBindings !== null && any(Object.keys(userBindings).map(function (k) {
-      return !(k in state);
-    }))) {
-      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
-    } else {
-      mapValues(state, updateRecurse);
-    }
-  }, _match2[ARRAY_OF] = function (arOf) {
-    // check array lengths
-    if (userBindings !== null && state.length !== userBindings.length) {
-      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
-    } else {
-      state.map(updateRecurse);
-    }
-  }, _match2[COMPONENT] = function (component) {
-    return updateRecurse(state, null);
-  }, _match2[ARRAY] = function (ar) {
-    if (userBindings !== null && !isArray(userBindings)) {
-      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
-    } else {
-      ar.map(recurse);
-    }
-  }, _match2[OBJECT] = function (obj) {
-    if (userBindings !== null && isArray(userBindings)) {
-      throw new Error('Shape of the bindings object does not match the ' + 'model. Model: ' + node + ' Bindings object: ' + userBindings);
-    } else {
-      mapValues(obj, recurse);
-    }
-  }, _match2));
-}
-
-/**
- * Check the result of render against the model and state.
- * @param {Object} node - A model node.
- * @param {*} state - A state node.
- * @param {Object} userBindings - The new bindings returned by render.
- * @return {Object} The userBindings object.
- */
-function checkRenderResult(userBindings, node, state) {
-  checkRenderResultRecurse(userBindings, node, state);
-  return userBindings;
-}
-
-/**
- * Run lifecycle functions for the component.
- * @param {Object} address -
- * @param {Object} component -
- * @param {Object} state -
- * @param {Object} diffVal -
- * @param {Object|null} lastRenderedEl - The element rendered in previously, if
- *                                       there was one.
- * @param {Object|null} el - The element to render in provided by
- *                           component.render.
- * @param {Object} stateCallers -
- * @return {Object}
- */
-function updateEl(address, component, state, diffVal, lastRenderedEl, el, stateCallers, opts) {
-  // the object passed to lifecycle functions
-  var reducers = patchReducersWithState(address, component, stateCallers.callReducer);
-  var signals = patchSignals(address, component, stateCallers.callSignal);
-  var methods = patchMethods(address, component, stateCallers.callMethod, reducers, signals);
-  var arg = { state: state, methods: methods, reducers: reducers, signals: signals, el: el, lastRenderedEl: lastRenderedEl };
-
-  // warn if the el is null
-  if (el === null && !(diffVal === DESTROY) && component.render !== noop) {
-    throw new Error('No binding provided for component ' + component.displayName + ' at [' + address.join(', ') + '].');
-  }
-
-  if (diffVal === DESTROY) {
-    // destroy
-    component.willUnmount(arg);
-    return { bindings: null, lastRenderedEl: lastRenderedEl };
-  } else {
-    // create or update
-    var shouldUpdate = diffVal === CREATE || diffVal === UPDATE || el !== lastRenderedEl;
-
-    if (diffVal === CREATE) component.willMount(arg);else if (shouldUpdate) component.willUpdate(arg);
-
-    if (opts.verbose && shouldUpdate) {
-      console.log('Rendering ' + component.displayName + ' at [' + address.join(', ') + '].');
-    }
-
-    // render
-    var bindings = shouldUpdate ? checkRenderResult(component.render(arg), component.model, state) : null;
-    // check result
-    if (shouldUpdate && bindings === null && hasChildren(component.model)) {
-      throw new Error('The render function of component ' + component.displayName + ' did not return new bindings');
-    }
-
-    // These need to be asynchronous.
-    if (diffVal === CREATE) {
-      defer(function () {
-        return component.didMount(arg);
-      });
-    } else if (shouldUpdate) {
-      defer(function () {
-        return component.didUpdate(arg);
-      });
-    }
-
-    // If the component rendered, then change lastEl.
-    return { bindings: bindings, lastRenderedEl: shouldUpdate ? el : lastRenderedEl };
-  }
-}
-
-/**
- * For a tree, return everything down to the first set of NODES with data for
- * leaves.
- */
-function dropNodes(tree) {
-  var _match3;
-
-  return match(tree, (_match3 = {}, _match3[NODE] = function (node) {
-    return node.data;
-  }, _match3[OBJECT] = function (obj) {
-    return mapValues(obj, dropNodes);
-  }, _match3[ARRAY] = function (ar) {
-    return ar.map(dropNodes);
-  }, _match3[NULL] = function () {
-    return null;
-  }, _match3));
-}
-
-/**
- * Run create, update, and destroy for component.
- * @param {Array} address - The location of the component in the state.
- * @param {Object} node - A model or a node within a model.
- * @param {Object} diff - The diff object for this component.
- * @param {Object|null} bindings -
- * @param {Object|null} renderResult -
- * @param {Object} stateCallers -
- * @return {Object}
- */
-function updateComponents(address, node, state, diff, bindings, renderResult, stateCallers, opts) {
-  var _match4;
-
-  var updateRecurse = function updateRecurse(_ref2, k) {
-    var d = _ref2[0],
-        s = _ref2[1];
-
-    // TODO in updateRecurse functions where k can be null, there must be a
-    // nicer way to organize things with fewer null checks
-    var component = k !== null ? node.component : node;
-    var newAddress = k !== null ? addressWith(address, k) : address;
-    var b = k !== null ? get(bindings, k) : bindings;
-    var r = k !== null ? get(renderResult, k) : renderResult;
-    // Update the component. If DESTROY, then there will not be a binding.
-    var res = updateEl(newAddress, component, s, d.data, get(b, 'data'), r, stateCallers, opts);
-    // Fall back on old bindings.
-    var nextRenderResult = res.bindings !== null ? res.bindings : dropNodes(b.children);
-    var data = res.lastRenderedEl;
-    // update children
-    var children = updateComponents(newAddress, component.model, s, d.children, get(b, 'children'), nextRenderResult, stateCallers, opts);
-    return tagType(NODE, { data: data, children: children });
-  };
-  var recurse = function recurse(n, k) {
-    return updateComponents(addressWith(address, k), n, get(state, k), diff[k], get(bindings, k), get(renderResult, k), stateCallers, opts);
-  };
-  return match(node, (_match4 = {}, _match4[OBJECT_OF] = function (objOf) {
-    return mapValues(zipObjects([diff, state]), updateRecurse);
-  }, _match4[ARRAY_OF] = function (arOf) {
-    return zipArrays([diff, state]).map(updateRecurse);
-  }, _match4[COMPONENT] = function (component) {
-    return updateRecurse([diff, state], null);
-  }, _match4[ARRAY] = function (ar) {
-    return ar.map(recurse);
-  }, _match4[OBJECT] = function (obj) {
-    return mapValues(obj, recurse);
-  }, _match4));
-}
-
-// -------------------------------------------------------------------
-// State
-// -------------------------------------------------------------------
-
-function addressWith(address, key) {
-  if (key === null) {
-    return address;
-  } else {
-    var newAddress = address.slice(0);
-    newAddress.push(key);
-    return newAddress;
-  }
-}
-
-function addressEqual(a1, a2) {
-  if (a1 === null || a2 === null || a1.length !== a2.length) return false;
-  return a1.reduce(function (accum, v, i) {
-    return accum && v === a2[i];
-  }, true);
-}
-
-/**
- * Get the value in a tree.
- * @param {Array} address -
- * @param {Object} tree -
- * @return {*} - The value at the given address.
- */
-function treeGet(address, tree) {
-  return address.reduce(function (accum, val) {
-    return checkType(NODE, accum) ? accum.children[val] : accum[val];
-  }, tree);
-}
-
-/**
- * Set the value in a tree; immutable.
- * @param {Array} address -
- * @param {Object} tree -
- * @param {*} value - The new value to set at address.
- * @return (*) The new tree.
- */
-function treeSet(address, tree, value) {
-  if (address.length === 0) {
-    return value;
-  } else {
-    var _extends3;
-
-    var _head = head(address),
-        k = _head[0],
-        rest = _head[1];
-
-    return typeof k === 'string' ? _extends({}, tree, (_extends3 = {}, _extends3[k] = treeSet(rest, treeGet([k], tree), value), _extends3)) : [].concat(tree.slice(0, k), [treeSet(rest, treeGet([k], tree), value)], tree.slice(k + 1));
-  }
-}
-
-/**
- * Set the value in a tree; mutable.
- * @param {Array} address -
- * @param {Object} tree -
- * @param {*} value - The new value to set at address.
- * @return (*) The tree.
- */
-function treeSetMutable(address, tree, value) {
-  if (address.length === 0) {
-    return value;
-  } else {
-    var _tail = tail(address),
-        rest = _tail[0],
-        _last = _tail[1];
-
-    var parent = treeGet(rest, tree);
-    if (checkType(NODE, parent)) {
-      parent.children[_last] = value;
-    } else {
-      parent[_last] = value;
-    }
-    return tree;
-  }
-}
-
-function makeTree(init, mutable) {
-  var state = init;
-  return {
-    get: function get(address) {
-      return treeGet(address, state);
-    },
-    set: function set(address, value) {
-      state = mutable ? treeSetMutable(address, state, value) : treeSet(address, state, value);
-    }
-  };
-}
-
-/**
- * Check that the new state is valid. If not, then throw an Error.
- * @param {Object} modelNode - A model or a node of a model.
- * @param {Object} newState - The new state corresponding to modelNode.
- */
-function checkState(modelNode, newState) {
-  var _match5;
-
-  if (newState === null) {
-    return;
-  }
-  match(modelNode, (_match5 = {}, _match5[OBJECT_OF] = function (objOf) {
-    if (!isObject(newState) || isArray(newState)) {
-      throw new Error('Shape of the new state does not match the model. ' + 'Model: ' + objOf + '  State: ' + newState);
-    } else {
-      mapValues(newState, function (s) {
-        return checkState(modelNode.component.model, s);
-      });
-    }
-  }, _match5[ARRAY_OF] = function (arOf) {
-    if (!isArray(newState)) {
-      throw new Error('Shape of the new state does not match the model.' + 'Model: ' + arOf + '  State: ' + newState);
-    } else {
-      newState.map(function (s) {
-        return checkState(modelNode.component.model, s);
-      });
-    }
-  }, _match5[COMPONENT] = function (component) {
-    checkState(modelNode.model, newState);
-  }, _match5[ARRAY] = function (ar) {
-    if (!isArray(newState)) {
-      throw new Error('Shape of the new state does not match the model.' + 'Model: ' + ar + '  State: ' + newState);
-    } else {
-      ar.map(function (a, i) {
-        return checkState(a, get(newState, i));
-      });
-    }
-  }, _match5[OBJECT] = function (obj) {
-    if (!isObject(newState) || isArray(newState)) {
-      throw new Error('Shape of the new state does not match the model. ' + 'Model: ' + obj + '  State: ' + newState);
-    } else {
-      mapValues(obj, function (o, k) {
-        return checkState(o, get(newState, k));
-      });
-    }
-  }, _match5));
-}
-
-function computeDiffValue(state, lastState, key, isValidFn, shouldUpdate, address, triggeringAddress) {
-  var stateValid = isValidFn(state, key);
-  var lastStateValid = isValidFn(lastState, key);
-  if (stateValid && !lastStateValid) {
-    return CREATE;
-  } else if (stateValid && lastStateValid) {
-    var same = key === null ? state !== lastState : state[key] !== lastState[key];
-    var componentTriggeredUpdate = addressEqual(address, triggeringAddress);
-    if (same && shouldUpdate({ state: state, lastState: lastState, componentTriggeredUpdate: componentTriggeredUpdate })) {
-      return UPDATE;
-    } else {
-      return null;
-    }
-  } else if (!stateValid && lastStateValid) {
-    return DESTROY;
-  } else {
-    return null;
-  }
-}
-
-/**
- * Compute the full diff tree for the model node. Calls shouldUpdate.
- */
-function diffWithModel(modelNode, state, lastState, address, triggeringAddress) {
-  var _match6;
-
-  return match(modelNode, (_match6 = {}, _match6[OBJECT_OF] = function (objOf) {
-    var isValidFn = function isValidFn(obj, k) {
-      return isObject(obj) && k in obj && obj[k] !== null;
-    };
-    var l = Object.assign({}, state || {}, lastState || {});
-    return mapValues(l, function (_, k) {
-      var data = computeDiffValue(state, lastState, k, isValidFn, objOf.component.shouldUpdate, addressWith(address, k), triggeringAddress);
-      var children = diffWithModel(objOf.component.model, get(state, k), get(lastState, k), addressWith(address, k), triggeringAddress);
-      return tagType(NODE, { data: data, children: children });
-    });
-  }, _match6[ARRAY_OF] = function (arOf) {
-    var isValidFn = function isValidFn(obj, i) {
-      return isArray(obj) && i < obj.length && obj[i] !== null;
-    };
-    var longest = Math.max(isArray(state) ? state.length : 0, isArray(lastState) ? lastState.length : 0);
-    var l = Array.apply(null, { length: longest });
-    return l.map(function (_, i) {
-      var data = computeDiffValue(state, lastState, i, isValidFn, arOf.component.shouldUpdate, addressWith(address, i), triggeringAddress);
-      var children = diffWithModel(arOf.component.model, get(state, i), get(lastState, i), addressWith(address, i), triggeringAddress);
-      return tagType(NODE, { data: data, children: children });
-    });
-  }, _match6[COMPONENT] = function (component) {
-    var isValidFn = function isValidFn(obj, _) {
-      return obj !== null;
-    };
-    var data = computeDiffValue(state, lastState, null, isValidFn, component.shouldUpdate, address, triggeringAddress);
-    var children = diffWithModel(component.model, state || null, lastState || null, address, triggeringAddress);
-    return tagType(NODE, { data: data, children: children });
-  }, _match6[ARRAY] = function (ar) {
-    return ar.map(function (n, i) {
-      return diffWithModel(n, get(state, i), get(lastState, i), addressWith(address, i), triggeringAddress);
-    });
-  }, _match6[OBJECT] = function (obj) {
-    return mapValues(obj, function (n, k) {
-      return diffWithModel(n, get(state, k), get(lastState, k), addressWith(address, k), triggeringAddress);
-    });
-  }, _match6));
-}
-
-/**
- * For an array of minSignals and minUpdate trees, return the minimal trees that
- * represent the whole array.
- */
-function singleOrAll(modelNode, address, minTreeAr) {
-  var getMin = function getMin(indices) {
-    if (indices.length === 0) {
-      // If all elements in the array are null, return null.
-      return null;
-    } else if (nonNullIndices.signals.length === 1) {
-      // If there is a single value, return that tree, with an updated address.
-      return {
-        minSignals: {
-          diff: minTreeAr.map(function (a) {
-            return a.minSignals.diff;
-          }),
-          address: address,
-          modelNode: modelNode
-        },
-        minUpdate: {
-          diff: minTreeAr.map(function (a) {
-            return a.minUpdate.diff;
-          }),
-          address: address,
-          modelNode: modelNode
-        }
-      };
-    } else {
-      // Otherwise, return full trees from this level.
-      return {
-        minSignals: {
-          diff: minTreeAr.map(function (a) {
-            return a.minSignals.diff;
-          }),
-          address: address,
-          modelNode: modelNode
-        },
-        minUpdate: {
-          diff: minTreeAr.map(function (a) {
-            return a.minUpdate.diff;
-          }),
-          address: address,
-          modelNode: modelNode
-        }
-      };
-    }
-  };
-  // Get the indices where the signal and update trees are not null.
-  var nonNullIndices = minTreeAr.reduce(function (accum, val, i) {
-    return {
-      signals: val.minSignals !== null ? [].concat(accum.signals, [i]) : accum.signals,
-      update: val.minUpdate !== null ? [].concat(accum.update, [i]) : accum.update
-    };
-  }, { signals: [], update: [] });
-  // For each set of indices, test the diffs with these tests to get a minimum
-  // tree.
-  var minSignals = getMin(nonNullIndices.signals);
-  var minUpdate = getMin(nonNullIndices.update);
-  return { minSignals: minSignals, minUpdate: minUpdate };
-}
-
-/**
- * 1. Run shouldUpdate for every component in the tree.
- * 2. Return the information about the minimal tree to update with
- *    updateComponents (whenever shouldUpdate is true) as minUpdate.
- * 3. Return the information about the minimal tree to update with
- *    mergeSignals (whenever nodes are added or deleted) as minSignals.
- *
- * @param {Object} modelNode - A model or a node of a model.
- * @param {Object} state - The new state corresponding to modelNode.
- * @param {Object|null} lastState - The old state corresponding to modelNode.
- * @param {Array} address -
- * @param {Array} triggeringAddress -
- * @returns {Object} An object with the attributes minSignals and
- *                   minUpdate. Each represents a minimal tree necessary for the
- *                   appropriate update function and has the attributes diff,
- *                   modelNode, and address.
- */
-function diffWithModelMin(modelNode, state, lastState, address, triggeringAddress) {
-  // 1. calculate whole diff tree
-  var diff = diffWithModel(modelNode, state, lastState, address, triggeringAddress);
-  // 2. trim the tree for the two needs
-  return {
-    minSignals: {
-      diff: diff,
-      address: address,
-      modelNode: modelNode
-    },
-    minUpdate: {
-      diff: diff,
-      address: address,
-      modelNode: modelNode
-    }
-  };
-}
-
-// -------------------------------------------------------------------
-// Signals
-// -------------------------------------------------------------------
-
-/**
- * Make a signal.
- * @return {Object} A signal with attributes `on` and `call`.
- */
-function makeSignal() {
-  var res = { _onFns: [] };
-  res.on = function (fn) {
-    if (!isFunction(fn)) {
-      throw new Error('First argument to "on" must be a function');
-    }
-    res._onFns = [].concat(res._onFns, [fn]);
-  };
-  res.call = function () {
-    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    return res._onFns.map(function (fn) {
-      return fn.apply(undefined, args);
-    });
-  };
-  return res;
-}
-
-/**
- * Create an object that with `on/onEach` and `call` attributes.
- * @param {Boolean} isCollection -
- * @return {Object}
- */
-function makeOneSignalAPI(isCollection) {
-  // make a `_callFn` function that will be replaced later and is the target of
-  // `call`
-  var res = { _callFns: [] };
-  // call will run all functions in `_callFns`
-  res.call = function () {
-    for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-
-    if (args.length > 1 || !isObject(args[0])) {
-      throw new Error('Call only accepts a single object as argument.');
-    }
-    res._callFns.map(function (_ref3) {
-      var fn = _ref3.fn;
-      return fn(args[0]);
-    });
-  };
-  // store callbacks passed with `on` or `onEach`
-  res._onFns = [];
-  var onName = isCollection ? 'onEach' : 'on';
-  res[onName] = function (fn) {
-    if (!isFunction(fn)) {
-      throw new Error('Argument to "' + onName + '" must be a function');
-    }
-    res._onFns.push(function (index) {
-      return function () {
-        if (arguments.length > 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
-          throw new Error('On function only accepts a single object as argument.');
-        }
-        var argObject = typeof index === 'string' ? _extends({ k: index }, arguments.length <= 0 ? undefined : arguments[0]) : typeof index === 'number' ? _extends({ i: index }, arguments.length <= 0 ? undefined : arguments[0]) : arguments.length <= 0 ? undefined : arguments[0];
-        fn(argObject);
-      };
-    });
-  };
-  return res;
-}
-
-/**
- * Implement the signals API.
- */
-function makeSignalsAPI(signalNames, isCollection) {
-  return fromPairs(signalNames.map(function (name) {
-    return [name, makeOneSignalAPI(isCollection)];
-  }));
-}
-
-/**
- * Implement the childSignals API.
- */
-function makeChildSignalsAPI(model) {
-  var _match7;
-
-  return match(model, (_match7 = {}, _match7[OBJECT_OF] = function (node) {
-    return makeSignalsAPI(node.component.signalNames, true);
-  }, _match7[ARRAY_OF] = function (node) {
-    return makeSignalsAPI(node.component.signalNames, true);
-  }, _match7[COMPONENT] = function (node) {
-    return makeSignalsAPI(node.signalNames, false);
-  }, _match7[ARRAY] = function (ar) {
-    return ar.map(makeChildSignalsAPI).filter(notNull);
-  }, _match7[OBJECT] = function (obj) {
-    return filterValues(mapValues(obj, makeChildSignalsAPI), notNull);
-  }, _match7), constant(null));
-}
-
-/**
- * Reduce the direct children of the tree.
- * @param {Object} node - A node in a tree.
- * @param {Function} fn - Function with arguments (accum, object).
- * @param {*} init - An initial value.
- * @param {Array} address - The local address.
- * @return {*}
- */
-function reduceChildren(node, fn, init) {
-  var _match8;
-
-  var address = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
-
-  return match(node, (_match8 = {}, _match8[NODE] = function (node) {
-    return fn(init, node.data, address);
-  }, _match8[ARRAY] = function (ar) {
-    return ar.reduce(function (accum, n, k) {
-      return reduceChildren(n, fn, accum, addressWith(address, k));
-    }, init);
-  }, _match8[OBJECT] = function (obj) {
-    return reduceValues(obj, function (accum, n, k) {
-      return reduceChildren(n, fn, accum, addressWith(address, k));
-    }, init);
-  }, _match8), constant(init));
-}
-
-/**
- * Run signalSetup with the component.
- * @param {Object} component -
- * @param {Array} address -
- * @param {Object} stateCallers -
- * @return {Object} Object with keys signalsAPI and childSignalsAPI.
- */
-function runSignalSetup(component, address, stateCallers) {
-  var signalsAPI = makeSignalsAPI(component.signalNames, false);
-  var childSignalsAPI = makeChildSignalsAPI(component.model);
-  var reducers = patchReducersWithState(address, component, stateCallers.callReducer);
-  var signals = patchSignals(address, component, stateCallers.callSignal);
-  var methods = patchMethods(address, component, stateCallers.callMethod, reducers, signals);
-  // cannot call signalSetup any earlier because it needs a reference to
-  // `methods`, which must know the address
-  component.signalSetup({
-    methods: methods,
-    reducers: reducers,
-    signals: signalsAPI,
-    childSignals: childSignalsAPI
-  });
-  return { signalsAPI: signalsAPI, childSignalsAPI: childSignalsAPI };
-}
-
-/**
- * Merge a signals object with signal callbacks from signalSetup.
- * @param {Object} node - A model node.
- * @param {Array} address - The address.
- * @param {Object} diffNode - A node in the diff tree.
- * @param {Object|null} signalNode - A node in the existing signals tree.
- * @param {Object} stateCallers - The object with 3 functions to modify global
- *                                state.
- * @param {Object|null} upChild - The childSignalsAPI object for the parent
- *                                Component.
- * @param {Array|null} upAddress - A local address specifying the location
- *                                 relative to the parent Component.
- * @return {Object} The new signals tree.
- */
-function mergeSignals(node, address, diffNode, signalNode, stateCallers) {
-  var _match9;
-
-  var upChild = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : null;
-  var upAddress = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : null;
-
-  var updateRecurse = function updateRecurse(_ref4, k) {
-    var d = _ref4[0],
-        s = _ref4[1];
-
-    var component = k !== null ? node.component : node;
-    var newAddress = k !== null ? addressWith(address, k) : address;
-    var diffVal = d.data;
-    if (diffVal === CREATE) {
-      var _ret2 = function () {
-        // For create, apply the callbacks
-        var _runSignalSetup = runSignalSetup(component, newAddress, stateCallers),
-            signalsAPI = _runSignalSetup.signalsAPI,
-            childSignalsAPI = _runSignalSetup.childSignalsAPI;
-
-        var newUpAddress = upAddress === null ? null : addressWith(upAddress, k);
-        var signals = mapValues(zipObjects([signalsAPI, upChild]), function (_ref5, key) {
-          var callbackObj = _ref5[0],
-              upCallbackObj = _ref5[1];
-
-          var signal = makeSignal();
-
-          // For each callback, add each onFn to the signal,
-          // and set the callFn to the signal dispatch. Only
-          // on, not onEach, so execute the fn with no
-          // argument.
-          callbackObj._onFns.map(function (fn) {
-            return signal.on(fn());
-          });
-          callbackObj._callFns = [{ fn: signal.call, address: null }];
-
-          // For the childSignalCallbacks from the parent
-          if (upCallbackObj !== null) {
-            upCallbackObj._onFns.map(function (fn) {
-              return signal.on(fn(k));
-            });
-            upCallbackObj._callFns = [].concat(upCallbackObj._callFns, [{ fn: signal.call, address: newUpAddress }]);
-          }
-
-          return signal;
-        });
-        var data = { signals: signals, signalsAPI: signalsAPI, childSignalsAPI: childSignalsAPI };
-
-        // loop through the children of signals and node
-        var children = mergeSignals(component.model, newAddress, d.children, get(s, 'children'), stateCallers, childSignalsAPI, []);
-
-        return {
-          v: tagType(NODE, { data: data, children: children })
-        };
-      }();
-
-      if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
-    } else if (diffVal === DESTROY) {
-      // In the case of destroy, this leaf in the signals object will be null.
-      return null;
-    } else {
-      // update
-      var _reduceChildren = reduceChildren(d.children, function (accum, diffVal, address) {
-        var hasCreated = accum.hasCreated || diffVal === CREATE;
-        var destroyed = diffVal === DESTROY ? [].concat(accum.destroyed, [address]) : accum.destroyed;
-        return { hasCreated: hasCreated, destroyed: destroyed };
-      }, { hasCreated: false, destroyed: [] }),
-          hasCreated = _reduceChildren.hasCreated,
-          destroyed = _reduceChildren.destroyed;
-
-      // if there are deleted children, delete references to them
-
-
-      destroyed.map(function (childAddress) {
-        // get the right child within childSignalsAPI
-        var childSignalsAPINode = childAddress.reduce(function (accum, k, i) {
-          if (k in accum) {
-            return accum[k];
-          } else if (i === childAddress.length - 1) {
-            return accum;
-          } else {
-            throw new Error('Bad address ' + childAddress + ' for object ' + s.data.childSignalsAPI);
-          }
-        }, s.data.childSignalsAPI);
-        mapValues(childSignalsAPINode, function (obj) {
-          // remove the matching callFns
-          obj._callFns = obj._callFns.filter(function (_ref6) {
-            var address = _ref6.address;
-
-            return !addressEqual(address, childAddress);
-          });
-        });
-      });
-
-      var newUpChild = hasCreated ? s.data.childSignalsAPI : null;
-      var _newUpAddress = hasCreated ? [] : null;
-      var _children = mergeSignals(component.model, newAddress, d.children, get(s, 'children'), stateCallers, newUpChild, _newUpAddress);
-      return tagType(NODE, { data: get(s, 'data'), children: _children });
-    }
-  };
-
-  var recurse = function recurse(_ref7, k) {
-    var n = _ref7[0],
-        d = _ref7[1],
-        s = _ref7[2],
-        u = _ref7[3];
-
-    var newAddress = addressWith(address, k);
-    var newUpAddress = upAddress === null ? null : addressWith(upAddress, k);
-    return mergeSignals(n, newAddress, d, s, stateCallers, u, newUpAddress);
-  };
-
-  return match(node, (_match9 = {}, _match9[OBJECT_OF] = function (objOf) {
-    return filterValues(mapValues(zipObjects([diffNode, signalNode]), updateRecurse), notNull);
-  }, _match9[ARRAY_OF] = function (arOf) {
-    return zipArrays([diffNode, signalNode]).map(updateRecurse).filter(notNull);
-  }, _match9[COMPONENT] = function (component) {
-    return updateRecurse([diffNode, signalNode], null);
-  }, _match9[ARRAY] = function (ar) {
-    return zipArrays([ar, diffNode, signalNode, upChild]).map(recurse);
-  }, _match9[OBJECT] = function (obj) {
-    return mapValues(zipObjects([obj, diffNode, signalNode, upChild]), recurse);
-  }, _match9), constant(null));
-}
-
-// -------------------------------------------------------------------
-// Component & run functions
-// -------------------------------------------------------------------
-
-/**
- * Create an object representing many instances of this component, for use in a
- * tinier model.
- * @param {Object} component - Tinier component.
- * @return {Object}
- */
-function objectOf(component) {
-  return tagType(OBJECT_OF, { component: component });
-}
-
-/**
- * Create an array representing many instances of this component, for use in a
- * tinier model.
- * @param {Object} component - Tinier component.
- * @return {Object}
- */
-function arrayOf(component) {
-  return tagType(ARRAY_OF, { component: component });
-}
-
-function defaultShouldUpdate(_ref8) {
-  var state = _ref8.state,
-      lastState = _ref8.lastState;
-
-  return state !== lastState;
-}
-
-function checkInputs(options, defaults) {
-  mapValues(options, function (_, k) {
-    if (!(k in defaults)) {
-      console.error('Unexpected argument ' + k);
-    }
-  });
-}
-
-function patchInitNoArg(init) {
-  return function () {
-    if (arguments.length === 0) {
-      return init({});
-    } else if (arguments.length > 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
-      throw new Error('Reducers can only take 1 or 0 arguments, and the ' + 'argument should be an object.');
-    } else {
-      return init(arguments.length <= 0 ? undefined : arguments[0]);
-    }
-  };
-}
-
-function patchReducersOneArg(reducers) {
-  return mapValues(reducers, function (reducer, name) {
-    return function () {
-      if (arguments.length !== 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
-        throw new Error('Reducers can only take 1 arguments, and the ' + 'argument should be an object.');
-      } else if (!('state' in (arguments.length <= 0 ? undefined : arguments[0]))) {
-        throw new Error('The argument to the reducer must have a "state" ' + 'attribute.');
-      } else {
-        return reducer(arguments.length <= 0 ? undefined : arguments[0]);
-      }
-    };
-  });
-}
-
-/**
- * Create a tinier component.
- * @param {Object} componentArgs - Functions defining the Tinier component.
- * @param {str} componentArgs.displayName - A name for the component.
- * @param {[str]} componentArgs.signals - An array of signal names.
- * @param {Object} componentArgs.model - The model object.
- * @param {Function} componentArgs.init - A function to initialize the state.
- * @param {Object} componentArgs.reducers -
- * @param {Object} componentArgs.methods -
- * @param {Function} componentArgs.willMount -
- * @param {Function} componentArgs.didMount -
- * @param {Function} componentArgs.shouldUpdate - Return true if the component
- *                                                should update, false if it
- *                                                should not, or null to use to
- *                                                default behavior (update when
- *                                                state changes).
- * @param {Function} componentArgs.willUpdate -
- * @param {Function} componentArgs.didUpdate -
- * @param {Function} componentArgs.willUnmount -
- * @param {Function} componentArgs.render -
- * @returns {Object} A tinier component.
- */
-function createComponent() {
-  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
-  // default attributes
-  var defaults = {
-    displayName: '',
-    signalNames: [],
-    signalSetup: noop,
-    model: {},
-    init: constant({}),
-    reducers: {},
-    methods: {},
-    willMount: noop,
-    didMount: noop,
-    shouldUpdate: defaultShouldUpdate,
-    willUpdate: noop,
-    didUpdate: noop,
-    willUnmount: noop,
-    render: noop
-  };
-  // check inputs
-  checkInputs(options, defaults);
-
-  if ('init' in options) {
-    options.init = patchInitNoArg(options.init);
-  }
-
-  if ('reducers' in options) {
-    options.reducersRaw = options.reducers;
-    options.reducers = patchReducersOneArg(options.reducers);
-  }
-
-  // check model
-  if (options.model && checkType(COMPONENT, options.model)) {
-    throw new Error('The model cannot be another Component. The top level of ' + 'the model should be an array or an object literal');
-  }
-  // set defaults & tag
-  return tagType(COMPONENT, _extends({}, defaults, options));
-}
-
-function patchReducersWithState(address, component, callReducer) {
-  return mapValues(component.reducersRaw, function (reducer, name) {
-    return function () {
-      if (arguments.length === 0) {
-        callReducer(address, component, reducer, {}, name);
-      } else if (arguments.length > 1 || !isObject(arguments.length <= 0 ? undefined : arguments[0])) {
-        throw new Error('Reducers can only take 1 or 0 arguments, and the ' + 'argument should be an object.');
-      } else {
-        callReducer(address, component, reducer, arguments.length <= 0 ? undefined : arguments[0], name);
-      }
-    };
-  });
-}
-
-function patchSignals(address, component, callSignal) {
-  return fromPairs(component.signalNames.map(function (signalName) {
-    return [signalName, { call: function call(arg) {
-        return callSignal(address, signalName, arg);
-      } }];
-  }));
-}
-
-/**
- * Return an object of functions that call the methods with component-specific
- * arguments.
- */
-function patchMethods(address, component, callMethod, reducers, signals) {
-  var methods = mapValues(component.methods, function (method) {
-    return function (arg) {
-      if (typeof Event !== 'undefined' && arg instanceof Event) {
-        callMethod(address, method, signals, methods, reducers, this, arg, {});
-      } else {
-        callMethod(address, method, signals, methods, reducers, null, null, arg);
-      }
-    };
-  });
-  return methods;
-}
-
-function makeCallMethod(stateTree, opts) {
-  /**
-   * Call a method on the local stateTree
-   * @param address
-   * @param method
-   * @param signals
-   * @param methods - Patched method functions.
-   * @param reducers - Patched reducer functions.
-   * @param target - The value of this in the called function.
-   * @param event - The event at the time of the function call.
-   * @param arg - An argument object.
-   */
-  return function (address, method, signals, methods, reducers, target, event, arg) {
-    // check for uninitialized stateTree
-    if (stateTree.get([]) === null) {
-      throw new Error('Cannot call method before the app is initialized (e.g. ' + 'in signalSetup).');
-    }
-    // get the local state
-    var localState = stateTree.get(address);
-    // run the method
-    method(_extends({ state: localState, signals: signals, methods: methods, reducers: reducers, target: target, event: event
-    }, arg));
-  };
-}
-
-/**
- * Return a callSignal function.
- */
-function makeCallSignal(signals, opts) {
-  return function (address, signalName, arg) {
-    if (opts.verbose) {
-      console.log('Called signal ' + signalName + ' at [' + address.join(', ') + '].');
-    }
-    signals.get(address).data.signals[signalName].call(arg);
-  };
-}
-
-/**
- * Return a new callReducer function.
- * @param {Object} topComponent - The top-level component.
- * @param {Object} stateTree - The global stateTree.
- * @param {Object} bindingTree - The global bindingTree.
- * @param {Object} signalTree - The global signalTree.
- * @param {Object} stateCallers - An object with functions callMethod,
- *                                callSignal, and callReducer.
- * @param {Object} opts - Options from `run`.
- * @returns {Function} - Call a reducer on the local state
- *   @param {Array} address - A location, as an array of keys (strings and
- *                            integers).
- *   @param {Object} triggeringComponent -
- *   @param {Function} reducer - A reducer.
- *   @param {Object} arg - An argument object.
- *   @param {String} name - The name of the reducer (for logging).
- */
-function makeCallReducer(topComponent, stateTree, bindingTree, signalTree, stateCallers, opts) {
-  return function (address, triggeringComponent, reducer, arg, name) {
-    if (!isFunction(reducer)) {
-      throw new Error('Reducer ' + name + ' is not a function');
-    }
-    // Run the reducer, and optionally log the result.
-    var localState = stateTree.get(address);
-    var newLocalState = reducer(_extends({}, arg, { state: localState }));
-    if (opts.verbose) {
-      console.log('Called reducer ' + name + ' for ' + triggeringComponent.displayName + ' at [' + address.join(', ') + '].');
-      console.log(localState);
-      console.log(newLocalState);
-    }
-
-    // Check that the new state is valid. If not, throw an Error, and the new
-    // state will be thrown out.
-    checkState(triggeringComponent.model, newLocalState);
-
-    // Set the state with immutable objects and arrays. A reference to oldState
-    // will used for diffing.
-    var lastState = stateTree.get([]);
-    stateTree.set(address, newLocalState);
-
-    // Run diffWithModelMin, which will do a few things:
-    // 1. Run shouldUpdate for every component in the tree.
-    // 2. Return the information about the minimal tree to update with
-    //    updateComponents (whenever shouldUpdate is true) as minUpdate.
-    // 3. Return the information about the minimal tree to update with
-    //    mergeSignals (whenever nodes are added or deleted) as minSignals.
-    // The output objects have the attributes diff, modelNode, and address.
-    // TODO might be best to go back to returning just one full diff here
-
-    var _diffWithModelMin = diffWithModelMin(topComponent, stateTree.get([]), lastState, [], address),
-        minSignals = _diffWithModelMin.minSignals,
-        minUpdate = _diffWithModelMin.minUpdate;
-
-    // Update the signals.
-
-
-    var localSignals = signalTree.get(minSignals.address);
-    var newSignals = mergeSignals(minSignals.modelNode, minSignals.address, minSignals.diff, localSignals, stateCallers);
-    signalTree.set(minSignals.address, newSignals);
-
-    // Update the components.
-    var minUpdateBindings = bindingTree.get(minUpdate.address);
-    var minUpdateEl = minUpdateBindings.data;
-    var minUpdateState = stateTree.get(minUpdate.address);
-    var newBindings = updateComponents(minUpdate.address, minUpdate.modelNode, minUpdateState, minUpdate.diff, minUpdateBindings, minUpdateEl, stateCallers, opts);
-    bindingTree.set(minUpdate.address, newBindings);
-  };
-}
-
-/**
- * Return an object with functions callMethod, callSignal, and callReducer.
- * @param {Object} component - The top-level component.
- * @param {Object} stateTree - The global stateTree.
- * @param {Object} bindingTree - The global bindings.
- * @param {Object} signalTree - The global signalTree.
- * @return {Object} An object with functions callMethod, callSignal, and
- *                  callReducer.
- */
-function makeStateCallers(component, stateTree, bindingTree, signalTree, opts) {
-  var stateCallers = {};
-  stateCallers.callMethod = makeCallMethod(stateTree, opts);
-  stateCallers.callSignal = makeCallSignal(signalTree, opts);
-  stateCallers.callReducer = makeCallReducer(component, stateTree, bindingTree, signalTree, stateCallers, opts);
-  return stateCallers;
-}
-
-/**
- * Run a tinier component.
- * @param {Object} component - A tinier component.
- * @param {*} appEl - An element to pass to the component's create, update, and
- *                    destroy methods.
- * @param {Object|null} initialState - The initial state. If null, then init()
- *                                     will be called to initialize the state.
- * @return {Object} The API functions, incuding getState, signals, and methods.
- */
-function run(component, appEl) {
-  var opts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-
-  // Create variables that will store the state for the whole lifetime of the
-  // application. Similar to the redux model.
-  var stateTree = makeTree(null, false);
-  var topBinding = tagType(NODE, { data: appEl, children: null });
-  var bindingTree = makeTree(topBinding, true);
-  var signalTree = makeTree(null, true);
-
-  // functions that access state, signals, and bindings
-  var stateCallers = makeStateCallers(component, stateTree, bindingTree, signalTree, opts);
-
-  // make sure initial state is valid
-  // TODO LEFT OFF ... does this work?
-  // Q: Does the state for a child component need to be defined? Are we checking
-  // all the way down the line?
-  var initialState = 'initialState' in opts ? opts.initialState : component.init();
-
-  // first draw
-  var setStateReducer = function setStateReducer(_ref9) {
-    var newState = _ref9.newState;
-    return newState;
-  };
-  var setState = function setState(newState) {
-    return stateCallers.callReducer([], component, setStateReducer, { newState: newState }, 'setState');
-  };
-  setState(initialState);
-
-  // return API
-  var getState = function getState() {
-    return stateTree.get([]);
-  };
-  // TODO check state
-  var setStateNoRender = function setStateNoRender(newState) {
-    return stateTree.set([], newState);
-  };
-  var reducers = patchReducersWithState([], component, stateCallers.callReducer);
-  var signalsCall = patchSignals([], component, stateCallers.callSignal);
-  var methods = patchMethods([], component, stateCallers.callMethod, reducers, signalsCall);
-  // if state is null, then data will be null
-  var signals = get(signalTree.get([]).data, 'signals');
-
-  return { setState: setState, setStateNoRender: setStateNoRender, getState: getState, reducers: reducers, methods: methods, signals: signals };
-}
-
-// -------------------------------------------------------------------
-// DOM
-// -------------------------------------------------------------------
-
-// constants
-var BINDING = exports.BINDING = '@TINIER_BINDING';
-var ELEMENT = exports.ELEMENT = '@TINIER_ELEMENT';
-var LISTENER_OBJECT = '@TINIER_LISTENERS';
-
-function reverseObject(obj) {
-  var newObj = {};
-  for (var k in obj) {
-    newObj[obj[k]] = k;
-  }
-  return newObj;
-}
-
-// some attribute renaming as seen in React
-var ATTRIBUTE_RENAME = {};
-var ATTRIBUTE_RENAME_REV = reverseObject(ATTRIBUTE_RENAME);
-var ATTRIBUTE_APPLY = {
-  checked: function checked(el, name) {
-    var val = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-
-    if (name !== 'input') {
-      throw new Error('"checked" attribute is only supported on input elements.');
-    }
-    el.checked = val;
-  },
-  value: function value(el, name) {
-    var val = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-
-    if (['input', 'textarea'].indexOf(name) === -1) {
-      throw new Error('"value" attribute is only supported on input and ' + 'textarea elements.');
-    }
-    el.value = val;
-  }
-};
-
-// namespace management inspired by of D3.js, Mike Bostock, BSD license
-var NAMESPACES = {
-  svg: 'http://www.w3.org/2000/svg',
-  xhtml: 'http://www.w3.org/1999/xhtml',
-  xlink: 'http://www.w3.org/1999/xlink',
-  xml: 'http://www.w3.org/XML/1998/namespace',
-  xmlns: 'http://www.w3.org/2000/xmlns/'
-};
-
-/**
- * Turn an array of objects into a new object of objects where the keys are
- * given by the value of `key` in each child object.
- * @param {[Object]} arr - The array of objects.
- * @param {String} key - The key to look for.
- */
-function keyBy(arr, key) {
-  var obj = {};
-  arr.map(function (x) {
-    return obj[x[key]] = x;
-  });
-  return obj;
-}
-
-/**
- *
- */
-function addressToObj(address, val) {
-  // If address is []
-  if (isUndefined(address[0])) {
-    return val;
-  }
-  var f = address[0];
-  if (isString(f)) {
-    var _ref10;
-
-    return _ref10 = {}, _ref10[f] = addressToObj(address.slice(1), val), _ref10;
-  } else {
-    var ar = Array(f + 1);
-    ar[f] = addressToObj(address.slice(1), val);
-    return ar;
-  }
-}
-
-function objectForBindingsArray(bindings) {
-  // Check arrays and find longest internal array.
-  var longest = 0;
-  for (var j = 0, l = bindings.length; j < l; j++) {
-    var binding = bindings[j];
-    if (!isArray(binding)) {
-      throw Error('Incompatible bindings: mix of types');
-    }
-    var len = binding.length;
-    if (len > longest) {
-      longest = len;
-    }
-  }
-  var acc = [];
-  for (var i = 0; i < longest; i++) {
-    for (var _j = 0, _l = bindings.length; _j < _l; _j++) {
-      var _binding = bindings[_j];
-      if (_binding[i] != null) {
-        // not null or undefined
-        if (acc[i] != null) {
-          // not null or undefined
-          acc[i] = objectForBindings([_binding[i], acc[i]]);
-        } else {
-          acc[i] = _binding[i];
-        }
-      }
-    }
-  }
-  return acc;
-}
-
-function objectForBindingsObject(bindings) {
-  return bindings.reduce(function (acc, binding) {
-    if (isArray(binding)) throw Error('Incompatible bindings: mix of types');
-    for (var k in binding) {
-      if (binding[k]) {
-        if (acc[k]) {
-          acc[k] = objectForBindings([binding[k], acc[k]]);
-        } else {
-          acc[k] = binding[k];
-        }
-      }
-    }
-    return acc;
-  }, {});
-}
-
-function objectForBindings(bindings) {
-  return isArray(bindings[0]) ? objectForBindingsArray(bindings) : objectForBindingsObject(bindings);
-}
-
-// Make sure default is null so undefined type constant do not match
-var isTinierBinding = function isTinierBinding(obj) {
-  return checkType(BINDING, obj);
-};
-var isTinierElement = function isTinierElement(obj) {
-  return checkType(ELEMENT, obj);
-};
-var isElement = function isElement(v) {
-  return v instanceof Element;
-};
-
-/**
- * Create a new TinierDOM element.
- * @param {String} tagName - The name for the element.
- * @param {Object|null} attributesIn - The attributes. Note that JSX will pass
- *                                     null in when there are no attributes. In
- *                                     the resulting object, this will be an
- *                                     empty object {}.
- * @param {Object[]|Object|String} ...children - A single binding or a mix of
- *                                               elements and strings.
- * @return {Object} A TinierDOM element.
- */
-function createElement(tagName, attributesIn) {
-  for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
-    children[_key3 - 2] = arguments[_key3];
-  }
-
-  var attributes = attributesIn == null ? {} : attributesIn;
-  return tagType(ELEMENT, { tagName: tagName, attributes: attributes, children: children });
-}
-
-/**
- * Create a new TinierDOM binding.
- * @param {Array|String|Number} addressIn - An address array, or single key or
- *                                          index.
- * @return {Object} A TinierDOM binding.
- */
-function bind(addressIn) {
-  var address = isArray(addressIn) ? addressIn : [addressIn];
-  return tagType(BINDING, { address: address });
-}
-
-function explicitNamespace(name) {
-  var i = name.indexOf(':');
-  if (i !== -1) {
-    var prefix = name.slice(0, i);
-    if (prefix in NAMESPACES) {
-      // for xmlns, treat the whole name (e.g. xmlns:xlink) as the name
-      var newName = prefix === 'xmlns' ? name : name.slice(i + 1);
-      return { name: newName, explicit: NAMESPACES[prefix] };
-    } else {
-      return { name: name, explicit: null };
-    }
-  } else {
-    return { name: name, explicit: null };
-  }
-}
-
-/**
- * Create a DOM element, inheriting namespace or choosing one based on tag.
- * @param {Object} tinierEl - A TinierDOM element.
- * @param {Object} parent - The parent el.
- * @return {Object} The DOM element.
- */
-function createDOMElement(tinierEl, parent) {
-  var tag = tinierEl.tagName;
-
-  var _explicitNamespace = explicitNamespace(tag),
-      name = _explicitNamespace.name,
-      explicit = _explicitNamespace.explicit;
-
-  var ns = explicit !== null ? explicit : tag in NAMESPACES ? NAMESPACES[tag] : parent.namespaceURI;
-  var el = ns === NAMESPACES.xhtml ? document.createElement(name) : document.createElementNS(ns, name);
-  return updateDOMElement(el, tinierEl);
-}
-
-function getStyles(cssText) {
-  var reg = /([^:; ]+):/g;
-  var res = [];
-  var ar = void 0;
-  while ((ar = reg.exec(cssText)) !== null) {
-    res.push(ar[1]);
-  }
-  return res;
-}
-
-function toCamelCase(name) {
-  return name
-  // Uppercase the first character in each group immediately following a dash
-  .replace(/-(.)/g, function (m) {
-    return m.toUpperCase();
-  })
-  // Remove dashes
-  .replace(/-/g, '');
-}
-
-function stripOn(name) {
-  return name.slice(2).toLowerCase();
-}
-
-function setAttributeCheckBool(namespace, el, name, val) {
-  // set boolean appropriately
-  var valToSet = val === true ? name : val;
-  if (namespace === NAMESPACES.xhtml) {
-    el.setAttribute(name, valToSet);
-  } else {
-    el.setAttributeNS(namespace, name, valToSet);
-  }
-}
-
-/**
- * Update the DOM element to match a TinierDOM element.
- * @param {Element} el - An existing DOM element.
- * @param {Object} tinierEl - A TinierDOM element.
- */
-function updateDOMElement(el, tinierEl) {
-  var thenFn = null;
-  var parentNamespace = el.namespaceURI;
-
-  // remove event listeners first, because they cannot simply be replaced
-  if (el.hasOwnProperty(LISTENER_OBJECT)) {
-    mapValues(el[LISTENER_OBJECT], function (onFn, name) {
-      el.removeEventListener(name, onFn);
-    });
-    delete el[LISTENER_OBJECT];
-  }
-
-  // Update the attributes.
-  // TODO is it faster to check first, or set first?
-  mapValues(tinierEl.attributes, function (v, k) {
-    if (k === 'id') {
-      // ID is set directly
-      el.id = v;
-    } else if (k === 'style' && !isString(v)) {
-      // For a style object. For a style string, use setAttribute below.
-      mapValues(v, function (sv, sk) {
-        el.style.setProperty(sk, sv);
-      });
-    } else if (k.indexOf('on') === 0) {
-      // Special handling for listeners
-      if (!el.hasOwnProperty(LISTENER_OBJECT)) {
-        el[LISTENER_OBJECT] = {};
-      }
-      // allow null
-      if (v !== null) {
-        var name = stripOn(k);
-        if (!isFunction(v) && v !== null) {
-          throw new Error(v + ' is not a function.');
-        }
-        el[LISTENER_OBJECT][name] = v;
-        el.addEventListener(name, v);
-      }
-    } else if (k in ATTRIBUTE_RENAME) {
-      // By default, set the attribute.
-      var _explicitNamespace2 = explicitNamespace(k),
-          _name = _explicitNamespace2.name,
-          explicit = _explicitNamespace2.explicit;
-
-      setAttributeCheckBool(explicit !== null ? explicit : parentNamespace, el, ATTRIBUTE_RENAME[explicit], v);
-    } else if (k in ATTRIBUTE_APPLY) {
-      ATTRIBUTE_APPLY[k](el, tinierEl.tagName, v);
-    } else if (k === 'then') {
-      if (v !== null) {
-        if (!isFunction(v)) {
-          throw new Error(v + ' is not a function or null.');
-        }
-        thenFn = v;
-      }
-    } else {
-      // By default, set the attribute.
-      var _explicitNamespace3 = explicitNamespace(k),
-          _name2 = _explicitNamespace3.name,
-          _explicit = _explicitNamespace3.explicit;
-
-      setAttributeCheckBool(_explicit !== null ? _explicit : parentNamespace, el, _name2, v);
-    }
-  });
-  // Delete attributes if not provided. First, loop through this attributes
-  // object to get a nice array.
-  var attributeNames = [];
-  for (var i = 0, l = el.attributes.length; i < l; i++) {
-    attributeNames.push(el.attributes[i].name);
-  }
-  attributeNames.filter(function (k) {
-    return !(k in tinierEl.attributes) || tinierEl.attributes[k] === false;
-  }).map(function (k) {
-    if (k in ATTRIBUTE_RENAME_REV) {
-      el.removeAttribute(ATTRIBUTE_RENAME_REV[k]);
-    } else if (k in ATTRIBUTE_APPLY) {
-      ATTRIBUTE_APPLY[k](el, tinierEl.tagName);
-    } else {
-      el.removeAttribute(k);
-    }
-  });
-  // Delete styles if not provided.
-  var tStyle = tinierEl.attributes.style;
-  if (tStyle && !isString(tStyle)) {
-    getStyles(el.style.cssText).filter(function (a) {
-      return !(a in tStyle || toCamelCase(a) in tStyle);
-    }).map(function (a) {
-      return el.style.removeProperty(a);
-    });
-  }
-
-  // call the callback
-  if (thenFn) {
-    defer(function () {
-      return thenFn(el);
-    });
-  }
-
-  return el;
-}
-
-/**
-* flatten the elements array
-*/
-function flattenElementsAr(ar) {
-  return ar.reduce(function (acc, el) {
-    return isArray(el) ? [].concat(acc, el) : [].concat(acc, [el]);
-  }, []).filter(notNull); // null means ignore
-}
-
-function removeExtraNodes(container, length) {
-  for (var i = container.childNodes.length - 1; i >= length; i--) {
-    container.removeChild(container.childNodes[i]);
-  }
-}
-
-/**
- * Render the given element tree into the container.
- * @param {Element} container - A DOM element that will be the container for
- *                              the renedered element tree.
- * @param {...[Object|String]|Object|String} tinierElementsAr -
- *   Any number of TinierDOM elements or strings that will be rendered.
- * @return {Object} A nested data structure of bindings for use in Tinier.
- */
-function render(container) {
-  // check arguments
-  if (!isElement(container)) {
-    throw new Error('First argument must be a DOM Element.');
-  }
-
-  for (var _len4 = arguments.length, tinierElementsAr = Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
-    tinierElementsAr[_key4 - 1] = arguments[_key4];
-  }
-
-  var tinierElements = flattenElementsAr(tinierElementsAr);
-
-  var first = get(tinierElements, 0);
-  if (isTinierBinding(first)) {
-    if (tinierElements.length !== 1) {
-      throw new Error('A binding cannot have siblings in TinierDOM. ' + 'At binding: [ ' + first.address.join(', ') + ' ].');
-    }
-    return objectForBindings([addressToObj(first.address, container)]);
-  }
-
-  // get the children with IDs
-  var childrenWithKeys = Array.from(container.children).filter(function (c) {
-    return c.id;
-  });
-  var elementsByID = keyBy(childrenWithKeys, 'id');
-
-  // render each element
-  var bindingsAr = tinierElements.map(function (tinierEl, i) {
-    // If an element if a binding, then there can only be one child.
-    if (isUndefined(tinierEl)) {
-      // cannot be undefined
-      throw new Error('Children in Tinier Elements cannot be undefined.');
-    } else if (isTinierElement(tinierEl)) {
-      // container.childNodes is a live collection, so get the current node at
-      // this index.
-      var el = container.childNodes[i];
-      // tinierEl is a TinierDOM element.
-      if (tinierEl.attributes.id in elementsByID) {
-        // el exist, then check for a matching node by ID
-        var movedEl = elementsByID[tinierEl.attributes.id];
-        if (el) {
-          // if match and existing el, then replace the element
-          container.replaceChild(movedEl, el);
-        } else {
-          // if match and el is undefined, then append the element
-          container.appendChild(movedEl);
-        }
-        // then render children
-        return render.apply(undefined, [movedEl].concat(tinierEl.children));
-      } else if (el) {
-        // both defined, check type and id
-        if (el.tagName && el.tagName.toLowerCase() === tinierEl.tagName.toLowerCase()) {
-          // matching tag, then update the node to match. Be aware that existing
-          // nodes with IDs might get moved, so we should clone them?
-          var elToUpdate = el.id ? el.cloneNode(true) : el;
-          updateDOMElement(elToUpdate, tinierEl);
-          if (el.id) container.replaceChild(elToUpdate, el);
-          return render.apply(undefined, [elToUpdate].concat(tinierEl.children));
-        } else {
-          // not a matching tag, then replace the element with a new one
-          var newEl = createDOMElement(tinierEl, container);
-          container.replaceChild(newEl, el);
-          return render.apply(undefined, [newEl].concat(tinierEl.children));
-        }
-      } else {
-        // no el and no ID match, then add a new Element or string node
-        var newEl2 = createDOMElement(tinierEl, container);
-        container.appendChild(newEl2);
-        return render.apply(undefined, [newEl2].concat(tinierEl.children));
-      }
-      // There should not be any bindings here
-    } else if (isTinierBinding(tinierEl)) {
-      throw new Error('A binding cannot have siblings in TinierDOM. ' + 'At binding: [ ' + tinierEl.address.join(', ') + ' ].');
-    } else {
-      var _el = container.childNodes[i];
-      var s = String(tinierEl);
-      // This should be a text node.
-      if (_el instanceof Text) {
-        // If already a text node, then set the text content.
-        _el.textContent = s;
-      } else if (_el) {
-        // If not a text node, then replace it.
-        container.replaceChild(document.createTextNode(s), _el);
-      } else {
-        // If no existing node, then add a new one.
-        container.appendChild(document.createTextNode(s));
-      }
-      // No binding here.
-      return null;
-    }
-  });
-
-  // remove extra nodes
-  // TODO This should not run if the child is a binding. Make a test for
-  // this. When else should it not run?
-  removeExtraNodes(container, tinierElements.length);
-
-  // bindings array to object
-  return objectForBindings(bindingsAr.filter(function (b) {
-    return b !== null;
-  }));
-}
-
-// export API
-exports.default = {
-  arrayOf: arrayOf, objectOf: objectOf, createComponent: createComponent, run: run, bind: bind, createElement: createElement, render: render
-};
 
 },{}]},{},[30])(30)
 });
