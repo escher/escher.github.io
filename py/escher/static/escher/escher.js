@@ -101,10 +101,10 @@ function turn_everything_off () {
   this.toggle_label_mouseover(false)
 }
 
+/**
+ * Listen for rotation, and rotate selected nodes.
+ */
 function toggle_rotation_mode (on_off) {
-  /** Listen for rotation, and rotate selected nodes.
-
-   */
   if (on_off === undefined) {
     this.rotation_mode_enabled = !this.rotation_mode_enabled
   } else {
@@ -190,34 +190,35 @@ function toggle_rotation_mode (on_off) {
 
   // definitions
   function show_center () {
-    var s = this.map.sel.selectAll('#rotation-center').data([0])
-    var enter = s.enter().append('g').attr('id', 'rotation-center')
+    var sel = this.map.sel.selectAll('#rotation-center').data([ 0 ])
+    var enter_sel = sel.enter().append('g').attr('id', 'rotation-center')
 
-    enter.append('path').attr('d', 'M-32 0 L32 0')
+    enter_sel.append('path').attr('d', 'M-32 0 L32 0')
       .attr('class', 'rotation-center-line')
-    enter.append('path').attr('d', 'M0 -32 L0 32')
+    enter_sel.append('path').attr('d', 'M0 -32 L0 32')
       .attr('class', 'rotation-center-line')
 
-    enter.merge(s)
-      .attr('transform',
-            'translate(' + this.center.x + ',' + this.center.y + ')')
+    var update_sel = enter_sel.merge(sel)
+
+    update_sel.attr('transform',
+                    'translate(' + this.center.x + ',' + this.center.y + ')')
       .attr('visibility', 'visible')
-
-    s.call(d3_drag()
-           .on('drag', function (sel) {
-             var cur = utils.d3_transform_catch(sel.attr('transform')),
-             new_loc = [d3_selection.event.dx + cur.translate[0],
-                        d3_selection.event.dy + cur.translate[1]]
-             sel.attr('transform', 'translate('+new_loc+')')
-             this.center = { x: new_loc[0], y: new_loc[1] }
-           }.bind(this, s)))
-    s.on('mouseover', function () {
-      var current = parseFloat(this.selectAll('path').style('stroke-width'))
-      this.selectAll('path').style('stroke-width', current * 2 + 'px')
-    }.bind(s))
-    s.on('mouseout', function () {
-      this.selectAll('path').style('stroke-width', null)
-    }.bind(s))
+      .on('mouseover', function () {
+        var current = parseFloat(update_sel.selectAll('path').style('stroke-width'))
+        update_sel.selectAll('path').style('stroke-width', current * 2 + 'px')
+      })
+      .on('mouseout', function () {
+        update_sel.selectAll('path').style('stroke-width', null)
+      })
+      .call(d3_drag().on('drag', function () {
+        var cur = utils.d3_transform_catch(update_sel.attr('transform'))
+        var new_loc = [
+          d3_selection.event.dx + cur.translate[0],
+          d3_selection.event.dy + cur.translate[1]
+        ]
+        update_sel.attr('transform', 'translate(' + new_loc + ')')
+        this.center = { x: new_loc[0], y: new_loc[1] }
+      }.bind(this)))
   }
   function hide_center(sel) {
     this.map.sel.select('#rotation-center')
@@ -1552,6 +1553,7 @@ Builder.prototype = {
   zoom_mode: zoom_mode,
   rotate_mode: rotate_mode,
   text_mode: text_mode,
+  _reaction_check_add_abs: _reaction_check_add_abs,
   set_reaction_data: set_reaction_data,
   set_metabolite_data: set_metabolite_data,
   set_gene_data: set_gene_data,
@@ -1568,7 +1570,7 @@ Builder.prototype = {
 module.exports = Builder
 
 function init (map_data, model_data, embedded_css, selection, options) {
-  // defaults
+  // Defaults
   if (!selection) {
     selection = d3_select('body').append('div')
   } else if (selection instanceof d3_selection) {
@@ -1596,6 +1598,9 @@ function init (map_data, model_data, embedded_css, selection, options) {
   // apply this object as data for the selection
   this.selection.datum(this)
   this.selection.__builder__ = this
+
+  // Remember if the user provided a custom value for reaction_styles
+  this.has_custom_reaction_styles = Boolean(options.reaction_styles)
 
   // set defaults
   this.options = utils.set_options(options, {
@@ -1648,8 +1653,8 @@ function init (map_data, model_data, embedded_css, selection, options) {
     identifiers_on_map: 'bigg_id',
     highlight_missing: false,
     allow_building_duplicate_reactions: false,
-    cofactors: ['atp', 'adp', 'nad', 'nadh', 'nadp', 'nadph', 'gtp', 'gdp',
-                'h', 'coa', 'ump', 'h20', 'ppi'],
+    cofactors: [ 'atp', 'adp', 'nad', 'nadh', 'nadp', 'nadph', 'gtp', 'gdp',
+                 'h', 'coa', 'ump', 'h20', 'ppi' ],
     // Extensions
     tooltip_component: DefaultTooltip,
     enable_tooltips: true,
@@ -1664,7 +1669,7 @@ function init (map_data, model_data, embedded_css, selection, options) {
     metabolite_no_data_size: true,
   })
 
-  // check the location
+  // Check the location
   if (utils.check_for_parent_tag(this.selection, 'svg')) {
     throw new Error('Builder cannot be placed within an svg node '+
                     'becuase UI elements are html-based.')
@@ -1707,15 +1712,16 @@ function init (map_data, model_data, embedded_css, selection, options) {
   }.bind(this))
   // TODO warn about repeated types in the scale
 
-  // set up this callback manager
+  // Set up this callback manager
   this.callback_manager = CallbackManager()
   if (this.options.first_load_callback !== null) {
     this.callback_manager.set('first_load', this.options.first_load_callback)
   }
 
-  // load the model, map, and update data in both
+  // Load the model, map, and update data in both
   this.load_model(this.model_data, false)
   this.load_map(this.map_data, false)
+  var message_fn = this._reaction_check_add_abs()
   this._update_data(true, true)
 
   // Setting callbacks. TODO enable atomic updates. Right now, every time the
@@ -1737,6 +1743,8 @@ function init (map_data, model_data, embedded_css, selection, options) {
     }.bind(this))
 
   this.callback_manager.run('first_load', this)
+
+  if (message_fn !== null) setTimeout(message_fn, 500)
 }
 
 /**
@@ -1815,97 +1823,100 @@ function load_map (map_data, should_update_data) {
                        this.options.enable_search)
   }
   // zoom container status changes
-  this.zoom_container.callback_manager.set('svg_start', function() {
+  this.zoom_container.callback_manager.set('svg_start', function () {
     this.map.set_status('Drawing ...')
   }.bind(this))
-  this.zoom_container.callback_manager.set('svg_finish', function() {
+  this.zoom_container.callback_manager.set('svg_finish', function () {
     this.map.set_status('')
   }.bind(this))
 
-  // set the data for the map
+  // Set the data for the map
   if (should_update_data)
     this._update_data(false, true)
 
-  // set up the reaction input with complete.ly
+  // Set up the reaction input with complete.ly
   this.build_input = new BuildInput(this.selection, this.map,
                                     this.zoom_container, this.settings)
 
-  // set up the text edit input
+  // Set up the text edit input
   this.text_edit_input = new TextEditInput(this.selection, this.map,
                                            this.zoom_container)
 
-  // set up the tooltip container
+  // Set up the tooltip container
   this.tooltip_container = new TooltipContainer(this.selection, this.map,
                                                 this.options.tooltip_component,
                                                 this.zoom_container)
 
-  // set up the Brush
+  // Set up the Brush
   this.brush = new Brush(zoomed_sel, false, this.map, '.canvas-group')
   this.map.canvas.callback_manager.set('resize', function() {
     this.brush.toggle(true)
   }.bind(this))
 
-  // set up the modes
+  // Set up the modes
   this._setup_modes(this.map, this.brush, this.zoom_container)
 
   var s = this.selection
     .append('div').attr('class', 'search-menu-container')
-    .append('div').attr('class', 'search-menu-container-inline'),
-  menu_div = s.append('div'),
-  search_bar_div = s.append('div'),
-  button_div = this.selection.append('div')
+    .append('div').attr('class', 'search-menu-container-inline')
+  var menu_div = s.append('div')
+  var search_bar_div = s.append('div')
+  var button_div = this.selection.append('div')
 
-  // set up the search bar
+  // Set up the search bar
   this.search_bar = new SearchBar(search_bar_div, this.map.search_index,
                                   this.map)
-  // set up the hide callbacks
+  // Set up the hide callbacks
   this.search_bar.callback_manager.set('show', function() {
     this.settings_bar.toggle(false)
   }.bind(this))
 
-  // set up the settings
+  // Set up the settings
   var settings_div = this.selection.append('div')
+  var settings_cb = function (type, on_off) {
+    // Temporarily set the abs type, for previewing it in the Settings menu
+    var o = this.options[type + '_styles']
+    if (on_off && o.indexOf('abs') === -1) {
+      o.push('abs')
+    }
+    else if (!on_off) {
+      var i = o.indexOf('abs')
+      if (i !== -1) {
+        this.options[type + '_styles'] = o.slice(0, i).concat(o.slice(i + 1))
+      }
+    }
+    this._update_data(false, true, type)
+  }.bind(this)
   this.settings_bar = new SettingsMenu(settings_div, this.settings, this.map,
-                                       function(type, on_off) {
-                                         // temporarily set the abs type, for
-                                         // previewing it in the Settings
-                                         // menu
-                                         var o = this.options[type + '_styles']
-                                         if (on_off && o.indexOf('abs') == -1)
-                                           o.push('abs')
-                                         else if (!on_off) {
-                                           var i = o.indexOf('abs')
-                                           if (i != -1)
-                                             this.options[type + '_styles'] = o.slice(0, i).concat(o.slice(i + 1))
-                                         }
-                                         this._update_data(false, true, type)
-                                       }.bind(this))
-  this.settings_bar.callback_manager.set('show', function() {
+                                       settings_cb)
+
+  this.settings_bar.callback_manager.set('show', function () {
     this.search_bar.toggle(false)
   }.bind(this))
 
-  // set up key manager
+  // Set up key manager
   var keys = this._get_keys(this.map, this.zoom_container,
                             this.search_bar, this.settings_bar,
                             this.options.enable_editing,
                             this.options.full_screen_button)
   this.map.key_manager.assigned_keys = keys
-  // tell the key manager about the reaction input and search bar
+  // Tell the key manager about the reaction input and search bar
   this.map.key_manager.input_list = [this.build_input, this.search_bar,
                                      this.settings_bar, this.text_edit_input]
-  // make sure the key manager remembers all those changes
+  // Make sure the key manager remembers all those changes
   this.map.key_manager.update()
-  // turn it on/off
+  // Turn it on/off
   this.map.key_manager.toggle(this.options.enable_keys)
 
-  // set up menu and status bars
+  // Set up menu and status bars
   if (this.options.menu === 'all') {
-    if (this.options.ignore_bootstrap)
+    if (this.options.ignore_bootstrap) {
       console.error('Cannot create the dropdown menus if ignore_bootstrap = true')
-    else
+    } else {
       this._set_up_menu(menu_div, this.map, this.map.key_manager, keys,
                         this.options.enable_editing, this.options.enable_keys,
                         this.options.full_screen_button)
+    }
   }
 
   this._set_up_button_panel(button_div, keys, this.options.enable_editing,
@@ -1913,54 +1924,59 @@ function load_map (map_data, should_update_data) {
                             this.options.full_screen_button,
                             this.options.menu, this.options.ignore_bootstrap)
 
-  // setup selection box
+  // Setup selection box
   if (this.options.zoom_to_element) {
     var type = this.options.zoom_to_element.type,
     element_id = this.options.zoom_to_element.id
-    if (typeof type === 'undefined' || ['reaction', 'node'].indexOf(type) == -1)
+    if (_.isUndefined(type) || [ 'reaction', 'node' ].indexOf(type) === -1) {
       throw new Error('zoom_to_element type must be "reaction" or "node"')
-    if (typeof element_id === 'undefined')
+    }
+    if (_.isUndefined(element_id)) {
       throw new Error('zoom_to_element must include id')
-    if (type == 'reaction')
+    }
+    if (type === 'reaction') {
       this.map.zoom_to_reaction(element_id)
-    else if (type == 'node')
+    } else if (type === 'node') {
       this.map.zoom_to_node(element_id)
+    }
   } else if (map_data !== null) {
     this.map.zoom_extent_canvas()
   } else {
     if (this.options.starting_reaction !== null && this.cobra_model !== null) {
       // Draw default reaction if no map is provided
       var size = this.zoom_container.get_size()
-      var start_coords = { x: size.width / 2,
-                           y: size.height / 4 }
-      this.map.new_reaction_from_scratch(this.options.starting_reaction, start_coords, 90)
+      var start_coords = { x: size.width / 2, y: size.height / 4 }
+      this.map.new_reaction_from_scratch(this.options.starting_reaction,
+                                         start_coords, 90)
       this.map.zoom_extent_nodes()
     } else {
       this.map.zoom_extent_canvas()
     }
   }
 
-  // status in both modes
+  // Status in both modes
   var status = this._setup_status(this.selection, this.map)
 
-  // set up quick jump
+  // Set up quick jump
   this._setup_quick_jump(this.selection)
 
-  // start in zoom mode for builder, view mode for viewer
-  if (this.options.enable_editing)
+  // Start in zoom mode for builder, view mode for viewer
+  if (this.options.enable_editing) {
     this.zoom_mode()
-  else
+  } else {
     this.view_mode()
+  }
 
   // confirm before leaving the page
-  if (this.options.enable_editing)
+  if (this.options.enable_editing) {
     this._setup_confirm_before_exit()
+  }
 
   // draw
   this.map.draw_everything()
 }
 
-function _set_mode(mode) {
+function _set_mode (mode) {
   this.search_bar.toggle(false)
   // input
   this.build_input.toggle(mode == 'build')
@@ -2044,21 +2060,43 @@ function text_mode() {
   this._set_mode('text')
 }
 
+function _reaction_check_add_abs () {
+  var curr_style = this.options.reaction_styles
+  var did_abs = false
+  if (this.options.reaction_data !== null &&
+      !this.has_custom_reaction_styles &&
+      !_.contains(curr_style, 'abs')) {
+    this.settings.set_conditional('reaction_styles', curr_style.concat('abs'))
+    return function () {
+      this.map.set_status('Visualizing absolute value of reaction data. ' +
+                          'Change this option in Settings.', 5000)
+    }.bind(this)
+  }
+  return null
+}
+
 /**
  * For documentation of this function, see docs/javascript_api.rst.
  */
 function set_reaction_data (data) {
   this.options.reaction_data = data
+  var message_fn = this._reaction_check_add_abs()
   this._update_data(true, true, 'reaction')
-  this.map.set_status('')
+  if (message_fn) {
+    message_fn()
+  } else {
+    this.map.set_status('')
+  }
 }
 
-function set_gene_data(data, clear_gene_reaction_rules) {
-  /** For documentation of this function, see docs/javascript_api.rst.
-
-   */
-  if (clear_gene_reaction_rules) // default undefined
+/**
+ * For documentation of this function, see docs/javascript_api.rst.
+ */
+function set_gene_data (data, clear_gene_reaction_rules) {
+  if (clear_gene_reaction_rules) {
+    // default undefined
     this.settings.set_conditional('show_gene_reaction_rules', false)
+  }
   this.options.gene_data = data
   this._update_data(true, true, 'reaction')
   this.map.set_status('')
@@ -2138,9 +2176,10 @@ function _update_data (update_model, update_map, kind, should_draw) {
   // first.
   // ----------------------------------------------------------------
 
-  // if this function runs again, cancel the previous model update
-  if (this.update_model_timer)
+  // If this function runs again, cancel the previous model update
+  if (this.update_model_timer) {
     clearTimeout(this.update_model_timer)
+  }
 
   var delay = 5
   this.update_model_timer = setTimeout(function () {
@@ -2205,8 +2244,8 @@ function _update_data (update_model, update_map, kind, should_draw) {
   }
 }
 
-function _set_up_menu(menu_selection, map, key_manager, keys, enable_editing,
-                      enable_keys, full_screen_button, ignore_bootstrap) {
+function _set_up_menu (menu_selection, map, key_manager, keys, enable_editing,
+                       enable_keys, full_screen_button, ignore_bootstrap) {
   var menu = menu_selection.attr('id', 'menu')
     .append('ul')
     .attr('class', 'nav nav-pills')
@@ -9907,8 +9946,8 @@ function get_met_label_loc (angle, index, count, is_primary, bigg_id,
 function new_reaction (bigg_id, cobra_reaction, cobra_metabolites,
                        selected_node_id, selected_node,
                        largest_ids, cofactors, angle) {
-  // Convert to radians
-  angle = Math.PI / 180 * angle
+  // Convert to radians, and force to domain - PI/2 to PI/2
+  angle = utils.to_radians_norm(angle)
 
   // Generate a new integer id
   var new_reaction_id = String(++largest_ids.reactions)
@@ -11569,7 +11608,7 @@ function _parse_float_or_null(x) {
 }
 
 },{"./utils":33,"d3-format":43,"underscore":56}],29:[function(require,module,exports){
-module.exports = {'version': '1.6.0-beta.4', builder_embed: 'svg.escher-svg .gene-label,svg.escher-svg .label{text-rendering:optimizelegibility;cursor:default}svg.escher-svg #mouse-node{fill:none}svg.escher-svg #canvas{stroke:#ccc;stroke-width:7px;fill:#fff}svg.escher-svg .resize-rect{fill:#000;opacity:0;stroke:none}svg.escher-svg .label{font-family:sans-serif;font-style:italic;font-weight:700;font-size:8px;fill:#000;stroke:none}svg.escher-svg .reaction-label{font-size:30px;fill:#202078;text-rendering:optimizelegibility}svg.escher-svg .node-label{font-size:20px}svg.escher-svg .gene-label{font-size:18px;fill:#202078}svg.escher-svg .text-label .label,svg.escher-svg .text-label-input{font-size:50px}svg.escher-svg .node-circle{stroke-width:2px}svg.escher-svg .midmarker-circle,svg.escher-svg .multimarker-circle{fill:#fff;fill-opacity:.2;stroke:#323232}svg.escher-svg g.selected .node-circle{stroke-width:6px;stroke:#1471c7}svg.escher-svg g.selected .label{fill:#1471c7}svg.escher-svg .metabolite-circle{stroke:#a24510;fill:#e0865b}svg.escher-svg g.selected .metabolite-circle{stroke:#050200}svg.escher-svg .segment{stroke:#334E75;stroke-width:10px;fill:none}svg.escher-svg .arrowhead{fill:#334E75}svg.escher-svg .stoichiometry-label-rect{fill:#fff;opacity:.5}svg.escher-svg .stoichiometry-label{fill:#334E75;font-size:17px}svg.escher-svg .membrane{fill:none;stroke:#fb0}svg.escher-svg .brush .extent{fill-opacity:.1;fill:#000;stroke:#fff;shape-rendering:crispEdges}svg.escher-svg #brush-container .background{fill:none}svg.escher-svg .bezier-circle{fill:#fff}svg.escher-svg .bezier-circle.b1{stroke:red}svg.escher-svg .bezier-circle.b2{stroke:#00f}svg.escher-svg .connect-line{stroke:#c8c8c8}svg.escher-svg .direction-arrow{stroke:#000;stroke-width:1px;fill:#fff;opacity:.3}svg.escher-svg .start-reaction-cursor{cursor:pointer}svg.escher-svg .start-reaction-target{stroke:#646464;fill:none;opacity:.5}svg.escher-svg .rotation-center-line{stroke:red;stroke-width:5px}svg.escher-svg .highlight{fill:#D97000;text-decoration:underline}svg.escher-svg .cursor-grab{cursor:grab;cursor:-webkit-grab}svg.escher-svg .cursor-grabbing{cursor:grabbing;cursor:-webkit-grabbing}svg.escher-svg .edit-text-cursor{cursor:text}'};
+module.exports = {'version': '1.6.0', builder_embed: 'svg.escher-svg .gene-label,svg.escher-svg .label{text-rendering:optimizelegibility;cursor:default}svg.escher-svg #mouse-node{fill:none}svg.escher-svg #canvas{stroke:#ccc;stroke-width:7px;fill:#fff}svg.escher-svg .resize-rect{fill:#000;opacity:0;stroke:none}svg.escher-svg .label{font-family:sans-serif;font-style:italic;font-weight:700;font-size:8px;fill:#000;stroke:none}svg.escher-svg .reaction-label{font-size:30px;fill:#202078;text-rendering:optimizelegibility}svg.escher-svg .node-label{font-size:20px}svg.escher-svg .gene-label{font-size:18px;fill:#202078}svg.escher-svg .text-label .label,svg.escher-svg .text-label-input{font-size:50px}svg.escher-svg .node-circle{stroke-width:2px}svg.escher-svg .midmarker-circle,svg.escher-svg .multimarker-circle{fill:#fff;fill-opacity:.2;stroke:#323232}svg.escher-svg g.selected .node-circle{stroke-width:6px;stroke:#1471c7}svg.escher-svg g.selected .label{fill:#1471c7}svg.escher-svg .metabolite-circle{stroke:#a24510;fill:#e0865b}svg.escher-svg g.selected .metabolite-circle{stroke:#050200}svg.escher-svg .segment{stroke:#334E75;stroke-width:10px;fill:none}svg.escher-svg .arrowhead{fill:#334E75}svg.escher-svg .stoichiometry-label-rect{fill:#fff;opacity:.5}svg.escher-svg .stoichiometry-label{fill:#334E75;font-size:17px}svg.escher-svg .membrane{fill:none;stroke:#fb0}svg.escher-svg .brush .extent{fill-opacity:.1;fill:#000;stroke:#fff;shape-rendering:crispEdges}svg.escher-svg #brush-container .background{fill:none}svg.escher-svg .bezier-circle{fill:#fff}svg.escher-svg .bezier-circle.b1{stroke:red}svg.escher-svg .bezier-circle.b2{stroke:#00f}svg.escher-svg .connect-line{stroke:#c8c8c8}svg.escher-svg .direction-arrow{stroke:#000;stroke-width:1px;fill:#fff;opacity:.3}svg.escher-svg .start-reaction-cursor{cursor:pointer}svg.escher-svg .start-reaction-target{stroke:#646464;fill:none;opacity:.5}svg.escher-svg .rotation-center-line{stroke:red;stroke-width:5px}svg.escher-svg .highlight{fill:#D97000;text-decoration:underline}svg.escher-svg .cursor-grab{cursor:grab;cursor:-webkit-grab}svg.escher-svg .cursor-grabbing{cursor:grabbing;cursor:-webkit-grabbing}svg.escher-svg .edit-text-cursor{cursor:text}'};
 },{}],30:[function(require,module,exports){
 /**
 * @license
@@ -11705,7 +11744,7 @@ module.exports = {
     set_json_or_csv_input_button: set_json_or_csv_input_button
 };
 
-function _button_with_sel(b, button) {
+function _button_with_sel (b, button) {
     var ignore_bootstrap = button.ignore_bootstrap || false
     b.attr('class', 'btn btn-default simple-button')
     // icon
@@ -11905,6 +11944,7 @@ module.exports = {
   rotate_coords: rotate_coords,
   get_angle: get_angle,
   to_degrees: to_degrees,
+  to_radians_norm: to_radians_norm,
   angle_for_event: angle_for_event,
   distance: distance,
   check_undefined: check_undefined,
@@ -12681,6 +12721,26 @@ function get_angle (coords) {
 
 function to_degrees (radians) {
   return radians * 180 / Math.PI
+}
+
+/**
+ * Force to domain - PI to PI
+ */
+function _angle_norm (radians) {
+  if (radians < -Math.PI) {
+    radians = radians + Math.ceil(radians / (-2*Math.PI)) * 2*Math.PI
+  } else if (radians > Math.PI) {
+    radians = radians - Math.ceil(radians / (2*Math.PI)) * 2*Math.PI
+  }
+  return radians
+}
+
+/**
+ * Convert to radians, and force to domain -PI to PI
+ */
+function to_radians_norm (degrees) {
+  var radians = Math.PI / 180 * degrees
+  return _angle_norm(radians)
 }
 
 function angle_for_event (displacement, point, center) {
