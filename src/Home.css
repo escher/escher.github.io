@@ -1,0 +1,111 @@
+#homepage-container  {
+  font-family: Open Sans, Helvetica Neue, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  display: flex;
+  flex-direction: row;
+  place-content: center center;
+}
+
+#homepage-body {
+  flex: 0 1 700px;
+}
+
+#homepage-title-box {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+}
+
+#homepage-logo {
+  flex: 0 0 auto;
+  height: 288px;
+  width: 250px;
+}
+
+#homepage-title {
+  flex: 1 1 100%;
+  color: #291E1E;
+  font-size: 140px;
+  font-family: tulpen-one, Futura, serif;
+  font-weight: 400;
+}
+
+#homepage-description {
+  font-style: italic;
+  font-size: 20px;
+  width: 100%;
+  padding: 10px 20px;
+  box-sizing: border-box;
+}
+
+#homepage-launch-box {
+  display: flex;
+  flex-direction: row;
+  place-content: center center;
+  width: 100%;
+  margin: 40px 0;
+}
+
+#homepage-launch-box-centered {
+  flex: 0 1 515px;
+  margin: 0 10px;
+  position: relative;
+}
+
+#homepage-launch-button {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  padding: 20px 0;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  color: #333;
+  font-style: italic;
+  font-size: 32px;
+  font-weight: bold;
+  z-index: 20;
+  background-color: rgba(229, 229, 229, 0.7);
+}
+
+#homepage-launch-screen {
+  width: 100%;
+  height: auto;
+  box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+}
+
+#funding {
+  width: 100%;
+  margin: 20px 0 0 0;
+}
+
+#logos {
+   text-align: center;
+}
+
+#sbrg-logo {
+  width: 100%;
+  max-width: 500px;
+  margin: 20px 0 20px 0;
+}
+
+#nnf-logo {
+  width: 100%;
+  max-width: 500px;
+  margin: 10px 0 30px 0;
+}
+
+#copyright {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  #homepage-logo {
+    display: none;
+  }
+  #homepage-title {
+    font-size: 140px;
+    text-align: center;
+  }
+}
