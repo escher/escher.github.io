@@ -26,7 +26,6 @@ body {
 #homepage-container h2,
 #homepage-container h3,
 #homepage-container h4 {
-  line-height: 1.1;
   margin: 18px 0 9px 0;
 }
 
@@ -42,14 +41,6 @@ body {
   font-size: 18px;
 }
 
-#homepage-container button {
-  font-size: 14px;
-}
-
-#homepage-container select {
-  font-size: 14px;
-}
-
 #homepage-container #homepage-body {
   max-width: 700px;
   margin: 0 auto;
@@ -62,11 +53,7 @@ body {
   place-content: center center;
 }
 
-/* TitleBox */
-
-#homepage-title-box {
-  text-align: center;
-}
+/* Link box */
 
 #github-link-box {
   position: absolute;
@@ -90,6 +77,12 @@ body {
   top: 3px;
   position: relative;
   margin-right: 3px;
+}
+
+/* TitleBox */
+
+#homepage-title-box {
+  text-align: center;
 }
 
 #homepage-logo {
@@ -137,6 +130,95 @@ body {
   flex: 0 0 auto;
   height: 288px;
   width: 250px;
+}
+
+/* Filters */
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.row-collapse {
+  display: flex;
+  flex-direction: row;
+}
+@media (max-width: 768px) {
+  .row-collapse {
+    flex-direction: column;
+  }
+}
+
+.filter {
+  padding: 0 10px;
+  box-sizing: border-box;
+  width: 100%;
+}
+.filter-label {
+  width: 100%;
+}
+.filter-select {
+  width: 100%;
+  height: 30px;
+  padding: 0;
+  font-size: 18px;
+  color: #777777;
+  background-color: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.075);
+  transition: border-color ease-in-out .15s,box-shadow ease-in-out .15s;
+}
+.filter-checkbox {
+  width: 100%;
+  display: block;
+}
+.filter-checkbox>input {
+  margin-right: 6px;
+  position: relative;
+  top: -1px;
+}
+
+#organism-filter {
+  flex: 0 0 100%;
+}
+
+#map-filter {
+  flex: 2;
+}
+
+#model-filter {
+  flex: 1.5;
+}
+
+#tool-filter {
+  flex: 1;
+}
+
+#options-filter {
+  flex: 1;
+}
+
+#go-button-container {
+  flex: 1;
+}
+
+#go-button {
+  color: #ffffff;
+  background-color: #474949;
+  box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+  border: none;
+  font-size: 25px;
+  border-radius: 4px;
+  display: block;
+  margin: 58px 0 0 0;
+  height: 40px;
+  width: 100%;
+}
+@media (max-width: 768px) {
+  #go-button {
+    margin: 25px 0 10px;
+  }
 }
 
 #homepage-launch-box {

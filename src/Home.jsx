@@ -2,7 +2,6 @@
 
 import { h, Component } from 'preact'
 
-import logo from './img/escher-logo.png'
 import logo2x from './img/escher-logo@2x.png'
 // import screenshot from './img/screen.png'
 // import screenshot2x from './img/screen@2x.png'
@@ -26,8 +25,7 @@ const TitleBox = () => (
     <img
       id='homepage-logo'
       alt=''
-      src={logo}
-      srcset={`${logo} 1x, ${logo2x} 2x`}
+      src={logo2x}
     />
     <div>
       <div id='homepage-title'>ESCHER</div>
@@ -39,52 +37,52 @@ const TitleBox = () => (
 )
 
 const Filters = () => (
-  <div id='filter-box'>
-    <div class='row'>
-      <div id='organism-filter'>
-        <h3>Filter by organism</h3>
-        <select id='organisms' class='form-control'>
-          <option value='all'>All</option>
-        </select>
-      </div>
+  <div id='filter-container' class='column'>
+    <div id='organism-filter' class='filter'>
+      <h3 class='filter-label'>Filter by organism</h3>
+      <select id='organisms' class='filter-select'>
+        <option value='all'>All</option>
+      </select>
     </div>
 
-    <div class='row'>
-      <div id='map-filter'>
-        <h3>Map</h3>
-        <select id='maps' class='form-control'>
+    <div class='row-collapse'>
+      <div id='map-filter' class='filter'>
+        <h3 class='filter-label'>Map</h3>
+        <select id='maps' class='filter-select'>
           <option value='none'>None</option>
         </select>
       </div>
 
-      <div>
-        <h3>Model (Optional)</h3>
-        <select id='models' class='form-control'>
+      <div id='model-filter' class='filter'>
+        <h3 class='filter-label'>Model (Optional)</h3>
+        <select id='models' class='filter-select'>
+          <option value='none'>None</option>
+        </select>
+      </div>
+
+      <div id='tool-filter' class='filter'>
+        <h3 class='filter-label'>Tool</h3>
+        <select id='tools' class='filter-select'>
           <option value='none'>None</option>
         </select>
       </div>
     </div>
 
-    <div class='row'>
-      <div class='col-sm-6'>
-        <h3>Options</h3>
-        <div style={{width: '100%'}}>
-          <label>
-            <input type='checkbox' id='scroll'>
-              Scroll to zoom (instead of scroll to pan)
-            </input>
-          </label>
-        </div>
-        <div style={{width: '100%'}}>
-          <label>
-            <input type='checkbox' id='never_ask'>
-              Never ask before reloading
-            </input>
-          </label>
-        </div>
+    <div class='row-collapse'>
+      <div id='options-filter' class='filter'>
+        <h3 class='filter-label'>Options</h3>
+        <label class='filter-checkbox'>
+          <input type='checkbox' id='scroll' />
+          Scroll to zoom (instead of scroll to pan)
+        </label>
+        <label class='filter-checkbox'>
+          <input type='checkbox' id='never_ask' />
+          Never ask before reloading
+        </label>
       </div>
-      <div class='col-sm-6'>
-        <button type='button' id='submit' class='btn btn-default column-button'>
+
+      <div class='filter' id='go-button-container'>
+        <button type='button' id='go-button'>
           Load map
         </button>
       </div>
