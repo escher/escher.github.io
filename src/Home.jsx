@@ -8,13 +8,18 @@ import logo2x from './img/escher-logo@2x.png'
 // import screenshot2x from './img/screen@2x.png'
 import sbrg from './img/sbrg-logo.png'
 import nnf from './img/nnf-logo.jpg'
+import github from './img/github-icon.svg'
 
 import './Home.css'
 
 const TitleBox = () => (
   <div id='homepage-title-box' class='row'>
-    <div id='whats-new'>
-      <a href='https://github.com/zakandrewking/escher/releases'>
+    <div id='github-link-box'>
+      <a href='https://github.com/zakandrewking/escher'>
+        <img src={github} alt='GitHub' id='github-link' />
+        GitHub
+      </a>
+      <a href='https://github.com/zakandrewking/escher/releases' id='whats-new'>
         What's new?
       </a>
     </div>

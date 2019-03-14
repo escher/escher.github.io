@@ -1,5 +1,5 @@
 body {
-    margin: 0;
+  margin: 0;
 }
 
 #homepage-container  {
@@ -14,40 +14,40 @@ body {
 #homepage-container a:hover,
 #homepage-container a:focus,
 #homepage-container a:visited {
-    color: #CF6965;
-    text-decoration: none;
+  color: #CF6965;
+  text-decoration: none;
 }
 
 #homepage-container a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 #homepage-container h1,
 #homepage-container h2,
 #homepage-container h3,
 #homepage-container h4 {
-    line-height: 1.1;
-    margin: 18px 0 9px 0;
+  line-height: 1.1;
+  margin: 18px 0 9px 0;
 }
 
 #homepage-container h2 {
-    font-size: 30px;
+  font-size: 30px;
 }
 
 #homepage-container h3 {
-    font-size: 24px;
+  font-size: 24px;
 }
 
 #homepage-container h4 {
-    font-size: 18px;
+  font-size: 18px;
 }
 
 #homepage-container button {
-    font-size: 14px;
+  font-size: 14px;
 }
 
 #homepage-container select {
-    font-size: 14px;
+  font-size: 14px;
 }
 
 #homepage-container #homepage-body {
@@ -65,70 +65,78 @@ body {
 /* TitleBox */
 
 #homepage-title-box {
-    text-align: center;
+  text-align: center;
 }
 
-#whats-new {
-    position: absolute;
-    top: 5px;
-    right: 20px;
-    font-style: italic;
-    font-size: 18px;
-    border-radius: 2px;
-    padding: 1px 5px;
-    border: 1px solid #CF6965;
+#github-link-box {
+  position: absolute;
+  top: 5px;
+  right: 20px;
+  font-style: italic;
+  font-size: 18px;
 }
-@media (max-width: 768px) {
-    #whats-new {
-        font-size: 18px;
-    }
+#github-link-box>a {
+  border: 1px solid #CF6965;
+  margin: 0 3px;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+#github-link-box>a:hover {
+  opacity: 0.8;
+  text-decoration: none;
+}
+#github-link {
+  height: 20px;
+  top: 3px;
+  position: relative;
+  margin-right: 3px;
 }
 
 #homepage-logo {
-    vertical-align: inherit;
-    margin-bottom: 60px;
+  vertical-align: inherit;
+  margin-bottom: 60px;
 }
 @media (max-width: 768px) {
-    #homepage-logo {
-        display: none;
-    }
+  #homepage-logo {
+    display: none;
+  }
 }
 
 #homepage-title {
-    flex: 1 1 100%;
-    font-size: 160px;
-    line-height: 1.1;
-    font-family: tulpen-one, Futura, serif;
-    font-weight: 400;
-    margin: 18px 0 0 0;
+  flex: 1 1 100%;
+  font-size: 160px;
+  line-height: 1.1;
+  font-family: tulpen-one, Futura, serif;
+  font-weight: 400;
+  margin: 35px 0 0 0;
 }
 @media (min-width: 768px) {
-    #homepage-title {
-        font-size: 230px;
-        position: relative;
-        top: 45px;
-        left: -7px;
-        text-align: left;
-        margin-bottom: 10px;
-    }
+  #homepage-title {
+    font-size: 230px;
+    position: relative;
+    top: 45px;
+    left: -7px;
+    text-align: left;
+    margin-bottom: 10px;
+  }
 }
 
 #homepage-description {
-    font-size: 22px;
-    font-style: italic;
-    margin: 0 0 9px;
-    font-weight: 200;
+  font-size: 22px;
+  font-style: italic;
+  margin: 0 0 9px;
+  font-weight: 200;
 }
 @media (min-width: 768px) {
-    #homepage-description {
-        text-align: left;
-    }
+  #homepage-description {
+    text-align: left;
+  }
 }
 
 #homepage-logo {
-    flex: 0 0 auto;
-    height: 288px;
-    width: 250px;
+  flex: 0 0 auto;
+  height: 288px;
+  width: 250px;
 }
 
 #homepage-launch-box {
@@ -168,7 +176,7 @@ body {
 }
 
 #logos {
-   text-align: center;
+  text-align: center;
 }
 
 #sbrg-logo {
