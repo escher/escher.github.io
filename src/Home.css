@@ -1,5 +1,10 @@
+/* Main */
 body {
   margin: 0;
+}
+
+p {
+  margin-block-end: 0;
 }
 
 #homepage-container  {
@@ -46,11 +51,43 @@ body {
   margin: 0 auto;
 }
 
-#homepage-container .row {
-  width: 100%;
+/* Flex */
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
   display: flex;
   flex-direction: row;
-  place-content: center center;
+}
+
+.row-collapse {
+  display: flex;
+  flex-direction: row;
+}
+@media (max-width: 768px) {
+  .row-collapse {
+    flex-direction: column;
+  }
+}
+
+.section {
+  margin: 18px 15px 22px 10px;
+}
+
+.section-title {
+  flex: 0 0 auto;
+  margin-right: 15px !important;
+}
+.demo-section-title {
+  flex: 0 0 133px;
+}
+@media (max-width: 768px) {
+  .demo-section-title {
+    flex: 1;
+  }
 }
 
 /* Link box */
@@ -59,7 +96,6 @@ body {
   position: absolute;
   top: 5px;
   right: 20px;
-  font-style: italic;
   font-size: 18px;
 }
 #github-link-box>a {
@@ -134,19 +170,8 @@ body {
 
 /* Filters */
 
-.column {
-  display: flex;
-  flex-direction: column;
-}
-
-.row-collapse {
-  display: flex;
-  flex-direction: row;
-}
-@media (max-width: 768px) {
-  .row-collapse {
-    flex-direction: column;
-  }
+#filter-container {
+  margin-bottom: 25px;
 }
 
 .filter {
@@ -202,8 +227,13 @@ body {
 #go-button-container {
   flex: 1;
 }
+#go-button-container:hover {
+  opacity: 0.8;
+  cursor: pointer;
+}
 
 #go-button {
+  cursor: pointer;
   color: #ffffff;
   background-color: #474949;
   box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
@@ -221,58 +251,103 @@ body {
   }
 }
 
-#homepage-launch-box {
-  display: flex;
-  flex-direction: row;
-  place-content: center center;
-  width: 100%;
-  margin: 40px 0;
-}
+/* Apps */
 
-#homepage-launch-box-centered {
-  flex: 0 1 515px;
-  margin: 0 10px;
+.demo-box {
+  flex: 1 1;
   position: relative;
+  box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+  margin: 10px;
+  height: 200px;
+  min-height: 200px;
+  overflow: hidden;
+  border-radius: 4px;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: right;
 }
 
-#homepage-launch-button {
+.demo-box:hover {
+  text-decoration: none !important;
+  opacity: 0.8;
+}
+
+.demo-title{
   position: absolute;
-  top: 0px;
-  left: 0px;
-  padding: 20px 0;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
   width: 100%;
-  text-align: center;
-  text-decoration: none;
-  color: #333;
+  background-color: rgba(0, 0, 0, 0.7);
+  margin: 0;
+  padding: 5px 10px 5px 20px;
+  z-index: 10;
+  color: white;
+}
+.demo-title>h3{
   font-style: italic;
   font-size: 32px;
   font-weight: bold;
-  z-index: 20;
-  background-color: rgba(229, 229, 229, 0.7);
+  margin: 0 !important;
 }
 
-#homepage-launch-screen {
-  width: 100%;
-  height: auto;
-  box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+/* FAQ */
+
+#faq-list {
+  margin-top: 13px;
+}
+@media (max-width: 768px) {
+  #faq-list {
+    margin-top: 0;
+  }
+}
+
+/* Funding */
+
+#funding {
+  text-align: center;
 }
 
 #logos {
-  text-align: center;
+  margin: 15px 5px;
+  align-items: center;
 }
 
 #sbrg-logo {
   width: 100%;
-  max-width: 500px;
-  margin: 20px 0 20px 0;
 }
 
 #nnf-logo {
   width: 100%;
-  max-width: 500px;
-  margin: 10px 0 30px 0;
 }
 
-#copyright {
+/* footer */
+
+footer {
   width: 100%;
+  box-sizing: border-box;
+  background-color: #291E1E;
+  color: white;
+  flex-direction: row;
+  justify-content: center;
+  display: flex;
+  padding: 10px 10px 15px 10px;
+  margin-top: 20px;
+}
+
+.footer-container {
+  display: flex;
+  flex: 0 1 700px;
+}
+
+#more {
+  flex: 0;
+}
+
+.fill {
+  flex: 1 1;
+}
+
+#version {
+  flex: 0;
 }
