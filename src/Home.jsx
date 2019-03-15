@@ -1,6 +1,8 @@
 /** @jsx h */
 
 import { h, Component } from 'preact'
+import { route } from 'preact-router'
+import linkstate from 'linkstate'
 
 import logo2x from './img/escher-logo@2x.png'
 import sbrg from './img/sbrg-logo.png'
@@ -9,6 +11,7 @@ import github from './img/github-icon.svg'
 import escherFbaScreen from './img/escher-fba.png'
 import structures from './img/structures.png'
 import tooltip from './img/tooltip.png'
+import index from 'data/index.json'
 
 import './Home.css'
 
@@ -31,65 +34,108 @@ const TitleBox = () => (
     <div>
       <div id='homepage-title'>ESCHER</div>
       <div id='homepage-description'>
-        Build, share, and embed visualizations of biological pathways.
+        Build, share, and embed visualizations of metabolic pathways
       </div>
     </div>
   </div>
 )
 
-const Filters = () => (
-  <div id='filter-container' class='column'>
-    <div id='organism-filter' class='filter'>
-      <h3 class='filter-label'>Filter by organism</h3>
-      <select id='organisms' class='filter-select'>
-        <option value='all'>All</option>
-      </select>
-    </div>
+class Filters extends Component {
+  constructor (props) {
+    super(props)
 
-    <div class='row-collapse'>
-      <div id='map-filter' class='filter'>
-        <h3 class='filter-label'>Map</h3>
-        <select id='maps' class='filter-select'>
-          <option value='none'>None</option>
-        </select>
-      </div>
+    this.state = {
+      maps: index.maps,
+      models: index.models,
+      tools: [ 'Builder', 'Viewer' ],
+      organisms: [],
+      map: index.maps[0],
+      model: index.models[0],
+      tool: 'Builder',
+      orgnanism: ''
+    }
+  }
 
-      <div id='model-filter' class='filter'>
-        <h3 class='filter-label'>Model (Optional)</h3>
-        <select id='models' class='filter-select'>
-          <option value='none'>None</option>
-        </select>
-      </div>
+  loadApp () {
+    let url = '/app?'
+    ;[ 'map', 'model', 'tool' ].map(key => {
+      const value = this.state[key]
+      if (value !== 'null') {
+        url += `${key}=${value}&`
+      }
+    })
+    url = url.replace(/[?&]$/, '')
+    console.log(url)
+    // this.route(url)
+  }
 
-      <div id='tool-filter' class='filter'>
-        <h3 class='filter-label'>Tool</h3>
-        <select id='tools' class='filter-select'>
-          <option value='none'>None</option>
-        </select>
-      </div>
-    </div>
+  render () {
+    const organism = this.state.organism
 
-    <div class='row-collapse'>
-      <div id='options-filter' class='filter'>
-        <h3 class='filter-label'>Options</h3>
-        <label class='filter-checkbox'>
-          <input type='checkbox' id='scroll' />
-          Scroll to zoom (instead of scroll to pan)
-        </label>
-        <label class='filter-checkbox'>
-          <input type='checkbox' id='never_ask' />
-          Never ask before reloading
-        </label>
-      </div>
+    return (
+      <div id='filter-container' class='column'>
+        <div id='organism-filter' class='filter'>
+          <h3 class='filter-label'>Filter by organism</h3>
+          <select id='organisms'
+            class='filter-select'
+            value={this.state.organism}
+            onChange={linkstate(this, 'organism')}
+          >
+            {this.state.organisms.map(x =>
+              <option value={x}>{x}</option>
+            )}
+          </select>
+        </div>
 
-      <div class='filter' id='go-button-container'>
-        <button type='button' id='go-button'>
-          Load map
-        </button>
+        <div class='row-collapse'>
+          <div id='map-filter' class='filter'>
+            <h3 class='filter-label'>Map</h3>
+            <select id='maps' class='filter-select'>
+              <option value='none'>None</option>
+            </select>
+          </div>
+
+          <div id='model-filter' class='filter'>
+            <h3 class='filter-label'>Model (Optional)</h3>
+            <select id='models' class='filter-select'>
+              <option value='none'>None</option>
+            </select>
+          </div>
+
+          <div id='tool-filter' class='filter'>
+            <h3 class='filter-label'>Tool</h3>
+            <select id='tools' class='filter-select'>
+              <option value='none'>None</option>
+            </select>
+          </div>
+        </div>
+
+        <div class='row-collapse'>
+          <div id='options-filter' class='filter'>
+            <h3 class='filter-label'>Options</h3>
+            <label class='filter-checkbox'>
+              <input type='checkbox' id='scroll' />
+              Scroll to zoom (instead of scroll to pan)
+            </label>
+            <label class='filter-checkbox'>
+              <input type='checkbox' id='never_ask' />
+              Never ask before reloading
+            </label>
+          </div>
+
+          <div class='filter' id='go-button-container'>
+            <button id='go-button'
+              type='button'
+              onClick={_ => this.loadApp()}
+            >
+              Load map
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-)
+    )
+  }
+}
 
 const Apps = () => (
   <div id='apps' class='row-collapse section'>
