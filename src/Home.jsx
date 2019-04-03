@@ -11,7 +11,7 @@ import github from './img/github-icon.svg'
 import escherFbaScreen from './img/escher-fba.png'
 import structures from './img/structures.png'
 import tooltip from './img/tooltip.png'
-import index from 'data/index.json'
+// import index from 'data/index.json'
 
 import './Home.css'
 
@@ -45,32 +45,33 @@ class Filters extends Component {
     super(props)
 
     this.state = {
-      maps: index.maps,
-      models: index.models,
-      tools: [ 'Builder', 'Viewer' ],
-      organisms: [],
-      map: index.maps[0],
-      model: index.models[0],
-      tool: 'Builder',
-      orgnanism: ''
+      // maps: index.maps,
+      // models: index.models,
+      // tools: [ 'Builder', 'Viewer' ],
+      // organisms: [],
+      // map: index.maps[0],
+      // model: index.models[0],
+      // tool: 'Builder',
+      // orgnanism: ''
     }
   }
 
   loadApp () {
-    let url = '/app?'
-    ;[ 'map', 'model', 'tool' ].map(key => {
-      const value = this.state[key]
-      if (value !== 'null') {
-        url += `${key}=${value}&`
-      }
-    })
-    url = url.replace(/[?&]$/, '')
-    console.log(url)
+    route('/app')
+    // let url = '/app?'
+    // ;[ 'map', 'model', 'tool' ].map(key => {
+    //   const value = this.state[key]
+    //   if (value !== 'null') {
+    //     url += `${key}=${value}&`
+    //   }
+    // })
+    // url = url.replace(/[?&]$/, '')
+    // console.log(url)
     // this.route(url)
   }
 
   render () {
-    const organism = this.state.organism
+    // const organism = this.state.organism
 
     return (
       <div id='filter-container' class='column'>
@@ -81,9 +82,7 @@ class Filters extends Component {
             value={this.state.organism}
             onChange={linkstate(this, 'organism')}
           >
-            {this.state.organisms.map(x =>
-              <option value={x}>{x}</option>
-            )}
+            <option>All</option>
           </select>
         </div>
 
