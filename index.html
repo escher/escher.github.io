@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+  <!-- BUMP -->
   <head>
     <title>Escher</title>
 
-    
+
   <script src="py/escher/static/escher/escher.min.js"></script>
 
   <link rel="stylesheet" href="py/escher/static/lib/bootstrap.min.css"/>
@@ -15,14 +16,14 @@
   <script src="//use.edgefonts.net/tulpen-one.js"></script>
 
 
-    
+
 
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, height=device-height,
                                    initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui"/>
   </head>
   <body>
-    
+
   <main>
     <div class="container">
       <header class="row">
@@ -91,7 +92,7 @@
 
       <hr/>
 
-      
+
         <!-- Demos -->
         <div id="demos" class="row">
           <div class="col-sm-2">
@@ -135,7 +136,7 @@
 
         <hr/>
 
-      
+
 
       <!-- FAQ  -->
       <div id="faq" class="row">
@@ -202,14 +203,14 @@
 
   <script src="py/escher/static/homepage/main.js"></script>
   <script>
-   
+
    // get the models
    escher.libs.d3_json('py/../1-0-0/5/index.json', function(d) {
      var server_index = d,
          local_index = null
      setup(server_index, local_index, '../1-0-0/5/maps/', false)
    });
-   
+
   </script>
 
   </body>
