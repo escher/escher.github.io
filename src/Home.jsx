@@ -1,7 +1,6 @@
 /** @jsx h */
 
 import { h, Component } from 'preact'
-import linkstate from 'linkstate'
 import _ from 'underscore'
 
 import logo2x from './img/escher-logo@2x.png'
@@ -31,7 +30,7 @@ const TitleBox = () => (
       alt=''
       src={logo2x}
     />
-    <div>
+    <div style={{width: '100%'}}>
       <div id='homepage-title'>ESCHER</div>
       <div id='homepage-description'>
         Build, share, and embed visualizations of metabolic pathways
@@ -58,6 +57,20 @@ class Filters extends Component {
     }
   }
 
+  componentDidMount () {
+    window.addEventListener('keyup', e => {
+      if (e.keyCode === 13) {
+        document.getElementById('go-button').click()
+      }
+    })
+  }
+
+  updateModel (mapName) {
+    if (mapName !== 'None') {
+      this.setState({ model: mapName.split('.')[0] })
+    }
+  }
+
   render () {
     // construct the URL for the Load Map button
     const baseOptions = [ 'map', 'tool', 'scrollToZoom' ]
@@ -69,13 +82,20 @@ class Filters extends Component {
     }).filter(x => x).join('&')
     const goPath = `#/app?${queries}`
 
+    // filter for comparing organisms
+    const onOrganism = x => (
+      x.name === 'None' ||
+      this.state.organism === 'All' ||
+      x.organism === this.state.organism
+    )
+
     return (
       <div id='filter-container' class='column'>
         <div id='organism-filter' class='filter'>
           <h3 class='filter-label'>Filter by organism</h3>
           <select class='filter-select'
             value={this.state.organism}
-            onChange={linkstate(this, 'organism')}
+            onChange={e => this.setState({ organism: e.target.value })}
           >
             {this.state.organisms
                  .map(name => <option value={name}>{name}</option>)}
@@ -87,9 +107,12 @@ class Filters extends Component {
             <h3 class='filter-label'>Map</h3>
             <select class='filter-select'
               value={this.state.map}
-              onChange={linkstate(this, 'map')}
+              onChange={e => {
+                this.setState({ map: e.target.value })
+                this.updateModel(e.target.value)
+              }}
             >
-              {this.state.maps.map(map => map.name)
+              {this.state.maps.filter(onOrganism).map(map => map.name)
                    .map(name => <option value={name}>{name}</option>)}
             </select>
           </div>
@@ -100,11 +123,11 @@ class Filters extends Component {
             <h3 class='filter-label'>Model (Optional)</h3>
             <select class='filter-select'
               value={this.state.model}
-              onChange={linkstate(this, 'model')}
+              onChange={e => this.setState({ model: e.target.value })}
               disabled={this.state.tool === 'Viewer'}
               style={this.state.tool === 'Viewer' ? 'background-color: #eee' : null}
             >
-              {this.state.models.map(model => model.name)
+              {this.state.models.filter(onOrganism).map(model => model.name)
                    .map(name => <option value={name}>{name}</option>)}
             </select>
           </div>
@@ -113,7 +136,7 @@ class Filters extends Component {
             <h3 class='filter-label'>Tool</h3>
             <select class='filter-select'
               value={this.state.tool}
-              onChange={linkstate(this, 'tool')}
+              onChange={e => this.setState({ tool: e.target.value })}
             >
               {this.state.tools.map(tool =>
                 <option value={tool}>{tool}</option>
@@ -128,7 +151,7 @@ class Filters extends Component {
             <label class='filter-checkbox'>
               <input type='checkbox'
                 checked={this.state.scrollToZoom}
-                onChange={linkstate(this, 'scrollToZoom')}
+                onChange={e => this.setState({ scrollToZoom: e.target.checked })}
               />
               Scroll to zoom (instead of scroll to pan)
             </label>
@@ -138,7 +161,7 @@ class Filters extends Component {
             >
               <input type='checkbox'
                 checked={this.state.neverAskBeforeQuit}
-                onChange={linkstate(this, 'neverAskBeforeQuit')}
+                onChange={e => this.setState({ neverAskBeforeQuit: e.target.checked })}
                 disabled={this.state.tool === 'Viewer'}
               />
               Never ask before reloading

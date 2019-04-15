@@ -10,7 +10,6 @@
     "escher": "1.7.0-beta.8",
     "gh-pages": "^1.0.0",
     "history": "^4.7.2",
-    "linkstate": "^1.1.1",
     "preact": "^8.2.7",
     "preact-compat": "^3.18.0",
     "preact-router": "^2.6.0",
