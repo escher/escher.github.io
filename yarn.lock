@@ -2406,10 +2406,10 @@ escape-string-regexp@1.0.5, escape-string-regexp@^1.0.2, escape-string-regexp@^1
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
 
-escher@1.7.0-beta.4:
-  version "1.7.0-beta.4"
-  resolved "https://registry.yarnpkg.com/escher/-/escher-1.7.0-beta.4.tgz#19c6e5fa3c0626b68088f2bc7d88e8e27e8bcc16"
-  integrity sha512-KDEmEa0feGrBl2a4USyAEH/Vo3kQDoEuSe2PcIOPVZJSEw2rKVDWhJyS5eiKKfcuWgGL+Mo9o6/oy9FmwnNl/w==
+escher@1.7.0-beta.8:
+  version "1.7.0-beta.8"
+  resolved "https://registry.yarnpkg.com/escher/-/escher-1.7.0-beta.8.tgz#114ad7ed1058b034229f9102cdc8b70691ccb666"
+  integrity sha512-CsUYm1RPtYQ2504BP3CoOZlJdrttb1E5VPV5koihUdN7921JUqgJ4+rT+f0IOcSUG0jT/5l5iIBUbgh0afBf/g==
   dependencies:
     baconjs "^0.7.71"
     d3-brush "https://github.com/zakandrewking/d3-brush.git"

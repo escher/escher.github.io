@@ -281,11 +281,11 @@ const Footer = () => (
         </span>
         <div class='fill' />
         <span class='version'>
-          <a href='https://github.com/zakandrewking/escher/releases'>Version {this.version}</a>
+          <a href='https://github.com/zakandrewking/escher/releases'>Version {process.env.REACT_APP_VERSION}</a>
         </span>
       </div>
       <span>
-        © 2018 The Regents of the University of California
+        © 2019 The Regents of the University of California
       </span>
     </div>
   </footer>
