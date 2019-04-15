@@ -25,7 +25,7 @@ def generate_index(directory):
                             f2 = f2.replace('.json', '')
                             top_level.append({
                                 'organism': f,
-                                kind + '_name': f2,
+                                'name': f2,
                             })
         return top_level
     return {

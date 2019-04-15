@@ -3,6 +3,7 @@
 import { h, Component } from 'preact'
 import { route } from 'preact-router'
 import linkstate from 'linkstate'
+import _ from 'underscore'
 
 import logo2x from './img/escher-logo@2x.png'
 import sbrg from './img/sbrg-logo.png'
@@ -11,7 +12,7 @@ import github from './img/github-icon.svg'
 import escherFbaScreen from './img/escher-fba.png'
 import structures from './img/structures.png'
 import tooltip from './img/tooltip.png'
-// import index from 'data/index.json'
+import index from './data/index.json'
 
 import './Home.css'
 
@@ -45,66 +46,76 @@ class Filters extends Component {
     super(props)
 
     this.state = {
-      // maps: index.maps,
-      // models: index.models,
-      // tools: [ 'Builder', 'Viewer' ],
-      // organisms: [],
-      // map: index.maps[0],
-      // model: index.models[0],
-      // tool: 'Builder',
-      // orgnanism: ''
+      maps: [ { name: 'None' }, ...index.maps ],
+      models: [ { name: 'None' }, ...index.models ],
+      tools: [ 'Builder', 'Viewer' ],
+      organisms: [ 'All', ..._.uniq(index.models.map(x => x['organism'])) ],
     }
+    this.state.map = 'None'
+    this.state.model = 'None'
+    this.state.tool = 'Builder'
+    this.state.organism = 'All'
   }
 
   loadApp () {
-    route('/app')
-    // let url = '/app?'
-    // ;[ 'map', 'model', 'tool' ].map(key => {
-    //   const value = this.state[key]
-    //   if (value !== 'null') {
-    //     url += `${key}=${value}&`
-    //   }
-    // })
-    // url = url.replace(/[?&]$/, '')
-    // console.log(url)
-    // this.route(url)
+    const queries = [ 'map', 'model', 'tool' ]
+      .map(key => {
+        const value = this.state[key]
+        const valueName = value.name || value
+        console.log(value, valueName, this.state)
+        return valueName !== 'None' ? `${key}=${valueName}` : null
+      })
+      .filter(x => x)
+      .join('&')
+    route(`/app?${queries}`)
   }
 
   render () {
-    // const organism = this.state.organism
-
     return (
       <div id='filter-container' class='column'>
         <div id='organism-filter' class='filter'>
           <h3 class='filter-label'>Filter by organism</h3>
-          <select id='organisms'
-            class='filter-select'
+          <select class='filter-select'
             value={this.state.organism}
             onChange={linkstate(this, 'organism')}
           >
-            <option>All</option>
+            {this.state.organisms
+                 .map(name => <option value={name}>{name}</option>)}
           </select>
         </div>
 
         <div class='row-collapse'>
           <div id='map-filter' class='filter'>
             <h3 class='filter-label'>Map</h3>
-            <select id='maps' class='filter-select'>
-              <option value='none'>None</option>
+            <select class='filter-select'
+              value={this.state.map}
+              onChange={linkstate(this, 'map')}
+            >
+              {this.state.maps.map(map => map.name)
+                   .map(name => <option value={name}>{name}</option>)}
             </select>
           </div>
 
           <div id='model-filter' class='filter'>
             <h3 class='filter-label'>Model (Optional)</h3>
-            <select id='models' class='filter-select'>
-              <option value='none'>None</option>
+            <select class='filter-select'
+              value={this.state.model}
+              onChange={linkstate(this, 'model')}
+            >
+              {this.state.models.map(model => model.name)
+                   .map(name => <option value={name}>{name}</option>)}
             </select>
           </div>
 
           <div id='tool-filter' class='filter'>
             <h3 class='filter-label'>Tool</h3>
-            <select id='tools' class='filter-select'>
-              <option value='none'>None</option>
+            <select class='filter-select'
+              value={this.state.tool}
+              onChange={linkstate(this, 'tool')}
+            >
+              {this.state.tools.map(tool =>
+                <option value={tool}>{tool}</option>
+              )}
             </select>
           </div>
         </div>
