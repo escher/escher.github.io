@@ -57,7 +57,7 @@ class Filters extends Component {
     this.state.organism = 'All'
   }
 
-  loadApp () {
+  render () {
     const queries = [ 'map', 'model', 'tool' ]
       .map(key => {
         const value = this.state[key]
@@ -67,10 +67,8 @@ class Filters extends Component {
       })
       .filter(x => x)
       .join('&')
-    route(`/app?${queries}`)
-  }
+    const goPath = `/#/app?${queries}`
 
-  render () {
     return (
       <div id='filter-container' class='column'>
         <div id='organism-filter' class='filter'>
@@ -134,12 +132,7 @@ class Filters extends Component {
           </div>
 
           <div class='filter' id='go-button-container'>
-            <button id='go-button'
-              type='button'
-              onClick={_ => this.loadApp()}
-            >
-              Load map
-            </button>
+            <a href={goPath} id='go-button'>Load map</a>
           </div>
         </div>
       </div>
