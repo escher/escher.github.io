@@ -20,9 +20,11 @@ export default class App extends Component {
   componentDidMount () {
     const builder = new Builder(null, null, null, this.base, {
       fill_screen: true,
-      never_ask_before_quit: process.env.NODE_ENV === 'development' ||
-                             this.props.tool === 'Viewer',
-      enable_editing: this.props.tool !== 'Viewer'
+      never_ask_before_quit: this.props.tool === 'Viewer' ||
+                             this.props.neverAskBeforeQuit,
+                          // || process.env.NODE_ENV === 'development',
+      enable_editing: this.props.tool !== 'Viewer',
+      scroll_behavior: this.props.scrollToZoom ? 'zoom' : 'pan'
     })
     this.setState({ builder })
   }

@@ -1,7 +1,6 @@
 /** @jsx h */
 
 import { h, Component } from 'preact'
-import { route } from 'preact-router'
 import linkstate from 'linkstate'
 import _ from 'underscore'
 
@@ -50,24 +49,25 @@ class Filters extends Component {
       models: [ { name: 'None' }, ...index.models ],
       tools: [ 'Builder', 'Viewer' ],
       organisms: [ 'All', ..._.uniq(index.models.map(x => x['organism'])) ],
+      map: 'None',
+      model: 'None',
+      tool: 'Builder',
+      organism: 'All',
+      scrollToZoom: false,
+      neverAskBeforeQuit: false
     }
-    this.state.map = 'None'
-    this.state.model = 'None'
-    this.state.tool = 'Builder'
-    this.state.organism = 'All'
   }
 
   render () {
-    const queries = [ 'map', 'model', 'tool' ]
-      .map(key => {
-        const value = this.state[key]
-        const valueName = value.name || value
-        console.log(value, valueName, this.state)
-        return valueName !== 'None' ? `${key}=${valueName}` : null
-      })
-      .filter(x => x)
-      .join('&')
-    const goPath = `/#/app?${queries}`
+    // construct the URL for the Load Map button
+    const baseOptions = [ 'map', 'tool', 'scrollToZoom' ]
+    const options = this.state.tool === 'Viewer' ? baseOptions : [...baseOptions, 'model', 'neverAskBeforeQuit']
+    const queries = options.map(key => {
+      const value = this.state[key]
+      const valueName = value.name || value
+      return valueName !== 'None' && valueName !== false ? `${key}=${valueName}` : null
+    }).filter(x => x).join('&')
+    const goPath = `#/app?${queries}`
 
     return (
       <div id='filter-container' class='column'>
@@ -94,11 +94,15 @@ class Filters extends Component {
             </select>
           </div>
 
-          <div id='model-filter' class='filter'>
+          <div id='model-filter' class='filter'
+            style={this.state.tool === 'Viewer' ? 'color: #aaa' : null}
+          >
             <h3 class='filter-label'>Model (Optional)</h3>
             <select class='filter-select'
               value={this.state.model}
               onChange={linkstate(this, 'model')}
+              disabled={this.state.tool === 'Viewer'}
+              style={this.state.tool === 'Viewer' ? 'background-color: #eee' : null}
             >
               {this.state.models.map(model => model.name)
                    .map(name => <option value={name}>{name}</option>)}
@@ -122,17 +126,27 @@ class Filters extends Component {
           <div id='options-filter' class='filter'>
             <h3 class='filter-label'>Options</h3>
             <label class='filter-checkbox'>
-              <input type='checkbox' id='scroll' />
+              <input type='checkbox'
+                checked={this.state.scrollToZoom}
+                onChange={linkstate(this, 'scrollToZoom')}
+              />
               Scroll to zoom (instead of scroll to pan)
             </label>
-            <label class='filter-checkbox'>
-              <input type='checkbox' id='never_ask' />
+
+            <label class='filter-checkbox'
+              style={this.state.tool === 'Viewer' ? 'color: #aaa' : null}
+            >
+              <input type='checkbox'
+                checked={this.state.neverAskBeforeQuit}
+                onChange={linkstate(this, 'neverAskBeforeQuit')}
+                disabled={this.state.tool === 'Viewer'}
+              />
               Never ask before reloading
             </label>
           </div>
 
           <div class='filter' id='go-button-container'>
-            <a href={goPath} id='go-button'>Load map</a>
+            <a href={goPath} id='go-button' target='_blank'>Load map</a>
           </div>
         </div>
       </div>
