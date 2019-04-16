@@ -12,13 +12,8 @@ import structures from './img/structures.png'
 import tooltip from './img/tooltip.png'
 import index from './data/index.json'
 
+import { niceMapName } from './util'
 import './Home.css'
-
-function niceMapName (name) {
-  if (name === 'None') return name
-  const [ model, map ] = name.split('.')
-  return `${map} (${model})`
-}
 
 const TitleBox = () => (
   <div id='homepage-title-box' class='row'>

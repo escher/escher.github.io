@@ -2,9 +2,12 @@
 /* global process, fetch */
 
 import { h, Component } from 'preact'
+import { route, getCurrentUrl } from 'preact-router'
 import _ from 'underscore'
 import { Builder } from 'escher'
 
+import { niceMapName } from './util'
+import './App.css'
 import index from './data/index.json'
 
 export default class App extends Component {
@@ -13,10 +16,14 @@ export default class App extends Component {
     this.state = {
       builder: null
     }
+    this.handleQuickJumpChange = this.handleQuickJumpChange.bind(this)
   }
 
   //  Enables Escher handling DOM
-  shouldComponentUpdate () {
+  shouldComponentUpdate (nextProps) {
+    if (this.props.url !== nextProps.url) {
+      this.loadMap()
+    }
     return false
   }
 
@@ -34,10 +41,10 @@ export default class App extends Component {
     Promise.all([
       this.props.map ? fetch(this.mapUrl()).then(r => r.json()) : Promise.resolve(null),
       this.props.model ? fetch(this.modelUrl()).then(r => r.json()) : Promise.resolve(null)
-    ]).then(([mapData, modelData]) => this.load(mapData, modelData))
+    ]).then(([mapData, modelData]) => this.loadBuilder(mapData, modelData))
   }
 
-  load (map, model) {
+  loadBuilder (map, model) {
     const builder = new Builder(map, model, null, this.base, {
       fill_screen: true,
       never_ask_before_quit: this.props.tool === 'Viewer' ||
@@ -49,9 +56,36 @@ export default class App extends Component {
     this.setState({ builder })
   }
 
+  loadMap () {
+    fetch(this.mapUrl()).then(r => r.json()).then(mapData => {
+      this.state.builder.load_map(mapData)
+    })
+  }
+
+  handleQuickJumpChange (e) {
+    const map = e.target.value.replace(/ /g, '%20')
+    const currentUrl = getCurrentUrl()
+    const newUrl = currentUrl.replace(/map=[^&]*/, `map=${map}`)
+    route(newUrl)
+  }
+
   render () {
+    const options = index.maps
+                         .map(x => x.name)
+                         .filter(x => x.split('.')[0] === this.props.map.split('.')[0])
     return (
-      <div />
+      <div>
+        {options.length > 1 &&
+        <select value={this.props.map}
+          onChange={this.handleQuickJumpChange}
+          id='quick-jump-menu'
+        >
+          {options.map(option => (
+            <option value={option}>{niceMapName(option)}</option>
+          ))}
+        </select>
+        }
+      </div>
     )
   }
 }
