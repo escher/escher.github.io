@@ -19,7 +19,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "copy": "cp -rf build/* .",
+    "copy": "rm -rf static && cp -rf build/* .",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
     "lint": "standard --fix | snazzy"

@@ -22,25 +22,25 @@ export default class App extends Component {
   //  Enables Escher handling DOM
   shouldComponentUpdate (nextProps) {
     if (this.props.url !== nextProps.url) {
-      this.loadMap()
+      this.loadMap(nextProps.map)
     }
     return false
   }
 
-  mapUrl () {
-    const organism = _.find(index.maps, x => x.name === this.props.map).organism
-    return `https://escher.github.io/${index.schema_version}/${index.map_model_version}/maps/${organism}/${this.props.map}.json`
+  mapUrl (map) {
+    const organism = _.find(index.maps, x => x.name === map).organism
+    return `https://escher.github.io/${index.schema_version}/${index.map_model_version}/maps/${organism}/${map}.json`
   }
 
-  modelUrl () {
-    const organism = _.find(index.models, x => x.name === this.props.model).organism
-    return `https://escher.github.io/${index.schema_version}/${index.map_model_version}/models/${organism}/${this.props.model}.json`
+  modelUrl (model) {
+    const organism = _.find(index.models, x => x.name === model).organism
+    return `https://escher.github.io/${index.schema_version}/${index.map_model_version}/models/${organism}/${model}.json`
   }
 
   componentDidMount () {
     Promise.all([
-      this.props.map ? fetch(this.mapUrl()).then(r => r.json()) : Promise.resolve(null),
-      this.props.model ? fetch(this.modelUrl()).then(r => r.json()) : Promise.resolve(null)
+      this.props.map ? fetch(this.mapUrl(this.props.map)).then(r => r.json()) : Promise.resolve(null),
+      this.props.model ? fetch(this.modelUrl(this.props.model)).then(r => r.json()) : Promise.resolve(null)
     ]).then(([mapData, modelData]) => this.loadBuilder(mapData, modelData))
   }
 
@@ -56,8 +56,8 @@ export default class App extends Component {
     this.setState({ builder })
   }
 
-  loadMap () {
-    fetch(this.mapUrl()).then(r => r.json()).then(mapData => {
+  loadMap (nextMap) {
+    fetch(this.mapUrl(nextMap)).then(r => r.json()).then(mapData => {
       this.state.builder.load_map(mapData)
     })
   }
