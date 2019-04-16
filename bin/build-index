@@ -8,6 +8,7 @@ from os import listdir
 from os.path import join, dirname, realpath, exists, isdir, relpath
 import sys
 from collections import defaultdict
+from operator import itemgetter
 
 
 top_directory = realpath(join(dirname(__file__), '..'))
@@ -29,8 +30,10 @@ def generate_index(directory, schema_version, map_model_version):
                             })
         return top_level
     return {
-        'maps': list_cached(join(directory, 'maps'), 'map'),
-        'models': list_cached(join(directory, 'models'), 'model'),
+        'maps': sorted(list_cached(join(directory, 'maps'), 'map'),
+                       key=itemgetter('organism', 'name')),
+        'models': sorted(list_cached(join(directory, 'models'), 'model'),
+                         key=itemgetter('organism', 'name')),
         'schema_version': schema_version,
         'map_model_version': map_model_version
     }
