@@ -104,10 +104,6 @@ p {
   padding: 2px 4px;
   border-radius: 3px;
 }
-#github-link-box>a:hover {
-  opacity: 0.8;
-  text-decoration: none;
-}
 #github-link {
   height: 20px;
   top: 3px;
@@ -119,6 +115,7 @@ p {
 
 #homepage-title-box {
   text-align: center;
+  position: relative; /* so github-link-box can have position: absolute */
 }
 
 #homepage-logo {
@@ -227,10 +224,6 @@ p {
 #go-button-container {
   flex: 1;
 }
-#go-button-container:hover {
-  opacity: 0.8;
-  cursor: pointer;
-}
 
 #go-button {
   cursor: pointer;
@@ -248,8 +241,6 @@ p {
 }
 #go-button:hover {
   text-decoration: none !important;
-  color: #ffffff;
-  background-color: #474949;
 }
 @media (max-width: 768px) {
   #go-button {
@@ -275,7 +266,6 @@ p {
 
 .demo-box:hover {
   text-decoration: none !important;
-  opacity: 0.8;
 }
 
 .demo-title{
