@@ -1,13 +1,13 @@
 {
   "name": "escher.github.io",
-  "version": "1.7.0-beta.8",
+  "version": "1.7.0-beta.9",
   "homepage": "https://escher.github.io",
   "private": false,
   "dependencies": {
     "@just-boris/preact-scripts": "1.1.0",
     "babel-core": "^6.26.0",
     "babel-loader": "^7.1.2",
-    "escher": "1.7.0-beta.8",
+    "escher": "1.7.0-beta.9",
     "gh-pages": "^1.0.0",
     "history": "^4.7.2",
     "preact": "^8.2.7",
