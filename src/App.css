@@ -1,0 +1,12 @@
+#quick-jump-menu {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 300px;
+  font-size: 18px;
+}
+@media (max-width: 550px) {
+  #quick-jump-menu {
+    display: none;
+  }
+}
