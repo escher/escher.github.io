@@ -2,7 +2,10 @@
 /* global process, fetch */
 
 import { h, Component } from 'preact'
+import _ from 'underscore'
 import { Builder } from 'escher'
+
+import index from './data/index.json'
 
 export default class App extends Component {
   constructor (props) {
@@ -18,11 +21,13 @@ export default class App extends Component {
   }
 
   mapUrl () {
-    return `https://escher.github.io/1-0-0/5/maps/${this.props.organism}/${this.props.map}.json'`
+    const organism = _.find(index.maps, x => x.name === this.props.map).organism
+    return `https://escher.github.io/${index.schema_version}/${index.map_model_version}/maps/${organism}/${this.props.map}.json`
   }
 
   modelUrl () {
-    return 'https://escher.github.io/1-0-0/5/models/${this.props.organism}/${this.props.model}.json'
+    const organism = _.find(index.models, x => x.name === this.props.model).organism
+    return `https://escher.github.io/${index.schema_version}/${index.map_model_version}/models/${organism}/${this.props.model}.json`
   }
 
   componentDidMount () {
@@ -33,7 +38,6 @@ export default class App extends Component {
   }
 
   load (map, model) {
-    console.log(map, model)
     const builder = new Builder(map, model, null, this.base, {
       fill_screen: true,
       never_ask_before_quit: this.props.tool === 'Viewer' ||

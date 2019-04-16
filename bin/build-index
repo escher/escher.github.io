@@ -13,7 +13,7 @@ from collections import defaultdict
 top_directory = realpath(join(dirname(__file__), '..'))
 
 
-def generate_index(directory):
+def generate_index(directory, schema_version, map_model_version):
     def list_cached(directory, kind):
         top_level = []
         if isdir(directory):
@@ -31,6 +31,8 @@ def generate_index(directory):
     return {
         'maps': list_cached(join(directory, 'maps'), 'map'),
         'models': list_cached(join(directory, 'models'), 'model'),
+        'schema_version': schema_version,
+        'map_model_version': map_model_version
     }
 
 
@@ -41,16 +43,18 @@ def main():
     with open(package_json_path, 'r') as f:
         package = json.load(f)
     # find directory to index
+    schema_version = package['schema_version']
+    map_model_version = package['map_model_version']
     directory = join(
         top_directory,
-        package['schema_version'],
-        package['map_model_version'],
+        schema_version,
+        map_model_version,
     )
     if not exists(directory):
         print('No directory to index')
         sys.exit()
     print('Indexing %s' % directory)
-    index = generate_index(directory)
+    index = generate_index(directory, schema_version, map_model_version)
     with open(join(top_directory, 'src', 'data', 'index.json'), 'w') as f:
         json.dump(index, f)
     print('Saved index.json')
