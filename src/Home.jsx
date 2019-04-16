@@ -14,12 +14,21 @@ import index from './data/index.json'
 
 import './Home.css'
 
+function niceMapName (name) {
+  if (name === 'None') return name
+  const [ model, map ] = name.split('.')
+  return `${map} (${model})`
+}
+
 const TitleBox = () => (
   <div id='homepage-title-box' class='row'>
     <div id='github-link-box'>
       <a href='https://github.com/zakandrewking/escher'>
         <img src={github} alt='GitHub' id='github-link' />
         GitHub
+      </a>
+      <a href='https://escher.readthedocs.io'>
+        Docs
       </a>
       <a href='https://github.com/zakandrewking/escher/releases'>
         What's new?
@@ -48,13 +57,16 @@ class Filters extends Component {
       models: [ { name: 'None' }, ...index.models ],
       tools: [ 'Builder', 'Viewer' ],
       organisms: [ 'All', ..._.uniq(index.models.map(x => x['organism'])) ],
-      map: 'None',
-      model: 'None',
+      map: 'e_coli_core.Core metabolism',
+      model: 'e_coli_core',
       tool: 'Builder',
       organism: 'All',
       scrollToZoom: false,
       neverAskBeforeQuit: false
     }
+
+    this.onOrganism = this.onOrganism.bind(this)
+    this.handleOrganismChange = this.handleOrganismChange.bind(this)
   }
 
   componentDidMount () {
@@ -71,6 +83,33 @@ class Filters extends Component {
     }
   }
 
+  handleOrganismChange (e) {
+    const organism = e.target.value
+    this.setState({ organism })
+
+    // Make sure something is selected after filtering
+    if (organism !== 'All') {
+      const filteredMaps = this.state.maps
+                               .filter(x => this.onOrganism(x, organism))
+                               .map(x => x.name)
+      if (!_.contains(filteredMaps, this.state.map)) {
+        this.setState({ map: filteredMaps[1] }) // first map skipping "None"
+      }
+      const filteredModels = this.state.models
+                               .filter(x => this.onOrganism(x, organism))
+                               .map(x => x.name)
+      if (!_.contains(filteredModels, this.state.model)) {
+        this.setState({ model: filteredModels[1] }) // first model skipping "None"
+      }
+    }
+  }
+
+  /** Filter for comparing organisms */
+  onOrganism (x, organism = null) {
+    if (organism === null) organism = this.state.organism
+    return x.name === 'None' || organism === 'All' || x.organism === organism
+  }
+
   render () {
     // construct the URL for the Load Map button
     const baseOptions = [ 'map', 'tool', 'scrollToZoom' ]
@@ -82,20 +121,13 @@ class Filters extends Component {
     }).filter(x => x).join('&')
     const goPath = `#/app?${queries}`
 
-    // filter for comparing organisms
-    const onOrganism = x => (
-      x.name === 'None' ||
-      this.state.organism === 'All' ||
-      x.organism === this.state.organism
-    )
-
     return (
       <div id='filter-container' class='column'>
         <div id='organism-filter' class='filter'>
           <h3 class='filter-label'>Filter by organism</h3>
           <select class='filter-select'
             value={this.state.organism}
-            onChange={e => this.setState({ organism: e.target.value })}
+            onChange={this.handleOrganismChange}
           >
             {this.state.organisms
                  .map(name => <option value={name}>{name}</option>)}
@@ -112,8 +144,8 @@ class Filters extends Component {
                 this.updateModel(e.target.value)
               }}
             >
-              {this.state.maps.filter(onOrganism).map(map => map.name)
-                   .map(name => <option value={name}>{name}</option>)}
+              {this.state.maps.filter(x => this.onOrganism(x)).map(map => map.name)
+                   .map(name => <option value={name}>{niceMapName(name)}</option>)}
             </select>
           </div>
 
@@ -127,7 +159,7 @@ class Filters extends Component {
               disabled={this.state.tool === 'Viewer'}
               style={this.state.tool === 'Viewer' ? 'background-color: #eee' : null}
             >
-              {this.state.models.filter(onOrganism).map(model => model.name)
+              {this.state.models.filter(x => this.onOrganism(x)).map(model => model.name)
                    .map(name => <option value={name}>{name}</option>)}
             </select>
           </div>
@@ -179,7 +211,10 @@ class Filters extends Component {
 
 const Apps = () => (
   <div id='apps' class='row-collapse section'>
-    <h2 class='section-title'>Escher Apps</h2>
+    <div class='column section-title'>
+      <h2>Escher Apps</h2>
+      <span>New capabilities with extensions of Escher</span>
+    </div>
     <a class='demo-box'
       href='https://sbrg.github.io/escher-fba'
       style={{'backgroundImage': `url(${escherFbaScreen})`}}
@@ -212,7 +247,7 @@ const Demos = () => (
       style={{'backgroundImage': `url(${tooltip})`}}
     >
       <div class='demo-title'>
-        <h3>Tooltip</h3>
+        <h3>Tooltips</h3>
         Customize tooltips
       </div>
     </a>
@@ -262,7 +297,7 @@ const FAQ = () => (
           Sonnenschein, Nathan E. Lewis, and Bernhard O. Palsson
           (2015) <i>Escher: A web application for building, sharing, and
           embedding data-rich visualizations of biological pathways</i>,
-  PLOS Computational Biology 11(8): e1004321.
+          PLOS Computational Biology 11(8): e1004321.
           doi:<a href='http://dx.doi.org/10.1371/journal.pcbi.1004321'>
             10.1371/journal.pcbi.1004321</a>
         </p>

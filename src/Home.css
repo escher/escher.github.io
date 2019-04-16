@@ -274,11 +274,12 @@ p {
   left: 0;
   box-sizing: border-box;
   width: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(255, 255, 255, 0.85);
   margin: 0;
   padding: 5px 10px 5px 20px;
   z-index: 10;
-  color: white;
+  color: black;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.13);
 }
 .demo-title>h3{
   font-style: italic;
