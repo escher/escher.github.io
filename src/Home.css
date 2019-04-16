@@ -95,7 +95,7 @@ p {
 #github-link-box {
   position: absolute;
   top: 5px;
-  right: 20px;
+  right: 2px;
   font-size: 18px;
 }
 #github-link-box>a {
