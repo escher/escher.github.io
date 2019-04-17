@@ -2401,10 +2401,10 @@ escape-string-regexp@1.0.5, escape-string-regexp@^1.0.2, escape-string-regexp@^1
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
 
-escher@1.7.0-beta.9:
-  version "1.7.0-beta.9"
-  resolved "https://registry.yarnpkg.com/escher/-/escher-1.7.0-beta.9.tgz#21138e475866b30bdfc95dbe83d4ea23feb10b8c"
-  integrity sha512-u7/iwBTX7zm2Pz4XMu3aczL0sYGY5aEIJ0sAG1hE+vSlwtDXnkJkmI4pK/ULicOc1wPZz1OKmq8xRF7XV5WJxw==
+escher@1.7.0-beta.10:
+  version "1.7.0-beta.10"
+  resolved "https://registry.yarnpkg.com/escher/-/escher-1.7.0-beta.10.tgz#b6f1312270bdc38c2aae10998017f8680cc4fbba"
+  integrity sha512-sgpN92cuzDLVnODFByULRcTjgr5UKZ85sdA3dlippiiJDvyPXo8A4iSIctul2ROWK3/cN9cKvLEj912VA7XlmA==
   dependencies:
     baconjs "^0.7.71"
     d3-brush "https://github.com/zakandrewking/d3-brush.git"
