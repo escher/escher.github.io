@@ -2401,9 +2401,9 @@ escape-string-regexp@1.0.5, escape-string-regexp@^1.0.2, escape-string-regexp@^1
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
 
-escher@1.7.0-beta.13:
-  version "1.7.0-beta.13"
-  resolved "https://registry.yarnpkg.com/escher/-/escher-1.7.0-beta.13.tgz#6efa1d0d7f96458632f3995c9b881738697cc711"
+escher@1.7.0-beta.14:
+  version "1.7.0-beta.14"
+  resolved "https://registry.yarnpkg.com/escher/-/escher-1.7.0-beta.14.tgz#2199e0597e2e65b733b549c90f16344933c98a33"
   dependencies:
     baconjs "^0.7.71"
     d3-brush "https://github.com/zakandrewking/d3-brush.git"
