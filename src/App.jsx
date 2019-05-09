@@ -70,9 +70,10 @@ export default class App extends Component {
   }
 
   render () {
-    const options = index.maps
-                         .map(x => x.name)
+    const options = this.props.map
+                  ? index.maps.map(x => x.name)
                          .filter(x => x.split('.')[0] === this.props.map.split('.')[0])
+                  : []
     return (
       <div>
         {options.length > 1 &&
