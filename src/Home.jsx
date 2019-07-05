@@ -222,6 +222,23 @@ const Apps = () => (
   </div>
 )
 
+const Python = () => (
+  <div id='python' class='row-collapse section'>
+    <h2 class='section-title'>Escher for Python</h2>
+    <div class='column section-body'>
+      <p>Use Escher in Python and Jupyter</p>
+      <pre>
+        import escher
+        <br />
+        escher.Builder(reaction_data=fluxes)
+      </pre>
+      <a href='https://escher.readthedocs.io/en/latest/escher-python.html'>
+        Learn more and install
+      </a>
+    </div>
+  </div>
+)
+
 const Demos = () => (
   <div id='demos' class='row-collapse section'>
     <div class='column section-title demo-section-title'>
@@ -252,14 +269,14 @@ const Demos = () => (
 const EscherConverter = () => (
   <div id='escher-converter' class='row-collapse section'>
     <h2 class='section-title'>EscherConverter</h2>
-    <div class='column'>
+    <div class='column section-body'>
       <p>
         EscherConverter is a standalone program that reads files created with
         Escher and converts them to files in community standard formats.
       </p>
       <p>
         <a href='https://escher.readthedocs.org/en/stable/escherconverter.html'>
-          Learn more and download.
+          Learn more and download
         </a>
       </p>
     </div>
@@ -378,6 +395,8 @@ export default class Home extends Component {
           <Filters />
           <hr />
           <Apps />
+          <hr />
+          <Python />
           <hr />
           <Demos />
           <hr />

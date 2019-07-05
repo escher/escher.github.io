@@ -7,6 +7,12 @@ p {
   margin-block-end: 0;
 }
 
+pre {
+  border-radius: 3px;
+  border: 1px solid #eee;
+  padding: 7px;
+}
+
 #homepage-container  {
   font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
   font-size: 17px;
@@ -87,6 +93,12 @@ p {
 @media (max-width: 768px) {
   .demo-section-title {
     flex: 1;
+  }
+}
+
+@media (min-width: 768px) {
+  .section-body {
+    margin: 15px 0 0 16px;
   }
 }
 
