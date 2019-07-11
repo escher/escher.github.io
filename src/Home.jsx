@@ -255,7 +255,7 @@ const Demos = () => (
       </div>
     </a>
     <a class='demo-box'
-      href='https://escher.github.io/escher-demo/structures'
+      href='https://escher.github.io/escher-demo/custom_tooltips'
       style={{'backgroundImage': `url(${tooltip})`}}
     >
       <div class='demo-title'>
