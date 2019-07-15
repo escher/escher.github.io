@@ -1970,9 +1970,10 @@ d3-transition@1:
     d3-selection "^1.1.0"
     d3-timer "1"
 
-d3-zoom@^1.1.1:
+d3-zoom@^1.7.3:
   version "1.7.3"
   resolved "https://registry.yarnpkg.com/d3-zoom/-/d3-zoom-1.7.3.tgz#f444effdc9055c38077c4299b4df999eb1d47ccb"
+  integrity sha512-xEBSwFx5Z9T3/VrwDkMt+mr0HCzv7XjpGURJ8lWmIC8wxe32L39eWHIasEe/e7Ox8MPU4p1hvH8PKN2olLzIBg==
   dependencies:
     d3-dispatch "1"
     d3-drag "1"
@@ -2401,10 +2402,10 @@ escape-string-regexp@1.0.5, escape-string-regexp@^1.0.2, escape-string-regexp@^1
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
 
-escher@1.7.0:
-  version "1.7.0"
-  resolved "https://registry.yarnpkg.com/escher/-/escher-1.7.0.tgz#11b1364d5f33beb717bdf1641da05267f6ec1e74"
-  integrity sha512-R8UChM/5uo3dfj6GgVEhypsrJXl6sQ2NWOn4rsbqS+sbF0sAQpkuY+s9tTPqT+k7iIYsJCvNTV1Kzg9sSAvAKQ==
+escher@1.7.1:
+  version "1.7.1"
+  resolved "https://registry.yarnpkg.com/escher/-/escher-1.7.1.tgz#c10396010a3d17a6c0dd044c7eff3383f51454cb"
+  integrity sha512-wvy0gu/aje8R0tZFx5JUlFU8t4UQ/J0kTXf1ysF+/+1QNcQMJHYZCzTcDPDQLhDB9sholo28W4Y77hAsw1GUkw==
   dependencies:
     baconjs "^0.7.71"
     d3-brush "https://github.com/zakandrewking/d3-brush.git"
@@ -2413,7 +2414,7 @@ escher@1.7.0:
     d3-request "^1.0.3"
     d3-scale "^1.0.4"
     d3-selection "^1.0.3"
-    d3-zoom "^1.1.1"
+    d3-zoom "^1.7.3"
     file-saver "^1.3.3"
     immutability-helper "^2.4.0"
     mousetrap "^1.5.3"
