@@ -1869,9 +1869,10 @@ d3-array@^1.2.0:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/d3-array/-/d3-array-1.2.4.tgz#635ce4d5eea759f6f605863dbcfc30edc737f71f"
 
-"d3-brush@git+https://github.com/zakandrewking/d3-brush.git":
+"d3-brush@https://github.com/zakandrewking/d3-brush.git":
   version "1.0.4"
-  resolved "git+https://github.com/zakandrewking/d3-brush.git#0def381d33b6de58383c6f8df68f042b690df416"
+  uid "0def381d33b6de58383c6f8df68f042b690df416"
+  resolved "https://github.com/zakandrewking/d3-brush.git#0def381d33b6de58383c6f8df68f042b690df416"
   dependencies:
     d3-dispatch "1"
     d3-drag "1"
@@ -7181,8 +7182,9 @@ websocket-driver@>=0.5.1:
     websocket-extensions ">=0.1.1"
 
 websocket-extensions@>=0.1.1:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/websocket-extensions/-/websocket-extensions-0.1.2.tgz#0e18781de629a18308ce1481650f67ffa2693a5d"
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/websocket-extensions/-/websocket-extensions-0.1.4.tgz#7f8473bc839dfd87608adb95d7eb075211578a42"
+  integrity sha512-OqedPIGOfsDlo31UNwYbCFMSaO9m9G/0faIHj5/dZFDMFqPTcx6UwqyOy3COEaEOg/9VsGIpdqn62W5KhoKSpg==
 
 whatwg-encoding@^1.0.1:
   version "1.0.3"
