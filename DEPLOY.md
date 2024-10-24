@@ -1,3 +1,4 @@
+```
 update versions in package.json (escher.github.io & dependency)
 yarn unlink escher
 yarn install
@@ -6,3 +7,4 @@ yarn build
 yarn copy
 git commit version change
 git push commit
+```
