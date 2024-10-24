@@ -2,7 +2,7 @@
 
 import { h, render } from 'preact'
 import Router from 'preact-router'
-import createHashHistory from 'history/createHashHistory'
+import { createHashHistory } from 'history'
 import App from './App'
 import Home from './Home'
 
