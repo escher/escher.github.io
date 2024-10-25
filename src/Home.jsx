@@ -1,6 +1,4 @@
-/** @jsx h */
-
-import { h, Component } from 'preact'
+import { Component } from 'preact'
 import _ from 'underscore'
 
 import logo2x from './img/escher-logo@2x.png'
@@ -369,7 +367,7 @@ const Footer = () => (
         </span>
         <div class='fill' />
         <span class='version'>
-          <a href='https://github.com/zakandrewking/escher/releases'>Version {process.env.REACT_APP_VERSION}</a>
+          <a href='https://github.com/zakandrewking/escher/releases'>Version {import.meta.env.VITE_APP_VERSION}</a>
         </span>
       </div>
       <span>

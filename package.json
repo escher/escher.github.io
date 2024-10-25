@@ -1,13 +1,13 @@
 {
   "name": "escher.github.io",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "homepage": "https://escher.github.io",
   "private": false,
+  "type": "module",
   "dependencies": {
-    "@just-boris/preact-scripts": "1.1.4",
     "babel-core": "^6.26.0",
     "babel-loader": "^9.2.1",
-    "escher": "1.8.0",
+    "escher": "1.8.1",
     "history": "^5.3.0",
     "preact": "^10.24.3",
     "preact-compat": "^3.18.0",
@@ -17,14 +17,16 @@
     "webpack": "^5.95.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "copy": "rm -rf static && cp -rf build/* .",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject",
-    "lint": "standard --fix | snazzy"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "copy": "rm -rf assets && cp -rf build/* ."
   },
   "standard": {
     "parser": "babel-eslint"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.1",
+    "vite": "^5.4.10"
   }
 }

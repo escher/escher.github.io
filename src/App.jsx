@@ -1,7 +1,4 @@
-/** @jsx h */
-/* global process, fetch */
-
-import { h, Component } from 'preact'
+import { Component } from 'preact'
 import { route, getCurrentUrl } from 'preact-router'
 import _ from 'underscore'
 import { Builder } from 'escher'

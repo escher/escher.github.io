@@ -1,6 +1,4 @@
-/** @jsx h */
-
-import { h, render } from 'preact'
+import { render } from 'preact'
 import Router from 'preact-router'
 import { createHashHistory } from 'history'
 import App from './App'
