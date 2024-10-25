@@ -3,6 +3,7 @@
   "version": "1.8.1",
   "homepage": "https://escher.github.io",
   "private": false,
+  "type": "module",
   "dependencies": {
     "babel-core": "^6.26.0",
     "babel-loader": "^9.2.1",
@@ -18,7 +19,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "copy": "rm -rf assets && cp -rf build/* ."
   },
   "standard": {
     "parser": "babel-eslint"
