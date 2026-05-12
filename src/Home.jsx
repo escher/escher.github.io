@@ -16,9 +16,6 @@ import './Home.css'
 const TitleBox = () => (
   <div id='homepage-title-box' class='row'>
     <div id='homepage-links'>
-      <div id='community-repo-notice'>
-        Please use <a href='https://github.com/opencobra/escher'>opencobra/escher</a> for current Escher development. That repository is the preferred home for the latest community-maintained version of Escher and is aligned with the npm package, PyPI package, and website deployments.
-      </div>
       <div id='github-link-box'>
         <a href='https://github.com/opencobra/escher'>
           <img src={github} alt='GitHub' id='github-link' />

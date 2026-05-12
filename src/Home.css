@@ -108,16 +108,8 @@ pre {
   position: absolute;
   top: 5px;
   right: 2px;
-  width: 360px;
-  max-width: calc(100% - 20px);
   text-align: right;
   z-index: 1;
-}
-#community-repo-notice {
-  color: #291E1E;
-  font-size: 13px;
-  line-height: 1.25;
-  margin-bottom: 8px;
 }
 #github-link-box {
   font-size: 18px;
