@@ -15,19 +15,17 @@ import './Home.css'
 
 const TitleBox = () => (
   <div id='homepage-title-box' class='row'>
-    <div id='homepage-links'>
-      <div id='github-link-box'>
-        <a href='https://github.com/opencobra/escher'>
-          <img src={github} alt='GitHub' id='github-link' />
-          GitHub
-        </a>
-        <a href='https://escher.readthedocs.io'>
-          Docs
-        </a>
-        <a href='https://github.com/opencobra/escher/releases'>
-          What's new?
-        </a>
-      </div>
+    <div id='github-link-box'>
+      <a href='https://github.com/opencobra/escher'>
+        <img src={github} alt='GitHub' id='github-link' />
+        GitHub
+      </a>
+      <a href='https://escher.readthedocs.io'>
+        Docs
+      </a>
+      <a href='https://github.com/opencobra/escher/releases'>
+        What's new?
+      </a>
     </div>
     <img
       id='homepage-logo'

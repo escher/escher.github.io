@@ -104,14 +104,10 @@ pre {
 
 /* Link box */
 
-#homepage-links {
+#github-link-box {
   position: absolute;
   top: 5px;
   right: 2px;
-  text-align: right;
-  z-index: 1;
-}
-#github-link-box {
   font-size: 18px;
 }
 #github-link-box>a {
@@ -125,15 +121,6 @@ pre {
   top: 3px;
   position: relative;
   margin-right: 3px;
-}
-@media (max-width: 768px) {
-  #homepage-links {
-    position: static;
-    width: auto;
-    max-width: none;
-    margin: 10px 8px 18px;
-    text-align: center;
-  }
 }
 
 /* TitleBox */
