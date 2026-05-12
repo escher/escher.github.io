@@ -104,10 +104,22 @@ pre {
 
 /* Link box */
 
-#github-link-box {
+#homepage-links {
   position: absolute;
   top: 5px;
   right: 2px;
+  width: 360px;
+  max-width: calc(100% - 20px);
+  text-align: right;
+  z-index: 1;
+}
+#community-repo-notice {
+  color: #291E1E;
+  font-size: 13px;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+#github-link-box {
   font-size: 18px;
 }
 #github-link-box>a {
@@ -121,6 +133,15 @@ pre {
   top: 3px;
   position: relative;
   margin-right: 3px;
+}
+@media (max-width: 768px) {
+  #homepage-links {
+    position: static;
+    width: auto;
+    max-width: none;
+    margin: 10px 8px 18px;
+    text-align: center;
+  }
 }
 
 /* TitleBox */

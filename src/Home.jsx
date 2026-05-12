@@ -15,17 +15,22 @@ import './Home.css'
 
 const TitleBox = () => (
   <div id='homepage-title-box' class='row'>
-    <div id='github-link-box'>
-      <a href='https://github.com/zakandrewking/escher'>
-        <img src={github} alt='GitHub' id='github-link' />
-        GitHub
-      </a>
-      <a href='https://escher.readthedocs.io'>
-        Docs
-      </a>
-      <a href='https://github.com/zakandrewking/escher/releases'>
-        What's new?
-      </a>
+    <div id='homepage-links'>
+      <div id='community-repo-notice'>
+        Please use <a href='https://github.com/opencobra/escher'>opencobra/escher</a> for current Escher development. That repository is the preferred home for the latest community-maintained version of Escher and is aligned with the npm package, PyPI package, and website deployments.
+      </div>
+      <div id='github-link-box'>
+        <a href='https://github.com/opencobra/escher'>
+          <img src={github} alt='GitHub' id='github-link' />
+          GitHub
+        </a>
+        <a href='https://escher.readthedocs.io'>
+          Docs
+        </a>
+        <a href='https://github.com/opencobra/escher/releases'>
+          What's new?
+        </a>
+      </div>
     </div>
     <img
       id='homepage-logo'
@@ -315,7 +320,7 @@ const FAQ = () => (
       <li>
         <h4>How is Escher licensed?</h4>
         <p>
-          Escher and EscherConverter are distributed under the <a href='https://github.com/zakandrewking/escher/blob/master/LICENSE'>MIT license</a>.
+          Escher and EscherConverter are distributed under the <a href='https://github.com/opencobra/escher/blob/master/LICENSE'>MIT license</a>.
         </p>
       </li>
       <li>
@@ -333,7 +338,7 @@ const FAQ = () => (
           the <a href='https://gitter.im/zakandrewking/escher'>Gitter chat room</a>. If
           you find bugs or would like to contribute to
           the project, feel free to submit an issue and or a pull
-          request on <a href='https://github.com/zakandrewking/escher'>Github</a>.
+          request on <a href='https://github.com/opencobra/escher'>Github</a>.
         </p>
       </li>
     </ol>
@@ -363,11 +368,11 @@ const Footer = () => (
     <div class='footer-container column'>
       <div class='row'>
         <span class='more'>
-          <a href='https://escher.readthedocs.io'>Documentation</a> – <a href='https://github.com/zakandrewking/escher'>GitHub</a>
+          <a href='https://escher.readthedocs.io'>Documentation</a> – <a href='https://github.com/opencobra/escher'>GitHub</a>
         </span>
         <div class='fill' />
         <span class='version'>
-          <a href='https://github.com/zakandrewking/escher/releases'>Version {import.meta.env.VITE_APP_VERSION}</a>
+          <a href='https://github.com/opencobra/escher/releases'>Version {import.meta.env.VITE_APP_VERSION}</a>
         </span>
       </div>
       <span>
